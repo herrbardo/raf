@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.SampleKeyValueListView"
+             x:DataType="vm:SampleKeyValueListViewModel">
+  <DockPanel>
+    <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Content="+ Agregar propio"
+            Command="{Binding AddCommand}" IsVisible="{Binding CanEdit}" />
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SampleKeyValueRowViewModel">
+            <Grid ColumnDefinitions="90,*,2*,Auto,Auto,Auto" ColumnSpacing="6" Margin="0,2,10,2">
+              <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding StateText}" />
+              <ctl:TextField Grid.Column="1" BoundText="{Binding Key}" IsReadOnly="{Binding KeyReadOnly}" />
+              <StackPanel Grid.Column="2" Spacing="1">
+                <ctl:TextField BoundText="{Binding Value}" IsReadOnly="{Binding ValueReadOnly}" IsVisible="{Binding !IsRemoved}" />
+                <TextBlock Classes="caption" TextTrimming="CharacterEllipsis" Text="{Binding InheritedText}" IsVisible="{Binding HasInherited}" />
+              </StackPanel>
+              <Button Grid.Column="3" Classes="link" Content="Sobreescribir" Command="{Binding OverrideCommand}" IsVisible="{Binding CanOverride}" />
+              <Button Grid.Column="4" Classes="link" Content="Quitar" Command="{Binding RemoveKeyCommand}" IsVisible="{Binding CanRemove}" />
+              <Button Grid.Column="5" Classes="link" Content="Volver a heredar" Command="{Binding InheritCommand}" IsVisible="{Binding CanInherit}" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

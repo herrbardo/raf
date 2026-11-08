@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.BodyEditorView"
+             x:DataType="vm:BodyEditorViewModel">
+  <DockPanel>
+    <ComboBox DockPanel.Dock="Top" Width="190" Margin="0,4,0,6" ItemsSource="{Binding AvailableTypes}"
+              SelectedItem="{Binding Type}" IsEnabled="{Binding CanEdit}" />
+    <Grid>
+      <ctl:TextField Multiline="True" BoundText="{Binding Content}" Syntax="{Binding Syntax}"
+                     IsReadOnly="{Binding IsReadOnly}" IsVisible="{Binding IsText}" />
+      <ContentControl Content="{Binding Form}" IsVisible="{Binding IsForm}" />
+    </Grid>
+  </DockPanel>
+</UserControl>

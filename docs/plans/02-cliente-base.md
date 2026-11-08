@@ -1,6 +1,6 @@
 # Plan 02 — Cliente base
 
-Estado: **definido, sin ejecutar**. Depende de: Plan 01.
+Estado: **implementado, pendiente de la prueba humana**. Depende de: Plan 01.
 Checkpoint humano al final: probar la app y dar feedback de UX.
 
 En este plan el cliente trabaja **siempre conectado**, contra la API. La caché local llega en el Plan 03.
@@ -33,6 +33,8 @@ En este plan el cliente trabaja **siempre conectado**, contra la API. La caché 
 - Acceso a datos detrás de una interfaz (`IWorkspaceStore`): en este plan va directo a la API y el Plan 03 la reemplaza por la caché local sin tocar los ViewModels.
 - Un `409` al guardar muestra un aviso y ofrece recargar. La resolución completa de conflictos va en el Plan 03.
 - Viewer: la UI queda en solo lectura. Si un request usa un secreto que el Viewer no puede leer, se avisa antes de ejecutar.
+- El timeout y la opción de aceptar certificados inválidos son **locales de cada equipo** y no se sincronizan: así nadie le desactiva la validación TLS a otro miembro del equipo.
+- El historial guarda método, URL sin valores secretos y resultado. No guarda headers, auth ni bodies.
 
 ## Verificación
 

@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             x:Class="Raf.Client.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+  <StackPanel Width="380" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <TextBlock Classes="title" Text="Iniciar sesión" />
+    <TextBlock Classes="caption" Text="{Binding ServerText}" />
+    <TextBox Text="{Binding Email}" Watermark="Email" />
+    <TextBox Text="{Binding Password}" Watermark="Contraseña" PasswordChar="•" />
+    <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    <DockPanel>
+      <Button Classes="link" Content="Cambiar de servidor" Command="{Binding ChangeServerCommand}" />
+      <Button Classes="accent" Content="Entrar" IsDefault="True" HorizontalAlignment="Right"
+              Command="{Binding LoginCommand}" IsEnabled="{Binding !IsBusy}" />
+    </DockPanel>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        x:Class="Raf.Client.Views.EnvironmentsWindow"
+        x:DataType="vm:EnvironmentsViewModel"
+        Title="Environments y variables"
+        Width="860" Height="560" MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="14">
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
+      <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Classes="accent" Content="Guardar" Command="{Binding SaveCommand}" IsVisible="{Binding CanEdit}" IsEnabled="{Binding !IsBusy}" />
+        <Button Content="Cerrar" Click="OnCloseClick" />
+      </StackPanel>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="210,14,*">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="2" Margin="0,6,0,0" IsVisible="{Binding CanEdit}">
+          <Button Classes="link" Content="+ Nuevo" Command="{Binding AddEnvironmentCommand}" />
+          <Button Classes="link" Content="Renombrar" Command="{Binding RenameEnvironmentCommand}" />
+          <Button Classes="link" Content="Eliminar" Command="{Binding DeleteEnvironmentCommand}" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:VariableScopeViewModel"><TextBlock Text="{Binding Name}" /></DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel Grid.Column="2">
+        <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Content="+ Agregar variable"
+                Command="{Binding AddVariableCommand}" IsVisible="{Binding CanEdit}" />
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,2*,90,70,30" ColumnSpacing="6" Margin="0,0,14,4">
+          <TextBlock Classes="caption" Text="Clave" />
+          <TextBlock Grid.Column="1" Classes="caption" Text="Valor" />
+          <TextBlock Grid.Column="2" Classes="caption" Text="Secreta" />
+        </Grid>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding SelectedScope.Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:VariableRowViewModel">
+                <Grid ColumnDefinitions="*,2*,90,70,30" ColumnSpacing="6" Margin="0,2,14,2">
+                  <TextBox Text="{Binding Key}" IsReadOnly="{Binding IsReadOnly}" />
+                  <TextBox Grid.Column="1" Text="{Binding Value}" PasswordChar="{Binding MaskChar}"
+                           Watermark="{Binding ValueHint}" IsReadOnly="{Binding IsReadOnly}" />
+                  <CheckBox Grid.Column="2" IsChecked="{Binding IsSecret}" IsEnabled="{Binding CanEdit}" />
+                  <ToggleButton Grid.Column="3" Content="Ver" IsChecked="{Binding Reveal}" IsVisible="{Binding CanReveal}" />
+                  <Button Grid.Column="4" Classes="link" Content="✕" Command="{Binding RemoveCommand}" IsVisible="{Binding CanEdit}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

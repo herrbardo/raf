@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.RequestTabView"
+             x:DataType="vm:RequestTabViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendCommand}" />
+  </UserControl.KeyBindings>
+  <Grid RowDefinitions="Auto,Auto,*,4,*" Margin="10">
+    <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8">
+      <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}" IsEnabled="{Binding CanEdit}" />
+      <ctl:TextField Grid.Column="1" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+        <Button Classes="accent" Content="Enviar" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}" />
+        <Button Content="Cancelar" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" />
+        <Button Content="Guardar" Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" />
+      </StackPanel>
+    </Grid>
+    <TextBlock Grid.Row="1" Classes="warning" Margin="0,6,0,0" Text="{Binding Warning}"
+               IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+    <TabControl Grid.Row="2" Padding="0,4,0,0">
+      <TabItem Header="Query" FontSize="14"><ContentControl Content="{Binding Query}" /></TabItem>
+      <TabItem Header="Headers" FontSize="14"><ContentControl Content="{Binding Headers}" /></TabItem>
+      <TabItem Header="Body" FontSize="14"><ContentControl Content="{Binding Body}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
+      <TabItem Header="Auth" FontSize="14"><ContentControl Content="{Binding Auth}" /></TabItem>
+      <TabItem Header="Opciones" FontSize="14">
+        <StackPanel Spacing="10" Margin="0,8" MaxWidth="460" HorizontalAlignment="Left">
+          <TextBlock Classes="caption" Text="Estas opciones se guardan solo en este equipo." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock VerticalAlignment="Center" Text="Timeout (segundos)" />
+            <TextBox Width="190" Text="{Binding TimeoutText}" Watermark="{Binding TimeoutHint}" />
+          </StackPanel>
+          <CheckBox IsChecked="{Binding AcceptInvalidCertificates}" Content="Aceptar certificados inválidos (APIs internas)" />
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+
+    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="Transparent" />
+    <ContentControl Grid.Row="4" Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+  </Grid>
+</UserControl>

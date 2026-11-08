@@ -11,6 +11,9 @@ public sealed partial class VariableResolver
 {
     public const int MaxDepth = 10;
 
+    /// <summary>Patrón de <c>{{nombre}}</c>; el grupo 1 es el nombre.</summary>
+    public const string PlaceholderPattern = @"\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}";
+
     private readonly IReadOnlyDictionary<string, string> _values;
     private readonly HashSet<string> _missing = new(StringComparer.Ordinal);
 
@@ -69,6 +72,6 @@ public sealed partial class VariableResolver
     private IReadOnlyList<KeyValueItem> ResolveItems(IReadOnlyList<KeyValueItem> items) =>
         items.Select(i => i with { Key = Resolve(i.Key), Value = Resolve(i.Value) }).ToList();
 
-    [GeneratedRegex(@"\{\{\s*([A-Za-z0-9_.\-]+)\s*\}\}")]
+    [GeneratedRegex(PlaceholderPattern)]
     private static partial Regex Placeholder();
 }

@@ -1,0 +1,46 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:views="using:Raf.Client.Views"
+             x:Class="Raf.Client.App"
+             RequestedThemeVariant="Default">
+  <Application.DataTemplates>
+    <DataTemplate DataType="vm:ConnectViewModel"><views:ConnectView /></DataTemplate>
+    <DataTemplate DataType="vm:LoginViewModel"><views:LoginView /></DataTemplate>
+    <DataTemplate DataType="vm:ChangePasswordViewModel"><views:ChangePasswordView /></DataTemplate>
+    <DataTemplate DataType="vm:MainViewModel"><views:MainView /></DataTemplate>
+    <DataTemplate DataType="vm:RequestTabViewModel"><views:RequestTabView /></DataTemplate>
+    <DataTemplate DataType="vm:SampleTabViewModel"><views:SampleTabView /></DataTemplate>
+    <DataTemplate DataType="vm:KeyValueListViewModel"><views:KeyValueListView /></DataTemplate>
+    <DataTemplate DataType="vm:SampleKeyValueListViewModel"><views:SampleKeyValueListView /></DataTemplate>
+    <DataTemplate DataType="vm:BodyEditorViewModel"><views:BodyEditorView /></DataTemplate>
+    <DataTemplate DataType="vm:AuthEditorViewModel"><views:AuthEditorView /></DataTemplate>
+    <DataTemplate DataType="vm:ResponseViewModel"><views:ResponseView /></DataTemplate>
+  </Application.DataTemplates>
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+
+    <Style Selector="TextBlock.caption">
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.error">
+      <Setter Property="Foreground" Value="#E5484D" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.warning">
+      <Setter Property="Foreground" Value="#D9822B" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="4,2" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+  </Application.Styles>
+</Application>

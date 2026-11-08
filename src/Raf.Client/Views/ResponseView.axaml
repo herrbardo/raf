@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.ResponseView"
+             x:DataType="vm:ResponseViewModel">
+  <Grid>
+    <TextBlock Classes="caption" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Text="La respuesta aparece acá." IsVisible="{Binding ShowPlaceholder}" />
+    <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsRunning}" />
+
+    <DockPanel IsVisible="{Binding HasResult}">
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="14" Margin="0,4">
+        <TextBlock FontWeight="SemiBold" Foreground="#2E9E6B" Text="{Binding StatusText}" IsVisible="{Binding IsSuccess}" />
+        <TextBlock FontWeight="SemiBold" Foreground="#E5484D" Text="{Binding StatusText}" IsVisible="{Binding !IsSuccess}" />
+        <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding TimeText}" />
+        <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding SizeText}" />
+        <CheckBox MinHeight="0" Content="Ver crudo" IsChecked="{Binding ShowRaw}" IsVisible="{Binding HasBody}" />
+        <Button Classes="link" Content="Guardar a archivo" Command="{Binding SaveCommand}" IsVisible="{Binding HasBody}" />
+      </StackPanel>
+      <TextBlock DockPanel.Dock="Top" Classes="error" Text="{Binding ErrorText}"
+                 IsVisible="{Binding ErrorText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock DockPanel.Dock="Top" Classes="warning" Text="{Binding TruncatedText}"
+                 IsVisible="{Binding TruncatedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TabControl Padding="0,4,0,0">
+        <TabItem Header="Body" FontSize="14">
+          <ctl:TextField Multiline="True" IsReadOnly="True" HighlightVariables="False"
+                         BoundText="{Binding BodyText, Mode=OneWay}" Syntax="{Binding Syntax}" />
+        </TabItem>
+        <TabItem Header="Headers" FontSize="14">
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Headers}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ResponseHeaderRow">
+                  <Grid ColumnDefinitions="240,*" Margin="0,2">
+                    <SelectableTextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                    <SelectableTextBlock Grid.Column="1" TextWrapping="Wrap" Text="{Binding Value}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
+    </DockPanel>
+  </Grid>
+</UserControl>

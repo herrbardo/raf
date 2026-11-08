@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Lo requiere el código generado por LibraryImport para el Keychain. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raf.Contracts\Raf.Contracts.csproj" />
+    <ProjectReference Include="..\Raf.Domain\Raf.Domain.csproj" />
+  </ItemGroup>
+</Project>

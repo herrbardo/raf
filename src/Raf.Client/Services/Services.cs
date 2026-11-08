@@ -1,0 +1,111 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Layout;
+using Avalonia.Platform.Storage;
+using Raf.Client.Core.Api;
+using Raf.Client.Core.Execution;
+using Raf.Client.Core.History;
+using Raf.Client.Core.Local;
+using Raf.Client.Core.Session;
+using Raf.Client.Core.Workspaces;
+
+namespace Raf.Client.Services;
+
+public sealed record ClientServices(
+    SessionManager Session,
+    RafApiClient Api,
+    IWorkspaceStore Store,
+    SettingsStore Settings,
+    RequestRunner Runner,
+    RunHistoryStore History,
+    IDialogs Dialogs);
+
+public interface IDialogs
+{
+    Task<string?> PromptAsync(string title, string label, string initial = "");
+    Task<bool> ConfirmAsync(string title, string message, string accept = "Aceptar");
+    Task InfoAsync(string title, string message);
+    Task<Stream?> SaveFileAsync(string suggestedName);
+}
+
+public sealed class WindowDialogs : IDialogs
+{
+    private static Window Owner =>
+        ((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).Windows
+            .LastOrDefault(w => w.IsActive) is { } active ? active
+            : ((IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).MainWindow!;
+
+    public async Task<string?> PromptAsync(string title, string label, string initial = "")
+    {
+        var input = new TextBox { Text = initial };
+        var dialog = Build<string?>(title, label, "Aceptar", true, input, () => input.Text, null, out var window);
+        window.Opened += (_, _) => { input.Focus(); input.SelectAll(); };
+        input.KeyDown += (_, e) =>
+        {
+            if (e.Key == Avalonia.Input.Key.Enter) window.Close(input.Text);
+        };
+        var result = await dialog();
+        return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
+    }
+
+    public Task<bool> ConfirmAsync(string title, string message, string accept = "Aceptar") =>
+        Build(title, message, accept, true, null, () => true, false, out _)();
+
+    public Task InfoAsync(string title, string message) =>
+        Build(title, message, "Aceptar", false, null, () => true, false, out _)();
+
+    public async Task<Stream?> SaveFileAsync(string suggestedName)
+    {
+        var file = await Owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            SuggestedFileName = suggestedName,
+            Title = "Guardar respuesta",
+        });
+        return file is null ? null : await file.OpenWriteAsync();
+    }
+
+    private static Func<Task<T>> Build<T>(
+        string title, string message, string accept, bool cancellable, Control? body,
+        Func<T> onAccept, T onCancel, out Window window)
+    {
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 420,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var ok = new Button { Content = accept, IsDefault = body is null, Classes = { "accent" } };
+        ok.Click += (_, _) => dialog.Close(onAccept());
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 8,
+            Children = { ok },
+        };
+        if (cancellable)
+        {
+            var cancel = new Button { Content = "Cancelar", IsCancel = true };
+            cancel.Click += (_, _) => dialog.Close(onCancel);
+            buttons.Children.Add(cancel);
+        }
+
+        var panel = new StackPanel { Margin = new Thickness(20), Spacing = 14 };
+        panel.Children.Add(new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        if (body is not null) panel.Children.Add(body);
+        panel.Children.Add(buttons);
+        dialog.Content = panel;
+        window = dialog;
+
+        return async () =>
+        {
+            var result = await dialog.ShowDialog<object?>(Owner);
+            return result is T value ? value : onCancel;
+        };
+    }
+}

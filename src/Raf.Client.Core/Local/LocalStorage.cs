@@ -1,0 +1,207 @@
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Raf.Client.Core.Api;
+
+namespace Raf.Client.Core.Local;
+
+public static class AppPaths
+{
+    /// <summary>Carpeta de datos locales de la app; no se sincroniza con el perfil móvil del usuario.</summary>
+    public static string DataDirectory { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RAF");
+}
+
+/// <summary>Almacén de secretos del sistema operativo.</summary>
+public interface ISecureStore
+{
+    string? Read(string name);
+    void Write(string name, string value);
+    void Delete(string name);
+}
+
+/// <summary>Solo memoria: la sesión no sobrevive al cierre de la app. Nunca se guardan tokens en claro.</summary>
+public sealed class MemorySecureStore : ISecureStore
+{
+    private readonly Dictionary<string, string> _values = new();
+
+    public string? Read(string name)
+    {
+        lock (_values) return _values.GetValueOrDefault(name);
+    }
+
+    public void Write(string name, string value)
+    {
+        lock (_values) _values[name] = value;
+    }
+
+    public void Delete(string name)
+    {
+        lock (_values) _values.Remove(name);
+    }
+}
+
+/// <summary>Archivos cifrados con DPAPI para el usuario actual de Windows.</summary>
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
+public sealed class DpapiSecureStore(string directory) : ISecureStore
+{
+    private string PathOf(string name) => Path.Combine(directory, name + ".dpapi");
+
+    public string? Read(string name)
+    {
+        try
+        {
+            var data = ProtectedData.Unprotect(File.ReadAllBytes(PathOf(name)), null, DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(data);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or CryptographicException)
+        {
+            return null;
+        }
+    }
+
+    public void Write(string name, string value)
+    {
+        Directory.CreateDirectory(directory);
+        var data = ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser);
+        var temp = PathOf(name) + ".tmp";
+        File.WriteAllBytes(temp, data);
+        File.Move(temp, PathOf(name), overwrite: true);
+    }
+
+    public void Delete(string name) => File.Delete(PathOf(name));
+}
+
+/// <summary>Elementos genéricos del Keychain de macOS.</summary>
+[System.Runtime.Versioning.SupportedOSPlatform("macos")]
+public sealed partial class KeychainSecureStore(string service) : ISecureStore
+{
+    private const string Security = "/System/Library/Frameworks/Security.framework/Security";
+    private const string CoreFoundation = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
+    private const int NotFound = -25300;
+
+    public string? Read(string name)
+    {
+        var (s, a) = (Encoding.UTF8.GetBytes(service), Encoding.UTF8.GetBytes(name));
+        var status = SecKeychainFindGenericPassword(
+            0, (uint)s.Length, s, (uint)a.Length, a, out var length, out var data, out var item);
+        if (status != 0) return null;
+        try
+        {
+            return Marshal.PtrToStringUTF8(data, (int)length);
+        }
+        finally
+        {
+            SecKeychainItemFreeContent(0, data);
+            CFRelease(item);
+        }
+    }
+
+    public void Write(string name, string value)
+    {
+        var (s, a, v) = (Encoding.UTF8.GetBytes(service), Encoding.UTF8.GetBytes(name), Encoding.UTF8.GetBytes(value));
+        var status = SecKeychainFindGenericPassword(0, (uint)s.Length, s, (uint)a.Length, a, out _, out var data, out var item);
+        if (status == 0)
+        {
+            SecKeychainItemFreeContent(0, data);
+            status = SecKeychainItemModifyAttributesAndData(item, 0, (uint)v.Length, v);
+            CFRelease(item);
+        }
+        else if (status == NotFound)
+        {
+            status = SecKeychainAddGenericPassword(0, (uint)s.Length, s, (uint)a.Length, a, (uint)v.Length, v, out var created);
+            if (status == 0) CFRelease(created);
+        }
+        if (status != 0) throw new IOException($"No se pudo escribir en el Keychain (código {status}).");
+    }
+
+    public void Delete(string name)
+    {
+        var (s, a) = (Encoding.UTF8.GetBytes(service), Encoding.UTF8.GetBytes(name));
+        if (SecKeychainFindGenericPassword(0, (uint)s.Length, s, (uint)a.Length, a, out _, out var data, out var item) != 0)
+            return;
+        SecKeychainItemFreeContent(0, data);
+        SecKeychainItemDelete(item);
+        CFRelease(item);
+    }
+
+    [LibraryImport(Security)]
+    private static partial int SecKeychainFindGenericPassword(
+        nint keychain, uint serviceLength, byte[] service, uint accountLength, byte[] account,
+        out uint passwordLength, out nint password, out nint item);
+
+    [LibraryImport(Security)]
+    private static partial int SecKeychainAddGenericPassword(
+        nint keychain, uint serviceLength, byte[] service, uint accountLength, byte[] account,
+        uint passwordLength, byte[] password, out nint item);
+
+    [LibraryImport(Security)]
+    private static partial int SecKeychainItemModifyAttributesAndData(nint item, nint attributes, uint length, byte[] data);
+
+    [LibraryImport(Security)]
+    private static partial int SecKeychainItemFreeContent(nint attributes, nint data);
+
+    [LibraryImport(Security)]
+    private static partial int SecKeychainItemDelete(nint item);
+
+    [LibraryImport(CoreFoundation)]
+    private static partial void CFRelease(nint handle);
+}
+
+public static class SecureStores
+{
+    public static ISecureStore CreateDefault()
+    {
+        if (OperatingSystem.IsWindows()) return new DpapiSecureStore(Path.Combine(AppPaths.DataDirectory, "secure"));
+        if (OperatingSystem.IsMacOS()) return new KeychainSecureStore("RAF");
+        return new MemorySecureStore();
+    }
+}
+
+/// <summary>Opciones de ejecución de un request, propias de este equipo. No se sincronizan.</summary>
+public sealed record RequestLocalOptions(int? TimeoutSeconds = null, bool AcceptInvalidCertificates = false);
+
+public sealed class LocalSettings
+{
+    public string? ServerUrl { get; set; }
+    public string? LastEmail { get; set; }
+    public Guid? LastWorkspaceId { get; set; }
+    public int DefaultTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>Environment activo por workspace.</summary>
+    public Dictionary<Guid, Guid> ActiveEnvironments { get; set; } = new();
+
+    public Dictionary<Guid, RequestLocalOptions> RequestOptions { get; set; } = new();
+}
+
+public sealed class SettingsStore(string path)
+{
+    private readonly object _lock = new();
+
+    public LocalSettings Current { get; private set; } = Load(path);
+
+    private static LocalSettings Load(string path)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<LocalSettings>(File.ReadAllText(path), ClientJson.Options) ?? new();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return new();
+        }
+    }
+
+    public void Update(Action<LocalSettings> change)
+    {
+        lock (_lock)
+        {
+            change(Current);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var temp = path + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(Current, ClientJson.Options));
+            File.Move(temp, path, overwrite: true);
+        }
+    }
+}

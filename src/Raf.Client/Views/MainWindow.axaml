@@ -1,0 +1,9 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        x:Class="Raf.Client.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="RAF — Requests and Friends"
+        Width="1280" Height="800" MinWidth="900" MinHeight="560">
+  <ContentControl Content="{Binding Page}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+</Window>
