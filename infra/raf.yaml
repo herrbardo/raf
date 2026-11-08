@@ -1,0 +1,357 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  RAF (Requests and Friends) - backend sobre una VPC y un ALB existentes: crea RDS PostgreSQL, ECR,
+  ECS Fargate, target group y una regla en el listener del ALB para servir la API bajo un subpath.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: { default: Red existente }
+        Parameters: [VpcId, ServiceSubnetIds, AssignPublicIp, DbSubnetIds]
+      - Label: { default: ALB existente }
+        Parameters: [AlbListenerArn, AlbSecurityGroupId, PathPrefix, HostHeader, ListenerRulePriority]
+      - Label: { default: Aplicacion }
+        Parameters: [EnvName, AdminEmail, ImageTag, DesiredCount, TaskCpu, TaskMemory]
+      - Label: { default: Base de datos }
+        Parameters: [DbInstanceClass, DbAllocatedStorage]
+
+Parameters:
+  # ---------- Red existente
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC donde ya esta el ALB.
+  ServiceSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: >-
+      Subredes para las tareas ECS. Deben poder salir a internet (NAT) o tener VPC endpoints para
+      ECR, Secrets Manager y CloudWatch Logs. Si son publicas, poner AssignPublicIp=ENABLED.
+  AssignPublicIp:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+  DbSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subredes privadas para RDS (al menos 2, en zonas distintas).
+
+  # ---------- ALB existente
+  AlbListenerArn:
+    Type: String
+    AllowedPattern: "^arn:aws[a-z-]*:elasticloadbalancing:.+:listener/app/.+$"
+    Description: ARN del listener (HTTP o HTTPS) del ALB al que se agrega la regla.
+  AlbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group del ALB; las tareas solo aceptan trafico desde este grupo.
+  PathPrefix:
+    Type: String
+    Default: /raf
+    AllowedPattern: "^/[a-zA-Z0-9._-]+$"
+    Description: Subpath bajo el que se publica la API (sin barra final).
+  HostHeader:
+    Type: String
+    Default: ""
+    Description: Opcional. Dominio para la regla (ej. apps.midominio.com). Vacio = cualquier host.
+  ListenerRulePriority:
+    Type: Number
+    MinValue: 1
+    MaxValue: 50000
+    Description: Prioridad de la regla en el listener; no puede repetirse con otras reglas existentes.
+
+  # ---------- Aplicacion
+  EnvName:
+    Type: String
+    Default: dev
+    AllowedPattern: "^[a-z0-9-]+$"
+    Description: Sufijo de nombres (dev, prod...).
+  AdminEmail:
+    Type: String
+    Description: Email del admin inicial. Su contrasena se genera en Secrets Manager (ver outputs).
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Tag de la imagen del servidor en el repositorio ECR.
+  DesiredCount:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 4
+    Description: Tareas del servidor. 0 en el primer despliegue (todavia no hay imagen); despues 1.
+  TaskCpu:
+    Type: String
+    Default: "256"
+    AllowedValues: ["256", "512", "1024"]
+  TaskMemory:
+    Type: String
+    Default: "512"
+    AllowedValues: ["512", "1024", "2048"]
+
+  # ---------- Base de datos
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+  DbAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+
+Conditions:
+  HasHostHeader: !Not [!Equals [!Ref HostHeader, ""]]
+
+Resources:
+  # ---------------------------------------------------------------- Security groups
+  # ALB existente -> tareas :8080 -> RDS :5432
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "RAF ${EnvName} - tareas ECS del servidor"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref AlbSecurityGroupId
+      Tags: [{ Key: Name, Value: !Sub "raf-${EnvName}-server" }]
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub "RAF ${EnvName} - PostgreSQL"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ServiceSecurityGroup
+      Tags: [{ Key: Name, Value: !Sub "raf-${EnvName}-db" }]
+
+  # ---------------------------------------------------------------- Secretos
+  DbSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "RAF ${EnvName} - credenciales de PostgreSQL"
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"raf"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  JwtSigningKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "RAF ${EnvName} - clave de firma de los JWT"
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+
+  AdminPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "RAF ${EnvName} - contrasena inicial del admin (se pide cambiarla en el primer login)"
+      GenerateSecretString:
+        PasswordLength: 20
+        ExcludePunctuation: true
+        RequireEachIncludedType: true
+
+  # ---------------------------------------------------------------- Base de datos
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub "RAF ${EnvName}"
+      SubnetIds: !Ref DbSubnetIds
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub "raf-${EnvName}"
+      Engine: postgres
+      EngineVersion: "17.11"
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: !Ref DbAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: raf
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DbSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DbSecret}:SecretString:password}}"
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups: [!Ref DbSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 7
+      CopyTagsToSnapshot: true
+      AutoMinorVersionUpgrade: true
+
+  # ---------------------------------------------------------------- Contenedores
+  Repository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "raf-${EnvName}-server"
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Conservar las ultimas 10 imagenes",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},
+          "action":{"type":"expire"}}]}
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub "raf-${EnvName}"
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/raf-${EnvName}-server"
+      RetentionInDays: 30
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-secrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: [!Ref DbSecret, !Ref JwtSigningKeySecret, !Ref AdminPasswordSecret]
+
+  # Rol de la aplicacion. Sin permisos por ahora; aca se agregaran los permisos de cifrado.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "raf-${EnvName}-server"
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: X86_64
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: server
+          Image: !Sub "${Repository.RepositoryUri}:${ImageTag}"
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8080
+          Environment:
+            - { Name: ASPNETCORE_ENVIRONMENT, Value: Production }
+            - { Name: PathBase, Value: !Ref PathPrefix }
+            - { Name: Db__Host, Value: !GetAtt Database.Endpoint.Address }
+            - { Name: Db__Port, Value: !GetAtt Database.Endpoint.Port }
+            - { Name: Db__Name, Value: raf }
+            - { Name: Db__SslMode, Value: Require }
+            - { Name: Bootstrap__AdminEmail, Value: !Ref AdminEmail }
+            - { Name: Bootstrap__AdminMustChangePassword, Value: "true" }
+          Secrets:
+            - { Name: Db__User, ValueFrom: !Sub "${DbSecret}:username::" }
+            - { Name: Db__Password, ValueFrom: !Sub "${DbSecret}:password::" }
+            - { Name: Jwt__SigningKey, ValueFrom: !Ref JwtSigningKeySecret }
+            - { Name: Bootstrap__AdminPassword, ValueFrom: !Ref AdminPasswordSecret }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: server
+
+  # ---------------------------------------------------------------- Integracion con el ALB existente
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      TargetType: ip
+      Protocol: HTTP
+      Port: 8080
+      HealthCheckPath: !Sub "${PathPrefix}/health"
+      Matcher: { HttpCode: "200" }
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+      Tags: [{ Key: Name, Value: !Sub "raf-${EnvName}" }]
+
+  # El ALB no recorta el prefijo: la app lo quita con PathBase.
+  ListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref AlbListenerArn
+      Priority: !Ref ListenerRulePriority
+      Conditions: !If
+        - HasHostHeader
+        - - Field: path-pattern
+            PathPatternConfig: { Values: [!Ref PathPrefix, !Sub "${PathPrefix}/*"] }
+          - Field: host-header
+            HostHeaderConfig: { Values: [!Ref HostHeader] }
+        - - Field: path-pattern
+            PathPatternConfig: { Values: [!Ref PathPrefix, !Sub "${PathPrefix}/*"] }
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: ListenerRule
+    Properties:
+      ServiceName: server
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: !Ref DesiredCount
+      HealthCheckGracePeriodSeconds: 120
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: !Ref AssignPublicIp
+          Subnets: !Ref ServiceSubnetIds
+          SecurityGroups: [!Ref ServiceSecurityGroup]
+      LoadBalancers:
+        - ContainerName: server
+          ContainerPort: 8080
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  PathPrefix:
+    Description: "La API queda en https://<dominio del ALB><PathPrefix> (ej. /raf/health)."
+    Value: !Ref PathPrefix
+  RepositoryUri:
+    Description: Repositorio ECR donde se sube la imagen del servidor.
+    Value: !GetAtt Repository.RepositoryUri
+  ClusterName:
+    Value: !Ref Cluster
+  ServiceName:
+    Value: !GetAtt Service.Name
+  TargetGroupArn:
+    Value: !Ref TargetGroup
+  LogGroupName:
+    Value: !Ref LogGroup
+  AdminPasswordSecretArn:
+    Description: Contrasena inicial del admin.
+    Value: !Ref AdminPasswordSecret
+  DbEndpoint:
+    Value: !GetAtt Database.Endpoint.Address

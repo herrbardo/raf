@@ -1,0 +1,37 @@
+# Entorno local. Antes, una vez:    .\scripts\dev-setup.ps1
+# Solo la base:                     docker compose up -d db
+# Base + servidor en contenedor:    docker compose up -d --build
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: raf
+      POSTGRES_USER: raf
+      POSTGRES_PASSWORD: ${RAF_DB_PASSWORD:?Correr scripts/dev-setup.ps1}
+    ports:
+      - "5433:5432"
+    volumes:
+      - raf-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raf -d raf"]
+      interval: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: src/Raf.Server/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Raf: "Host=db;Port=5432;Database=raf;Username=raf;Password=${RAF_DB_PASSWORD}"
+      Jwt__SigningKey: ${RAF_JWT_SIGNING_KEY}
+      Bootstrap__AdminPassword: ${RAF_ADMIN_PASSWORD}
+    ports:
+      - "5081:8080"
+    profiles: ["server"]
+
+volumes:
+  raf-db:

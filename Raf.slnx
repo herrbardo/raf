@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Raf.Contracts/Raf.Contracts.csproj" />
+    <Project Path="src/Raf.Domain/Raf.Domain.csproj" />
+    <Project Path="src/Raf.Server.Data/Raf.Server.Data.csproj" />
+    <Project Path="src/Raf.Server/Raf.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Raf.Domain.Tests/Raf.Domain.Tests.csproj" />
+    <Project Path="tests/Raf.Server.Tests/Raf.Server.Tests.csproj" />
+  </Folder>
+</Solution>

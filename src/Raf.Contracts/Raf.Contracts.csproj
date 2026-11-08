@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Raf.Domain\Raf.Domain.csproj" />
+  </ItemGroup>
+</Project>
