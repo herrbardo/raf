@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # Reglas del repositorio
 
 Este repositorio es público. Estas reglas valen para código, templates, tests, scripts, documentación y mensajes de commit.
