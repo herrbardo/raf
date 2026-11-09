@@ -1,0 +1,107 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace Raf.Server.Confidential;
+
+public sealed class ConfidentialOptions
+{
+    public const string Section = "Confidential";
+    public const string LocalProvider = "local";
+
+    /// <summary>Proveedor de la clave maestra. Hoy solo existe <c>local</c>; KMS llega en el Plan 05.</summary>
+    [Required] public string Provider { get; set; } = LocalProvider;
+
+    /// <summary>Clave maestra local: 32 bytes en base64. Solo para desarrollo y tests; nunca se versiona.</summary>
+    public string? LocalKey { get; set; }
+}
+
+/// <summary>
+/// Envuelve las claves de datos con una clave maestra tomada de la configuración. Solo para desarrollo y tests: el
+/// servidor se niega a arrancar con este proveedor en producción.
+/// </summary>
+public sealed class LocalKeyWrapper : IKeyWrapper
+{
+    private const int NonceSize = 12;
+    private const int TagSize = 16;
+    private readonly byte[] _master;
+
+    public LocalKeyWrapper(IOptions<ConfidentialOptions> options)
+    {
+        var text = options.Value.LocalKey;
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidOperationException("Falta Confidential:LocalKey. Correr scripts/dev-setup.ps1.");
+        try
+        {
+            _master = Convert.FromBase64String(text);
+        }
+        catch (FormatException e)
+        {
+            throw new InvalidOperationException("Confidential:LocalKey debe ser base64.", e);
+        }
+        if (_master.Length != 32) throw new InvalidOperationException("Confidential:LocalKey debe tener 32 bytes.");
+    }
+
+    public string Provider => ConfidentialOptions.LocalProvider;
+
+    public Task<byte[]> WrapAsync(Guid workspaceId, byte[] dataKey, CancellationToken ct)
+    {
+        var output = new byte[NonceSize + TagSize + dataKey.Length];
+        var nonce = output.AsSpan(0, NonceSize);
+        RandomNumberGenerator.Fill(nonce);
+        using var aes = new AesGcm(_master, TagSize);
+        aes.Encrypt(nonce, dataKey, output.AsSpan(NonceSize + TagSize), output.AsSpan(NonceSize, TagSize), workspaceId.ToByteArray());
+        return Task.FromResult(output);
+    }
+
+    public Task<byte[]> UnwrapAsync(Guid workspaceId, byte[] wrappedKey, CancellationToken ct)
+    {
+        var key = new byte[wrappedKey.Length - NonceSize - TagSize];
+        using var aes = new AesGcm(_master, TagSize);
+        aes.Decrypt(wrappedKey.AsSpan(0, NonceSize), wrappedKey.AsSpan(NonceSize + TagSize),
+            wrappedKey.AsSpan(NonceSize, TagSize), key, workspaceId.ToByteArray());
+        return Task.FromResult(key);
+    }
+}
+
+public static class ConfidentialSetup
+{
+    public static IServiceCollection AddConfidential(this IServiceCollection services, IConfiguration config, IHostEnvironment env)
+    {
+        var provider = config[$"{ConfidentialOptions.Section}:Provider"] ?? ConfidentialOptions.LocalProvider;
+        services.AddOptions<ConfidentialOptions>().BindConfiguration(ConfidentialOptions.Section).ValidateDataAnnotations();
+
+        if (!string.Equals(provider, ConfidentialOptions.LocalProvider, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Proveedor de claves desconocido: '{provider}'.");
+        if (env.IsProduction())
+            throw new InvalidOperationException(
+                "El proveedor de claves 'local' es solo para desarrollo y tests: en producción hay que configurar KMS.");
+
+        services.AddSingleton<IKeyWrapper, LocalKeyWrapper>();
+        services.AddSingleton<IConfidentialManager, EnvelopeConfidentialManager>();
+        return services;
+    }
+
+    /// <summary>
+    /// Cifra los valores secretos guardados en claro antes de este plan. Es idempotente y no cambia
+    /// <c>Version</c> ni <c>ChangeSeq</c>: el contenido visible de la variable sigue siendo el mismo.
+    /// </summary>
+    public static async Task<int> EncryptLegacySecretsAsync(Data.RafDbContext db, IConfidentialManager confidential, CancellationToken ct = default)
+    {
+        var legacy = await db.Variables.AsNoTracking()
+            .Where(v => v.IsSecret && !v.Value.StartsWith(EnvelopeConfidentialManager.Prefix))
+            .Select(v => new { v.Id, v.WorkspaceId, v.Value })
+            .ToListAsync(ct);
+
+        var done = 0;
+        foreach (var v in legacy)
+        {
+            var encrypted = await confidential.ProtectAsync(v.WorkspaceId, v.Value, ct);
+            // Si alguien la editó mientras tanto, la escritura nueva ya quedó cifrada.
+            done += await db.Variables.Where(x => x.Id == v.Id && x.Value == v.Value)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Value, encrypted), ct);
+        }
+        return done;
+    }
+}

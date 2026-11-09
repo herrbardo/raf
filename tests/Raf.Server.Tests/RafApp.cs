@@ -47,6 +47,7 @@ public sealed class RafApp : IAsyncLifetime
             b.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             b.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             b.UseSetting("Bootstrap:AdminMustChangePassword", "false");
+            b.UseSetting("Confidential:LocalKey", Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)));
         });
         _ = _factory.Server; // arranca el host: migra y crea el admin
     }
@@ -56,6 +57,8 @@ public sealed class RafApp : IAsyncLifetime
         if (_factory is not null) await _factory.DisposeAsync();
         await _db.DisposeAsync();
     }
+
+    public IServiceProvider Services => _factory!.Services;
 
     public HttpClient Anonymous() => _factory!.CreateClient();
 

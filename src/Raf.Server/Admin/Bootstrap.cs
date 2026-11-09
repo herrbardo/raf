@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Raf.Server.Confidential;
 using Raf.Server.Data;
 
 namespace Raf.Server.Admin;
@@ -19,7 +20,7 @@ public sealed class BootstrapOptions
 public static class Bootstrap
 {
     /// <summary>
-    /// Aplica migraciones (si <c>Database:MigrateOnStartup</c>) y crea el primer admin cuando no existe ninguno.
+    /// Aplica migraciones y cifra los secretos heredados (si <c>Database:MigrateOnStartup</c>), y crea el primer admin cuando no existe ninguno.
     /// </summary>
     public static async Task InitializeAsync(this WebApplication app)
     {
@@ -32,6 +33,10 @@ public static class Bootstrap
         {
             log.LogInformation("Aplicando migraciones…");
             await db.Database.MigrateAsync();
+
+            // Parte de la migración de datos: los secretos guardados antes del cifrado pasan a estar cifrados.
+            var encrypted = await ConfidentialSetup.EncryptLegacySecretsAsync(db, sp.GetRequiredService<IConfidentialManager>());
+            if (encrypted > 0) log.LogInformation("Variables secretas cifradas: {Count}", encrypted);
         }
 
         if (await db.Users.AnyAsync(u => u.IsAdmin)) return;

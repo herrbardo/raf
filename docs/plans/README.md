@@ -8,7 +8,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 01 | [Esqueleto + backend base](01-backend-base.md) | ✅ Implementado | — |
 | 02 | [Cliente base](02-cliente-base.md) | 🧪 Implementado, falta la prueba humana | Probar la app y dar feedback de UX |
 | 03 | [Sincronización](03-sincronizacion.md) | 🧪 Implementado, falta la prueba humana | Probar con 2 clientes y 2 usuarios en simultáneo |
-| 04 | [Colaboración y administración](04-colaboracion-admin.md) | 📝 Definido | Probar flujos de admin y permisos con varios usuarios |
+| 04 | [Colaboración y administración](04-colaboracion-admin.md) | 🧪 Implementado, falta la prueba humana | Probar flujos de admin y permisos con varios usuarios |
 | 05 | [Despliegue AWS y tiempo real](05-despliegue-aws.md) | 📝 Definido (template base hecho) | Desplegar con AWS CLI y validar |
 | 06 | [Empaquetado y distribución](06-distribucion.md) | 📝 Definido | Certificados de firma y prueba de instalación |
 | 07 | [Embellecer la aplicación](07-embellecer-ui.md) | 📝 Definido | Revisar la aplicación en tema claro y oscuro, y dar feedback visual |

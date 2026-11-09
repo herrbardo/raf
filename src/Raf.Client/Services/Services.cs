@@ -27,6 +27,9 @@ public interface IDialogs
     Task<string?> PromptAsync(string title, string label, string initial = "");
     Task<bool> ConfirmAsync(string title, string message, string accept = "Aceptar");
     Task InfoAsync(string title, string message);
+
+    /// <summary>Muestra un valor que no se vuelve a ver (como una contraseña temporal), con botón para copiarlo.</summary>
+    Task ShowSecretAsync(string title, string message, string secret);
     Task<Stream?> SaveFileAsync(string suggestedName);
 }
 
@@ -55,6 +58,34 @@ public sealed class WindowDialogs : IDialogs
 
     public Task InfoAsync(string title, string message) =>
         Build(title, message, "Aceptar", false, null, () => true, false, out _)();
+
+    public async Task ShowSecretAsync(string title, string message, string secret)
+    {
+        var value = new TextBox
+        {
+            Text = secret,
+            IsReadOnly = true,
+            FontFamily = new Avalonia.Media.FontFamily("Cascadia Mono,Consolas,Menlo,monospace"),
+        };
+        var copy = new Button { Content = "Copiar" };
+        var row = new DockPanel();
+        DockPanel.SetDock(copy, Dock.Right);
+        copy.Margin = new Thickness(8, 0, 0, 0);
+        row.Children.Add(copy);
+        row.Children.Add(value);
+
+        var dialog = Build(title, message, "Listo", false, row, () => true, false, out var window);
+        copy.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(window)?.Clipboard is { } clipboard)
+            {
+                await clipboard.SetTextAsync(secret);
+                copy.Content = "Copiada ✓";
+            }
+        };
+        window.Opened += (_, _) => { value.Focus(); value.SelectAll(); };
+        await dialog();
+    }
 
     public async Task<Stream?> SaveFileAsync(string suggestedName)
     {

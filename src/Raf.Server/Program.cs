@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Raf.Server.Admin;
 using Raf.Server.Auth;
+using Raf.Server.Confidential;
 using Raf.Server.Data;
 using Raf.Server.Infrastructure;
 using Raf.Server.Workspaces;
@@ -21,6 +22,7 @@ services.AddScoped<ICurrentUser, HttpCurrentUser>();
 services.AddSingleton<IChangeNotifier, NoopChangeNotifier>();
 services.AddDbContext<RafDbContext>((sp, o) =>
     o.UseNpgsql(DatabaseConfig.GetConnectionString(sp.GetRequiredService<IConfiguration>())));
+services.AddConfidential(builder.Configuration, builder.Environment);
 
 // ---------- Identity + JWT ----------
 services.AddIdentityCore<AppUser>(o =>
@@ -50,6 +52,7 @@ services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             NameClaimType = RafClaims.Name,
             ClockSkew = TimeSpan.FromSeconds(30),
         };
+        o.Events = new JwtBearerEvents { OnTokenValidated = UserStateCheck.ValidateAsync };
     });
 
 services.AddAuthorizationBuilder()

@@ -39,6 +39,21 @@ public sealed class WorkspaceSequence
     public long Value { get; set; }
 }
 
+/// <summary>
+/// Clave de datos de un workspace, envuelta (cifrada) por la clave maestra del proveedor. Con ella se cifran los
+/// valores de las variables secretas.
+/// </summary>
+public sealed class WorkspaceKey
+{
+    public Guid WorkspaceId { get; set; }
+
+    /// <summary>Proveedor que envolvió la clave (por ejemplo "local"); permite detectar una configuración equivocada.</summary>
+    public required string Provider { get; set; }
+
+    public required byte[] WrappedKey { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
 /// <summary>Usuario autenticado en la request actual; null fuera de una request (migraciones, bootstrap).</summary>
 public interface ICurrentUser
 {

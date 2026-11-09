@@ -15,6 +15,8 @@ public partial class MainView : UserControl
             if (DataContext is not MainViewModel vm) return;
             vm.ShowEnvironments = ShowEnvironmentsAsync;
             vm.ShowConflicts = ShowConflictsAsync;
+            vm.ShowWorkspaceSettings = ShowWorkspaceSettingsAsync;
+            vm.ShowAdmin = ShowAdminAsync;
         };
     }
 
@@ -23,6 +25,12 @@ public partial class MainView : UserControl
 
     private Task ShowConflictsAsync(ConflictsViewModel vm) =>
         new ConflictsWindow { DataContext = vm }.ShowDialog((Window)this.GetVisualRoot()!);
+
+    private Task ShowWorkspaceSettingsAsync(WorkspaceSettingsViewModel vm) =>
+        new WorkspaceSettingsWindow { DataContext = vm }.ShowDialog((Window)this.GetVisualRoot()!);
+
+    private Task ShowAdminAsync(AdminViewModel vm) =>
+        new AdminWindow { DataContext = vm }.ShowDialog((Window)this.GetVisualRoot()!);
 
     private void OnNodeTapped(object? sender, TappedEventArgs e)
     {

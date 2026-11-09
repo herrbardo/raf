@@ -17,6 +17,7 @@
           <Button Content="{Binding UserText}">
             <Button.Flyout>
               <MenuFlyout>
+                <MenuItem Header="Administración del servidor…" Command="{Binding OpenAdminCommand}" IsVisible="{Binding IsAdmin}" />
                 <MenuItem Header="Cambiar contraseña" Command="{Binding ChangePasswordCommand}" />
                 <MenuItem Header="Cerrar sesión" Command="{Binding LogoutCommand}" />
               </MenuFlyout>
@@ -31,6 +32,7 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
           <Button Content="+" ToolTip.Tip="Nuevo workspace" Command="{Binding NewWorkspaceCommand}" />
+          <Button Content="Miembros" ToolTip.Tip="Nombre y miembros del workspace" Command="{Binding OpenWorkspaceSettingsCommand}" />
           <ComboBox MinWidth="170" ItemsSource="{Binding Environments}" SelectedItem="{Binding SelectedEnvironment}"
                     PlaceholderText="Environment">
             <ComboBox.ItemTemplate>

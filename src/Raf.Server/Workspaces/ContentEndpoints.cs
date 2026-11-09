@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Raf.Contracts;
 using Raf.Domain.Entities;
 using Raf.Domain.Requests;
+using Raf.Server.Confidential;
 using Raf.Server.Data;
 using Raf.Server.Infrastructure;
 
@@ -33,15 +34,19 @@ public static class ContentEndpoints
     /// Reintento de un alta cuya respuesta se perdió: si el id ya existe en este workspace devuelve el elemento.
     /// Si fue borrado mientras tanto, no se resucita.
     /// </summary>
+    private static Task<IResult?> RetriedCreateAsync<T>(
+        DbSet<T> set, Guid ws, Guid? id, string kind, Func<T, object> toDto, CancellationToken ct) where T : SyncEntity =>
+        RetriedCreateAsync(set, ws, id, kind, x => Task.FromResult(toDto(x)), ct);
+
     private static async Task<IResult?> RetriedCreateAsync<T>(
-        DbSet<T> set, Guid ws, Guid? id, string kind, Func<T, object> toDto, CancellationToken ct) where T : SyncEntity
+        DbSet<T> set, Guid ws, Guid? id, string kind, Func<T, Task<object>> toDto, CancellationToken ct) where T : SyncEntity
     {
         if (id is null) return null;
         var existing = await set.FirstOrDefaultAsync(x => x.Id == id && x.WorkspaceId == ws, ct);
         if (existing is null) return null;
         return existing.IsDeleted
             ? Problems.Conflict("El elemento ya fue eliminado.")
-            : Results.Created($"/workspaces/{ws}/{kind}/{id}", toDto(existing));
+            : Results.Created($"/workspaces/{ws}/{kind}/{id}", await toDto(existing));
     }
 
     // ---------- Feed de cambios ----------
@@ -50,7 +55,7 @@ public static class ContentEndpoints
     private const int MaxChangesLimit = 2000;
 
     private static async Task<IResult> GetChangesAsync(
-        Guid ws, long? since, int? limit, HttpContext http, RafDbContext db, CancellationToken ct)
+        Guid ws, long? since, int? limit, HttpContext http, RafDbContext db, IConfidentialManager confidential, CancellationToken ct)
     {
         var from = Math.Max(since ?? 0, 0);
         var take = Math.Clamp(limit ?? DefaultChangesLimit, 1, MaxChangesLimit);
@@ -104,13 +109,16 @@ public static class ContentEndpoints
         Tombstones(ChangeKind.Sample, samples);
 
         var canSee = role >= WorkspaceRole.Editor;
+        var variableDtos = new List<VariableDto>();
+        foreach (var v in variables.Where(x => !x.IsDeleted)) variableDtos.Add(await v.ToDtoAsync(canSee, confidential, ct));
+
         return Results.Ok(new ChangesResponse(
             cutoff, hasMore, role,
             workspaces.Where(w => !w.IsDeleted).Select(w => new WorkspaceDto(w.Id, w.Name, role, w.Version, w.ChangeSeq)).FirstOrDefault(),
             members.Where(m => !m.IsDeleted && users.ContainsKey(m.UserId))
                 .Select(m => new MemberDto(m.UserId, users[m.UserId].Email!, users[m.UserId].DisplayName, m.Role, m.Version, m.ChangeSeq)).ToList(),
             environments.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
-            variables.Where(x => !x.IsDeleted).Select(x => x.ToDto(canSee)).ToList(),
+            variableDtos,
             apps.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
             folders.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
             requests.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
@@ -178,8 +186,18 @@ public static class ContentEndpoints
 
     // ---------- Variables ----------
 
-    private static VariableDto ToDto(this Variable v, bool canSeeSecrets) =>
-        new(v.Id, v.EnvironmentId, v.Key, v.IsSecret && !canSeeSecrets ? null : v.Value, v.IsSecret, v.Version, v.ChangeSeq);
+    /// <summary>Un secreto se descifra solo si el rol puede verlo; si no, viaja sin valor.</summary>
+    private static async Task<VariableDto> ToDtoAsync(
+        this Variable v, bool canSeeSecrets, IConfidentialManager confidential, CancellationToken ct) =>
+        v.ToDto(!v.IsSecret ? v.Value : canSeeSecrets ? await confidential.UnprotectAsync(v.WorkspaceId, v.Value, ct) : null);
+
+    private static VariableDto ToDto(this Variable v, string? plainValue) =>
+        new(v.Id, v.EnvironmentId, v.Key, plainValue, v.IsSecret, v.Version, v.ChangeSeq);
+
+    /// <summary>Lo que se guarda en la columna: el valor cifrado si es secreto, en claro si no.</summary>
+    private static async Task<string> StoredValueAsync(
+        Guid ws, string plain, bool isSecret, IConfidentialManager confidential, CancellationToken ct) =>
+        isSecret ? await confidential.ProtectAsync(ws, plain, ct) : plain;
 
     private static bool CanSeeSecrets(this HttpContext http) => http.GetRole() >= WorkspaceRole.Editor;
 
@@ -192,49 +210,59 @@ public static class ContentEndpoints
 
     private static void MapVariables(RouteGroupBuilder g)
     {
-        g.MapGet("/", async (Guid ws, Guid? environmentId, bool? globalsOnly, HttpContext http, RafDbContext db, CancellationToken ct) =>
+        g.MapGet("/", async (
+            Guid ws, Guid? environmentId, bool? globalsOnly, HttpContext http, RafDbContext db,
+            IConfidentialManager confidential, CancellationToken ct) =>
         {
             var q = db.Variables.In(ws);
             if (globalsOnly == true) q = q.Where(v => v.EnvironmentId == null);
             else if (environmentId is not null) q = q.Where(v => v.EnvironmentId == environmentId);
             var canSee = http.CanSeeSecrets();
-            return (await q.OrderBy(v => v.Key).ToListAsync(ct)).Select(v => v.ToDto(canSee));
+            var result = new List<VariableDto>();
+            foreach (var v in await q.OrderBy(v => v.Key).ToListAsync(ct)) result.Add(await v.ToDtoAsync(canSee, confidential, ct));
+            return result;
         }).WithSummary("Lista variables. Sin filtros devuelve globales y de todos los environments.");
 
-        g.MapPost("/", async (Guid ws, CreateVariableRequest req, RafDbContext db, CancellationToken ct) =>
+        g.MapPost("/", async (Guid ws, CreateVariableRequest req, RafDbContext db, IConfidentialManager confidential, CancellationToken ct) =>
         {
             if (ValidateKey(req.Key) is { } invalid) return invalid;
             if (req.EnvironmentId is { } envId && !await db.Environments.In(ws).AnyAsync(e => e.Id == envId, ct))
                 return Problems.BadRequest("El environment no existe.");
 
-            if (await RetriedCreateAsync(db.Variables, ws, req.Id, "variables", x => x.ToDto(canSeeSecrets: true), ct) is { } retried) return retried;
+            if (await RetriedCreateAsync(db.Variables, ws, req.Id, "variables",
+                    async x => (object)await x.ToDtoAsync(canSeeSecrets: true, confidential, ct), ct) is { } retried)
+                return retried;
 
+            var plain = req.Value ?? "";
             var v = new Variable
             {
                 Id = req.Id ?? Guid.CreateVersion7(),
                 WorkspaceId = ws,
                 EnvironmentId = req.EnvironmentId,
                 Key = req.Key.Trim(),
-                Value = req.Value ?? "",
+                Value = await StoredValueAsync(ws, plain, req.IsSecret, confidential, ct),
                 IsSecret = req.IsSecret,
             };
             db.Variables.Add(v);
             await db.SaveChangesAsync(ct);
-            return Results.Created($"/workspaces/{ws}/variables/{v.Id}", v.ToDto(canSeeSecrets: true));
+            return Results.Created($"/workspaces/{ws}/variables/{v.Id}", v.ToDto(plain));
         }).RequireWorkspaceRole(WorkspaceRole.Editor);
 
-        g.MapPut("/{id:guid}", async (Guid ws, Guid id, UpdateVariableRequest req, RafDbContext db, CancellationToken ct) =>
+        g.MapPut("/{id:guid}", async (
+            Guid ws, Guid id, UpdateVariableRequest req, RafDbContext db, IConfidentialManager confidential, CancellationToken ct) =>
         {
             if (ValidateKey(req.Key) is { } invalid) return invalid;
             var v = await db.Variables.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
             if (v is null) return Problems.NotFound("Variable");
             if (v.Version != req.Version) return Problems.VersionConflict(v);
 
+            // El cliente siempre manda el valor en claro: pasar a secreta lo cifra y dejar de serlo lo guarda en claro.
+            var plain = req.Value ?? "";
             v.Key = req.Key.Trim();
-            v.Value = req.Value ?? "";
+            v.Value = await StoredValueAsync(ws, plain, req.IsSecret, confidential, ct);
             v.IsSecret = req.IsSecret;
             await db.SaveChangesAsync(ct);
-            return Results.Ok(v.ToDto(canSeeSecrets: true));
+            return Results.Ok(v.ToDto(plain));
         }).RequireWorkspaceRole(WorkspaceRole.Editor);
 
         g.MapDelete("/{id:guid}", async (Guid ws, Guid id, RafDbContext db, CancellationToken ct) =>

@@ -1,6 +1,6 @@
 # Plan 04 — Colaboración y administración
 
-Estado: **definido, sin ejecutar**. Depende de: Plan 03.
+Estado: **implementado, falta la prueba humana**. Depende de: Plan 03.
 Checkpoint humano al final: probar flujos de admin y permisos con varios usuarios.
 
 Los endpoints de administración y miembros ya existen desde el Plan 01. Este plan agrega las pantallas y el cifrado de secretos.
@@ -46,3 +46,15 @@ Los endpoints de administración y miembros ya existen desde el Plan 01. Este pl
 - Integración: los secretos nunca se guardan en claro, y siguen funcionando tras la migración.
 - Integración: un usuario deshabilitado recibe `401` con un access token todavía vigente.
 - Prueba manual con tres usuarios (Owner, Editor, Viewer) y un Admin.
+
+## Decisiones de implementación
+
+- **Cifrado por sobre, con el proveedor separado.** `EnvelopeConfidentialManager` implementa `IConfidentialManager`: genera una clave AES-256 por workspace, la guarda envuelta en `WorkspaceKeys` y la cachea 5 minutos. Los valores se cifran con AES-GCM y el id del workspace como dato asociado, así un valor copiado a otro workspace no se descifra. Lo único que depende del proveedor es `IKeyWrapper` (envolver y desenvolver la clave de datos). En el Plan 05, KMS entra como otro `IKeyWrapper` y no hace falta reescribir el cifrado.
+- **Formato guardado:** `enc:v1:` + base64(nonce, tag, texto cifrado). Un valor secreto sin ese prefijo se considera anterior a la migración y se lee tal cual.
+- **Clave local:** `Confidential:LocalKey` (32 bytes en base64), generada por `scripts/dev-setup.ps1` en `.env` y user-secrets. Los tests generan una al azar. Con `Confidential:Provider=local` y `ASPNETCORE_ENVIRONMENT=Production`, el servidor no arranca: **hasta el Plan 05 no se puede desplegar en AWS**.
+- **Migración de datos:** la tabla nueva llega por migración de EF. Los secretos existentes se cifran justo después de migrar (`ConfidentialSetup.EncryptLegacySecretsAsync`, dentro de `Database:MigrateOnStartup`). Es idempotente y no cambia `Version` ni `ChangeSeq`, porque el valor visible es el mismo.
+- **Corte inmediato:** `UserStateCheck` corre en `OnTokenValidated` del JWT. Consulta `IsDisabled` e `IsAdmin` por clave primaria, sin caché. Además del corte por deshabilitación, quitar el rol Admin rige en el acto, sin esperar a que venza el token.
+- **Gestión en línea:** los miembros, el nombre del workspace y la administración del servidor no pasan por la bandeja offline. Van directo a la API (`ManagementApi`) y después se sincroniza. Al salir del workspace o eliminarlo, se borra su copia local.
+- **Permisos testeables:** la matriz de permisos vive en `WorkspacePermissions` (en `Raf.Client.Core`), que usan los viewmodels. Los tests por rol la cubren ahí, porque los viewmodels dependen de Avalonia y no tienen proyecto de tests.
+- **Cambio de rol con la app abierta:** al sincronizar, si cambió el rol en el workspace elegido, se avisa en la barra de estado y se rehacen las pestañas sin cambios. Una pestaña con cambios sin guardar se conserva: si se perdió el permiso, guardar informa el error.
+- **Variables secretas (punto 9):** ya venían enmascaradas desde el Plan 02, con el botón "Ver" solo para Editor y Owner. No hubo cambios.

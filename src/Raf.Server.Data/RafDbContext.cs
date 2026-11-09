@@ -16,6 +16,7 @@ public sealed class RafDbContext(
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<WorkspaceSequence> WorkspaceSequences => Set<WorkspaceSequence>();
+    public DbSet<WorkspaceKey> WorkspaceKeys => Set<WorkspaceKey>();
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
     public DbSet<WorkspaceEnvironment> Environments => Set<WorkspaceEnvironment>();
@@ -46,6 +47,12 @@ public sealed class RafDbContext(
         });
 
         b.Entity<WorkspaceSequence>().HasKey(s => s.WorkspaceId);
+
+        b.Entity<WorkspaceKey>(e =>
+        {
+            e.HasKey(k => k.WorkspaceId);
+            e.Property(k => k.Provider).HasMaxLength(50);
+        });
 
         Sync<Workspace>(b).Property(w => w.Name).HasMaxLength(200);
 

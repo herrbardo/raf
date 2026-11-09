@@ -8,8 +8,8 @@ Se mantiene un **único template de CloudFormation**, que despliega el usuario.
 ## Alcance
 
 1. **Tiempo real con SignalR:** implementación de `IChangeNotifier` e `IChangeSubscriber`; el polling queda como respaldo.
-2. **`AwsConfidentialManager`:** una clave KMS en el template, permisos en `TaskRole` e implementación de `IConfidentialManager`. Usa `workspaceId` como contexto de cifrado, así CloudTrail registra cada uso por workspace.
-3. **Migraciones como paso de despliegue:** una tarea ECS de una sola ejecución, con `Database:MigrateOnStartup=false` en el servicio. Evita carreras cuando haya más de una tarea.
+2. **KMS para los secretos:** una clave KMS en el template, permisos en `TaskRole` y un `IKeyWrapper` de KMS, activado con `Confidential:Provider`. El cifrado por sobre del Plan 04 (`EnvelopeConfidentialManager`) no cambia: KMS solo envuelve la clave de datos de cada workspace. Usa `workspaceId` como contexto de cifrado, así CloudTrail registra cada uso por workspace. Hasta que esto exista, el servidor no arranca en producción.
+3. **Migraciones como paso de despliegue:** una tarea ECS de una sola ejecución, con `Database:MigrateOnStartup=false` en el servicio. Evita carreras cuando haya más de una tarea. Esa tarea también tiene que cifrar los secretos heredados (`ConfidentialSetup.EncryptLegacySecretsAsync`), que hoy corre después de migrar.
 4. **Script de despliegue** `infra/deploy.ps1`: construye y sube la imagen, migra y actualiza el stack. No guarda credenciales.
 5. **CI en GitHub Actions:** build, tests y escaneo de secretos (gitleaks) en cada push. El despliegue sigue siendo manual.
 

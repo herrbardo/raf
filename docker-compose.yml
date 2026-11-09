@@ -29,6 +29,7 @@ services:
       ConnectionStrings__Raf: "Host=db;Port=5432;Database=raf;Username=raf;Password=${RAF_DB_PASSWORD}"
       Jwt__SigningKey: ${RAF_JWT_SIGNING_KEY}
       Bootstrap__AdminPassword: ${RAF_ADMIN_PASSWORD}
+      Confidential__LocalKey: ${RAF_CONFIDENTIAL_KEY:?Correr scripts/dev-setup.ps1}
     ports:
       - "5081:8080"
     profiles: ["server"]

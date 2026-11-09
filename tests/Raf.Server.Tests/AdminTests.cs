@@ -88,4 +88,37 @@ public class AdminTests(RafApp app)
         var listed = await admin.GetOkAsync<List<AdminWorkspaceDto>>("/admin/workspaces");
         Assert.Equal(newOwner.Id, listed.Single(w => w.Id == ws.Id).Owner!.Id);
     }
+
+    [Fact]
+    public async Task Disabled_user_is_cut_off_even_with_a_valid_access_token()
+    {
+        var (user, client) = await app.CreateActiveUserAsync();
+        var ws = await client.PostOkAsync<WorkspaceDto>("/workspaces", new CreateWorkspaceRequest("Antes del corte"));
+        var admin = await app.AdminAsync();
+
+        await (await admin.PostAsync($"/admin/users/{user.Id}/disable", null)).EnsureStatusAsync(HttpStatusCode.OK);
+
+        // El mismo access token, todavía vigente, ya no sirve para nada.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/workspaces/{ws.Id}/changes")).StatusCode);
+
+        await (await admin.PostAsync($"/admin/users/{user.Id}/enable", null)).EnsureStatusAsync(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Removing_the_admin_role_takes_effect_before_the_token_expires()
+    {
+        var (user, _) = await app.CreateActiveUserAsync();
+        var admin = await app.AdminAsync();
+        await (await admin.PutJsonAsync($"/admin/users/{user.Id}", new UpdateUserRequest(user.Email, user.DisplayName, IsAdmin: true)))
+            .EnsureStatusAsync(HttpStatusCode.OK);
+
+        var promoted = app.WithToken((await app.LoginRawAsync(user.Email, "NuevaClave123")).AccessToken);
+        Assert.Equal(HttpStatusCode.OK, (await promoted.GetAsync("/admin/users")).StatusCode);
+
+        await (await admin.PutJsonAsync($"/admin/users/{user.Id}", new UpdateUserRequest(user.Email, user.DisplayName, IsAdmin: false)))
+            .EnsureStatusAsync(HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.Forbidden, (await promoted.GetAsync("/admin/users")).StatusCode);
+    }
 }

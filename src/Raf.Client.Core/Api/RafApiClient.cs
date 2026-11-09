@@ -32,6 +32,12 @@ public sealed class RafApiClient(HttpClient http, SessionManager session)
         using var _ = await SendAsync(HttpMethod.Delete, path, null, ct);
     }
 
+    /// <summary>Para operaciones que no devuelven contenido (204).</summary>
+    public async Task ExecuteAsync(HttpMethod method, string path, object? body, CancellationToken ct = default)
+    {
+        using var _ = await SendAsync(method, path, body, ct);
+    }
+
     /// <summary>El servidor revoca las demás sesiones y emite tokens nuevos, que reemplazan a los actuales.</summary>
     public async Task ChangePasswordAsync(string current, string next, CancellationToken ct = default) =>
         session.Adopt(await PostAsync<TokenResponse>("auth/change-password", new ChangePasswordRequest(current, next), ct));

@@ -8,6 +8,7 @@ using Raf.Client.Core.Api;
 using Raf.Client.Core.Execution;
 using Raf.Client.Core.History;
 using Raf.Client.Core.Sync;
+using Raf.Client.Core.Workspaces;
 using Raf.Client.Services;
 using Raf.Contracts;
 using Raf.Domain.Entities;
@@ -112,11 +113,13 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _switching;
     private bool _reloadRunning;
     private bool _reloadAgain;
+    private bool _roleChanged;
     private readonly SyncSession _sync;
+    private readonly ManagementApi _management;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanEdit), nameof(RoleText))]
-    [NotifyCanExecuteChangedFor(nameof(NewAppCommand))]
+    [NotifyPropertyChangedFor(nameof(Permissions), nameof(CanEdit), nameof(RoleText))]
+    [NotifyCanExecuteChangedFor(nameof(NewAppCommand), nameof(OpenWorkspaceSettingsCommand))]
     private WorkspaceDto? _selectedWorkspace;
 
     [ObservableProperty] private EnvironmentChoice? _selectedEnvironment;
@@ -133,6 +136,7 @@ public sealed partial class MainViewModel : ObservableObject
         Services = services;
         Shell = shell;
         _sync = sync;
+        _management = new ManagementApi(services.Api);
         sync.Engine.StatusChanged += s => Dispatcher.UIThread.Post(() => SyncStatus = s);
         sync.Engine.DataChanged += () => Dispatcher.UIThread.Post(() => _ = ReloadFromSyncAsync());
         sync.Engine.WorkspaceLost += lost => Dispatcher.UIThread.Post(() => _ = OnWorkspaceLostAsync(lost));
@@ -203,6 +207,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var list = await Services.Store.GetWorkspacesAsync();
         var selectedId = SelectedWorkspace?.Id;
+        var previousRole = SelectedWorkspace?.MyRole;
 
         // Reemplazar la lista no es un cambio de workspace: el combo se vacía y vuelve a la misma selección.
         _switching = true;
@@ -210,6 +215,13 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var w in list) Workspaces.Add(w);
         SelectedWorkspace = Workspaces.FirstOrDefault(w => w.Id == selectedId);
         _switching = false;
+
+        if (SelectedWorkspace is { } current && current.MyRole != previousRole)
+        {
+            // Las pestañas abiertas se armaron con el rol anterior: se rehacen en la próxima recarga.
+            _roleChanged = true;
+            ReportStatus($"Tu rol en \"{current.Name}\" cambió: ahora sos {Permissions.RoleText}.");
+        }
 
         if (SelectedWorkspace is null && Workspaces.Count > 0) SelectedWorkspace = Workspaces[0];
         else if (SelectedWorkspace is null && selectedId is not null) await SwitchWorkspaceAsync(null);
@@ -244,16 +256,15 @@ public sealed partial class MainViewModel : ObservableObject
     public VariableContext Variables { get; private set; } = VariableContext.Empty;
 
     public Guid WorkspaceId => SelectedWorkspace?.Id ?? Guid.Empty;
-    public bool CanEdit => SelectedWorkspace?.MyRole >= WorkspaceRole.Editor;
-    public bool CanSeeSecrets => CanEdit;
+
+    /// <summary>Qué se muestra y se habilita según el rol. El servidor valida igual cada acción.</summary>
+    public WorkspacePermissions Permissions => WorkspacePermissions.For(SelectedWorkspace, IsAdmin);
+
+    public bool CanEdit => Permissions.CanEditContent;
+    public bool CanSeeSecrets => Permissions.CanSeeSecrets;
+    public bool IsAdmin => Services.Session.User?.IsAdmin == true;
     public string UserText => Services.Session.User?.DisplayName ?? "";
-    public string RoleText => SelectedWorkspace?.MyRole switch
-    {
-        WorkspaceRole.Owner => "Owner",
-        WorkspaceRole.Editor => "Editor",
-        WorkspaceRole.Viewer => "Viewer (solo lectura)",
-        _ => "",
-    };
+    public string RoleText => Permissions.RoleText;
 
     public bool HasUnsavedChanges => Tabs.Any(t => t.IsDirty);
 
@@ -351,7 +362,8 @@ public sealed partial class MainViewModel : ObservableObject
             Roots.Clear();
             foreach (var root in nodes) Roots.Add(root);
             foreach (var n in Roots.SelectMany(r => r.SelfAndDescendants())) n.IsExpanded = expanded.Contains(n.Id);
-            RebindOpenTabs();
+            RebindOpenTabs(recreate: _roleChanged);
+            _roleChanged = false;
         });
     }
 
@@ -388,7 +400,8 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Tras recargar el árbol, las pestañas abiertas sin cambios se reemplazan; las eliminadas se cierran.</summary>
-    private void RebindOpenTabs()
+    /// <param name="recreate">Rehace las pestañas sin cambios aunque su contenido no haya cambiado (cambió el rol).</param>
+    private void RebindOpenTabs(bool recreate = false)
     {
         var byId = Roots.SelectMany(r => r.SelfAndDescendants()).ToDictionary(n => n.Id);
         foreach (var tab in Tabs.ToList())
@@ -404,7 +417,7 @@ public sealed partial class MainViewModel : ObservableObject
             // Con cambios sin guardar conserva la versión que tenía: al guardar, el conflicto se detecta y se resuelve.
             if (tab.IsDirty) continue;
 
-            if (SyncContent.Same(tab.Node.Dto, fresh.Dto))
+            if (!recreate && SyncContent.Same(tab.Node.Dto, fresh.Dto))
             {
                 tab.Rebind(fresh); // no se recrea, para no perder la respuesta que está mostrando
                 continue;
@@ -677,4 +690,52 @@ public sealed partial class MainViewModel : ObservableObject
         await ShowEnvironments(vm);
         await ReloadVariablesAsync();
     });
+
+    // ---------- Gestión del workspace y del servidor ----------
+
+    /// <summary>Lo implementa la vista, que abre la ventana del workspace.</summary>
+    public Func<WorkspaceSettingsViewModel, Task>? ShowWorkspaceSettings { get; set; }
+
+    /// <summary>Lo implementa la vista, que abre la ventana de administración.</summary>
+    public Func<AdminViewModel, Task>? ShowAdmin { get; set; }
+
+    private bool HasWorkspace => SelectedWorkspace is not null;
+
+    [RelayCommand(CanExecute = nameof(HasWorkspace))]
+    private Task OpenWorkspaceSettingsAsync() => GuardAsync(async () =>
+    {
+        if (SelectedWorkspace is not { } workspace || ShowWorkspaceSettings is null) return;
+        var vm = new WorkspaceSettingsViewModel(_management, Services.Dialogs, workspace, Services.Session.User!.Id, IsAdmin);
+        await vm.LoadAsync();
+        await ShowWorkspaceSettings(vm);
+
+        switch (vm.Outcome)
+        {
+            case WorkspaceSettingsOutcome.Gone:
+                // Ya no existe o ya no es miembro: lo local de ese workspace no sirve más.
+                if (SelectedWorkspace?.Id == workspace.Id) CloseAllTabs();
+                await _sync.Store.ForgetWorkspaceAsync(workspace.Id);
+                await ReloadFromSyncAsync();
+                break;
+            case WorkspaceSettingsOutcome.Changed:
+                await SyncNowAsync();
+                break;
+        }
+    });
+
+    [RelayCommand]
+    private Task OpenAdminAsync() => GuardAsync(async () =>
+    {
+        if (ShowAdmin is null) return;
+        var vm = new AdminViewModel(_management, Services.Dialogs, Services.Session.User!.Id);
+        await vm.LoadAsync();
+        await ShowAdmin(vm);
+        if (vm.Changed) await SyncNowAsync();
+    });
+
+    private async Task SyncNowAsync()
+    {
+        await _sync.Engine.SyncOnceAsync();
+        await ReloadFromSyncAsync();
+    }
 }

@@ -10,7 +10,7 @@ Cliente desktop colaborativo para enviar requests HTTP a distintas APIs y trabaj
 Requisitos: .NET SDK 10 y Docker.
 
 ```bash
-.\scripts\dev-setup.ps1                 # una vez: genera .env y user-secrets
+.\scripts\dev-setup.ps1                 # genera .env y user-secrets; volver a correrlo si se agregan claves
 docker compose up -d db                 # Postgres en localhost:5433
 dotnet run --project src/Raf.Server     # API en http://localhost:5080, docs en /scalar
 dotnet test                             # tests (levanta Postgres con Testcontainers)
