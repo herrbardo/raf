@@ -10,6 +10,9 @@
     <Border DockPanel.Dock="Top" Padding="10,8" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource TextControlBorderBrush}">
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+          <Button Classes="link" VerticalAlignment="Center" Content="{Binding SyncText}" Foreground="{Binding SyncBrush}"
+                  ToolTip.Tip="Estado de la sincronización. Con conflictos, abre la pantalla para resolverlos."
+                  Command="{Binding OpenConflictsCommand}" />
           <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding RoleText}" />
           <Button Content="{Binding UserText}">
             <Button.Flyout>

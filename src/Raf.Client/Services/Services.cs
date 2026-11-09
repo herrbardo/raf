@@ -15,7 +15,8 @@ namespace Raf.Client.Services;
 public sealed record ClientServices(
     SessionManager Session,
     RafApiClient Api,
-    IWorkspaceStore Store,
+    IWorkspaceStore Store, // al entrar a la app se reemplaza por la caché local del usuario
+    ISecureStore Secure,
     SettingsStore Settings,
     RequestRunner Runner,
     RunHistoryStore History,

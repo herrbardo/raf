@@ -1,6 +1,6 @@
 # Plan 03 — Sincronización
 
-Estado: **definido, sin ejecutar**. Depende de: Plan 02.
+Estado: **implementado, falta la prueba humana**. Depende de: Plan 02.
 Checkpoint humano al final: probar con 2 clientes y 2 usuarios en simultáneo.
 
 ## Alcance
@@ -38,6 +38,10 @@ Checkpoint humano al final: probar con 2 clientes y 2 usuarios en simultáneo.
 - La regla de conflicto se aplica **por elemento completo**, sin fusionar campos.
 - **Valores secretos en disco:** cifrados con una clave protegida por DPAPI/Keychain (D2), para poder ejecutar requests sin conexión.
 - El feed respeta el rol: un Viewer recibe los secretos sin valor.
+- La bandeja guarda qué cambió, no los datos: lo que se envía es siempre el estado actual del elemento en la caché.
+- **Recrear** asigna ids nuevos al elemento y a sus padres borrados, porque el servidor no deja reutilizar un id eliminado.
+- **Descartar** un cambio ya conocido por el servidor reinicia el `since` del workspace y lo vuelve a traer completo.
+- Editar una pestaña con una versión superada solo por cambios propios no es un conflicto; superada por otro usuario, sí.
 
 ## Verificación
 

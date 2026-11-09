@@ -12,12 +12,17 @@ public partial class MainView : UserControl
         InitializeComponent();
         DataContextChanged += (_, _) =>
         {
-            if (DataContext is MainViewModel vm) vm.ShowEnvironments = ShowEnvironmentsAsync;
+            if (DataContext is not MainViewModel vm) return;
+            vm.ShowEnvironments = ShowEnvironmentsAsync;
+            vm.ShowConflicts = ShowConflictsAsync;
         };
     }
 
     private Task ShowEnvironmentsAsync(EnvironmentsViewModel vm) =>
         new EnvironmentsWindow { DataContext = vm }.ShowDialog((Window)this.GetVisualRoot()!);
+
+    private Task ShowConflictsAsync(ConflictsViewModel vm) =>
+        new ConflictsWindow { DataContext = vm }.ShowDialog((Window)this.GetVisualRoot()!);
 
     private void OnNodeTapped(object? sender, TappedEventArgs e)
     {

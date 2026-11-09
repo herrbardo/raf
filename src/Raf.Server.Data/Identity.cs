@@ -44,3 +44,16 @@ public interface ICurrentUser
 {
     Guid? UserId { get; }
 }
+
+/// <summary>Avisa que un workspace cambió. Se invoca después de confirmar la transacción.</summary>
+public interface IChangeNotifier
+{
+    /// <summary>No debe propagar errores de entrega: la escritura ya está confirmada.</summary>
+    ValueTask NotifyAsync(Guid workspaceId, long changeSeq);
+}
+
+/// <summary>Sin tiempo real: los clientes se enteran por polling hasta el Plan 05.</summary>
+public sealed class NoopChangeNotifier : IChangeNotifier
+{
+    public ValueTask NotifyAsync(Guid workspaceId, long changeSeq) => ValueTask.CompletedTask;
+}

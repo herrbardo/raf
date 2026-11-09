@@ -4,8 +4,8 @@ using Raf.Contracts;
 namespace Raf.Client.Core.Workspaces;
 
 /// <summary>
-/// Acceso a los datos de los workspaces para los ViewModels. En este plan va directo a la API; el Plan 03 la
-/// implementa sobre la caché local.
+/// Acceso a los datos de los workspaces. Los ViewModels usan <see cref="Sync.SyncedWorkspaceStore"/>, que trabaja sobre
+/// la caché local; <see cref="ApiWorkspaceStore"/> va directo al servidor y es lo que usa el motor de sincronización.
 /// </summary>
 public interface IWorkspaceStore
 {
@@ -13,7 +13,7 @@ public interface IWorkspaceStore
     Task<WorkspaceDto> CreateWorkspaceAsync(string name, CancellationToken ct = default);
 
     Task<IReadOnlyList<EnvironmentDto>> GetEnvironmentsAsync(Guid ws, CancellationToken ct = default);
-    Task<EnvironmentDto> CreateEnvironmentAsync(Guid ws, string name, CancellationToken ct = default);
+    Task<EnvironmentDto> CreateEnvironmentAsync(Guid ws, string name, Guid? id = null, CancellationToken ct = default);
     Task<EnvironmentDto> UpdateEnvironmentAsync(Guid ws, Guid id, UpdateEnvironmentRequest req, CancellationToken ct = default);
     Task DeleteEnvironmentAsync(Guid ws, Guid id, CancellationToken ct = default);
 
@@ -58,13 +58,19 @@ public sealed class ApiWorkspaceStore(RafApiClient api) : IWorkspaceStore
         await api.GetAsync<List<WorkspaceDto>>("workspaces", ct);
 
     public Task<WorkspaceDto> CreateWorkspaceAsync(string name, CancellationToken ct = default) =>
-        api.PostAsync<WorkspaceDto>("workspaces", new CreateWorkspaceRequest(name, Guid.CreateVersion7()), ct);
+        CreateWorkspaceAsync(name, Guid.CreateVersion7(), ct);
+
+    public Task<WorkspaceDto> CreateWorkspaceAsync(string name, Guid id, CancellationToken ct) =>
+        api.PostAsync<WorkspaceDto>("workspaces", new CreateWorkspaceRequest(name, id), ct);
+
+    public Task<ChangesResponse> GetChangesAsync(Guid ws, long since, int limit, CancellationToken ct = default) =>
+        api.GetAsync<ChangesResponse>($"workspaces/{ws}/changes?since={since}&limit={limit}", ct);
 
     public Task<IReadOnlyList<EnvironmentDto>> GetEnvironmentsAsync(Guid ws, CancellationToken ct = default) =>
         ListAsync<EnvironmentDto>(ws, "environments", ct);
 
-    public Task<EnvironmentDto> CreateEnvironmentAsync(Guid ws, string name, CancellationToken ct = default) =>
-        api.PostAsync<EnvironmentDto>(P(ws, "environments"), new CreateEnvironmentRequest(name, Guid.CreateVersion7()), ct);
+    public Task<EnvironmentDto> CreateEnvironmentAsync(Guid ws, string name, Guid? id = null, CancellationToken ct = default) =>
+        api.PostAsync<EnvironmentDto>(P(ws, "environments"), new CreateEnvironmentRequest(name, id ?? Guid.CreateVersion7()), ct);
 
     public Task<EnvironmentDto> UpdateEnvironmentAsync(Guid ws, Guid id, UpdateEnvironmentRequest req, CancellationToken ct = default) =>
         api.PutAsync<EnvironmentDto>(P(ws, "environments", id), req, ct);

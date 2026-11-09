@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raf.Server\Raf.Server.csproj" />
+    <ProjectReference Include="..\..\src\Raf.Client.Core\Raf.Client.Core.csproj" />
   </ItemGroup>
 </Project>

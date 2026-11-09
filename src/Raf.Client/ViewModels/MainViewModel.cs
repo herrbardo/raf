@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -6,6 +7,7 @@ using Raf.Client.Controls;
 using Raf.Client.Core.Api;
 using Raf.Client.Core.Execution;
 using Raf.Client.Core.History;
+using Raf.Client.Core.Sync;
 using Raf.Client.Services;
 using Raf.Contracts;
 using Raf.Domain.Entities;
@@ -108,6 +110,9 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private IReadOnlyList<VariableDto> _variables = [];
     private bool _switching;
+    private bool _reloadRunning;
+    private bool _reloadAgain;
+    private readonly SyncSession _sync;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanEdit), nameof(RoleText))]
@@ -118,10 +123,112 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private EditorTabViewModel? _selectedTab;
     [ObservableProperty] private string? _status;
 
-    public MainViewModel(ClientServices services, ShellViewModel shell)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SyncText), nameof(SyncBrush))]
+    [NotifyCanExecuteChangedFor(nameof(OpenConflictsCommand))]
+    private SyncStatus _syncStatus = new(SyncState.Pending, 0, 0);
+
+    public MainViewModel(ClientServices services, ShellViewModel shell, SyncSession sync)
     {
         Services = services;
         Shell = shell;
+        _sync = sync;
+        sync.Engine.StatusChanged += s => Dispatcher.UIThread.Post(() => SyncStatus = s);
+        sync.Engine.DataChanged += () => Dispatcher.UIThread.Post(() => _ = ReloadFromSyncAsync());
+        sync.Engine.WorkspaceLost += lost => Dispatcher.UIThread.Post(() => _ = OnWorkspaceLostAsync(lost));
+    }
+
+    public string SyncText => SyncStatus.State switch
+    {
+        SyncState.Synced => "✓ Sincronizado",
+        SyncState.Offline when SyncStatus.Pending > 0 => $"Sin conexión · {SyncStatus.Pending} pendientes",
+        SyncState.Offline => "Sin conexión",
+        SyncState.Conflict => $"⚠ {SyncStatus.Conflicts} en conflicto",
+        _ when SyncStatus.Pending > 0 => $"{SyncStatus.Pending} pendientes",
+        _ => "Sincronizando…",
+    };
+
+    public IBrush SyncBrush => SyncStatus.State switch
+    {
+        SyncState.Synced => Brushes.SeaGreen,
+        SyncState.Conflict => Brushes.IndianRed,
+        SyncState.Offline => Brushes.Gray,
+        _ => Brushes.DarkOrange,
+    };
+
+    public void OnWindowActivated() => _sync.Engine.Kick();
+
+    /// <summary>Lo implementa la vista, que abre la ventana de conflictos.</summary>
+    public Func<ConflictsViewModel, Task>? ShowConflicts { get; set; }
+
+    private bool HasConflicts => SyncStatus.Conflicts > 0;
+
+    [RelayCommand(CanExecute = nameof(HasConflicts))]
+    private Task OpenConflictsAsync() => GuardAsync(async () =>
+    {
+        if (ShowConflicts is null) return;
+        var vm = new ConflictsViewModel(_sync, Services.Dialogs);
+        await vm.LoadAsync();
+        await ShowConflicts(vm);
+        await ReloadFromSyncAsync();
+    });
+
+    /// <summary>Refleja lo que trajo la sincronización. Los pedidos que llegan durante una recarga se atienden con una más.</summary>
+    private async Task ReloadFromSyncAsync()
+    {
+        if (_reloadRunning)
+        {
+            _reloadAgain = true;
+            return;
+        }
+
+        _reloadRunning = true;
+        try
+        {
+            do
+            {
+                _reloadAgain = false;
+                await GuardAsync(RefreshWorkspacesAsync);
+                if (SelectedWorkspace is not null) await ReloadAsync();
+            }
+            while (_reloadAgain);
+        }
+        finally
+        {
+            _reloadRunning = false;
+        }
+    }
+
+    private async Task RefreshWorkspacesAsync()
+    {
+        var list = await Services.Store.GetWorkspacesAsync();
+        var selectedId = SelectedWorkspace?.Id;
+
+        // Reemplazar la lista no es un cambio de workspace: el combo se vacía y vuelve a la misma selección.
+        _switching = true;
+        Workspaces.Clear();
+        foreach (var w in list) Workspaces.Add(w);
+        SelectedWorkspace = Workspaces.FirstOrDefault(w => w.Id == selectedId);
+        _switching = false;
+
+        if (SelectedWorkspace is null && Workspaces.Count > 0) SelectedWorkspace = Workspaces[0];
+        else if (SelectedWorkspace is null && selectedId is not null) await SwitchWorkspaceAsync(null);
+    }
+
+    private async Task OnWorkspaceLostAsync(WorkspaceLost lost)
+    {
+        if (lost.PendingChanges > 0)
+        {
+            await Services.Dialogs.InfoAsync(
+                "Perdiste el acceso a un workspace",
+                $"Ya no tenés acceso a \"{lost.Name}\". Se van a descartar {lost.PendingChanges} cambios tuyos que no se llegaron a enviar.");
+            await GuardAsync(() => _sync.Store.ForgetWorkspaceAsync(lost.Id));
+        }
+        else
+        {
+            ReportStatus($"Ya no tenés acceso a \"{lost.Name}\".");
+        }
+        await ReloadFromSyncAsync();
     }
 
     public ClientServices Services { get; }
@@ -174,6 +281,8 @@ public sealed partial class MainViewModel : ObservableObject
         var last = Services.Settings.Current.LastWorkspaceId;
         SelectedWorkspace = Workspaces.FirstOrDefault(w => w.Id == last) ?? Workspaces.FirstOrDefault();
         if (SelectedWorkspace is null) ReportStatus("Creá tu primer workspace con el botón + de arriba.");
+        SyncStatus = await _sync.Engine.GetStatusAsync();
+        _sync.Engine.Start();
     });
 
     private WorkspaceDto? _previousWorkspace;
@@ -218,7 +327,11 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task RefreshAsync() => GuardAsync(ReloadAsync);
+    private Task RefreshAsync() => GuardAsync(async () =>
+    {
+        await _sync.Engine.SyncOnceAsync();
+        await ReloadAsync();
+    });
 
     private async Task ReloadAsync()
     {
@@ -288,9 +401,12 @@ public sealed partial class MainViewModel : ObservableObject
                 continue;
             }
 
-            if (tab.IsDirty)
+            // Con cambios sin guardar conserva la versión que tenía: al guardar, el conflicto se detecta y se resuelve.
+            if (tab.IsDirty) continue;
+
+            if (SyncContent.Same(tab.Node.Dto, fresh.Dto))
             {
-                tab.Node.Dto = fresh.Dto;
+                tab.Rebind(fresh); // no se recrea, para no perder la respuesta que está mostrando
                 continue;
             }
 

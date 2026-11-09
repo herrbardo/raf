@@ -2,7 +2,9 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Local;
 using Raf.Client.Core.Session;
+using Raf.Client.Core.Sync;
 using Raf.Client.Services;
 
 namespace Raf.Client.ViewModels;
@@ -36,6 +38,7 @@ public abstract partial class PageViewModel : ObservableObject
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly ClientServices _services;
+    private SyncSession? _sync;
 
     [ObservableProperty] private object? _page;
 
@@ -70,9 +73,25 @@ public sealed partial class ShellViewModel : ObservableObject
         else await EnterMainAsync();
     }
 
-    public void ShowConnect() => Page = new ConnectViewModel(_services, this);
+    public void ShowConnect()
+    {
+        CloseSync();
+        Page = new ConnectViewModel(_services, this);
+    }
 
-    public void ShowLogin(string? message = null) => Page = new LoginViewModel(_services, this) { Error = message };
+    public void ShowLogin(string? message = null)
+    {
+        CloseSync();
+        Page = new LoginViewModel(_services, this) { Error = message };
+    }
+
+    /// <summary>La caché sigue en disco: lo pendiente se envía la próxima vez que entre este usuario.</summary>
+    private void CloseSync()
+    {
+        var sync = _sync;
+        _sync = null;
+        if (sync is not null) _ = sync.DisposeAsync().AsTask();
+    }
 
     public void ShowForcedPasswordChange() => Page = new ChangePasswordViewModel(_services, this, returnTo: null);
 
@@ -82,7 +101,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public async Task EnterMainAsync()
     {
-        var main = new MainViewModel(_services, this);
+        CloseSync();
+        var sync = await SyncSession.OpenAsync(
+            Path.Combine(AppPaths.DataDirectory, "cache"), _services.Session.Server!, _services.Session.User!.Id,
+            _services.Api, _services.Secure);
+        _sync = sync;
+
+        var main = new MainViewModel(_services with { Store = sync.Store }, this, sync);
         Page = main;
         await main.InitializeAsync();
     }

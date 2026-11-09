@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Closing += OnClosing;
+        Activated += (_, _) => (DataContext as ShellViewModel)?.Main?.OnWindowActivated();
     }
 
     private async void OnClosing(object? sender, WindowClosingEventArgs e)

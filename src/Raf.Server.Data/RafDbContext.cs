@@ -10,7 +10,8 @@ using Raf.Domain.Requests;
 
 namespace Raf.Server.Data;
 
-public sealed class RafDbContext(DbContextOptions<RafDbContext> options, ICurrentUser? currentUser = null)
+public sealed class RafDbContext(
+    DbContextOptions<RafDbContext> options, ICurrentUser? currentUser = null, IChangeNotifier? notifier = null)
     : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -129,9 +130,11 @@ public sealed class RafDbContext(DbContextOptions<RafDbContext> options, ICurren
         await using var ownTx = Database.CurrentTransaction is null ? await Database.BeginTransactionAsync(ct) : null;
 
         var now = DateTimeOffset.UtcNow;
+        var stamped = new List<(Guid WorkspaceId, long Seq)>();
         foreach (var group in entries.GroupBy(e => e.Entity.WorkspaceId).OrderBy(g => g.Key))
         {
             var seq = await NextChangeSeqAsync(group.Key, ct);
+            stamped.Add((group.Key, seq));
             foreach (var entry in group)
             {
                 var entity = entry.Entity;
@@ -151,7 +154,12 @@ public sealed class RafDbContext(DbContextOptions<RafDbContext> options, ICurren
         }
 
         var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, ct);
-        if (ownTx is not null) await ownTx.CommitAsync(ct);
+        if (ownTx is not null)
+        {
+            await ownTx.CommitAsync(ct);
+            if (notifier is not null)
+                foreach (var (workspaceId, seq) in stamped) await notifier.NotifyAsync(workspaceId, seq);
+        }
         return result;
     }
 

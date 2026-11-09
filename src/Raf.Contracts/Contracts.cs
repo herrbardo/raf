@@ -53,7 +53,8 @@ public sealed record CreateWorkspaceRequest(string Name, Guid? Id = null);
 
 public sealed record UpdateWorkspaceRequest(string Name, long Version);
 
-public sealed record MemberDto(Guid UserId, string Email, string DisplayName, WorkspaceRole Role);
+public sealed record MemberDto(
+    Guid UserId, string Email, string DisplayName, WorkspaceRole Role, long Version = 0, long ChangeSeq = 0);
 
 /// <summary>Rol Editor o Viewer. La propiedad se transfiere con <see cref="TransferOwnershipRequest"/>.</summary>
 public sealed record AddMemberRequest(Guid UserId, WorkspaceRole Role);
@@ -111,3 +112,28 @@ public sealed record CreateSampleRequest(
     Guid RequestId, string Name, SampleOverrides? Overrides = null, int Order = 0, Guid? Id = null);
 
 public sealed record UpdateSampleRequest(string Name, int Order, SampleOverrides Overrides, long Version);
+
+// ---------- Sincronización ----------
+
+public enum ChangeKind { Workspace, Member, Environment, Variable, App, Folder, Request, Sample }
+
+/// <summary>Elemento borrado. En miembros, <see cref="Id"/> es el id del usuario.</summary>
+public sealed record DeletedItem(ChangeKind Kind, Guid Id, long ChangeSeq);
+
+/// <summary>
+/// Cambios posteriores a un <c>since</c>. Para seguir, se pide <c>since = LastSeq</c>. Un mismo número de cambio
+/// nunca se parte entre páginas, así que una página puede superar levemente el límite pedido.
+/// </summary>
+public sealed record ChangesResponse(
+    long LastSeq,
+    bool HasMore,
+    WorkspaceRole MyRole,
+    WorkspaceDto? Workspace,
+    IReadOnlyList<MemberDto> Members,
+    IReadOnlyList<EnvironmentDto> Environments,
+    IReadOnlyList<VariableDto> Variables,
+    IReadOnlyList<AppDto> Apps,
+    IReadOnlyList<FolderDto> Folders,
+    IReadOnlyList<RequestDto> Requests,
+    IReadOnlyList<SampleDto> Samples,
+    IReadOnlyList<DeletedItem> Deleted);

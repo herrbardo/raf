@@ -31,6 +31,13 @@ public static class WorkspaceEndpoints
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
 
+            if (req.Id is { } retryId && await (
+                    from m in db.WorkspaceMembers
+                    join w in db.Workspaces on m.WorkspaceId equals w.Id
+                    where w.Id == retryId && m.UserId == me.GetUserId() && !m.IsDeleted && !w.IsDeleted
+                    select new WorkspaceDto(w.Id, w.Name, m.Role, w.Version, w.ChangeSeq)).FirstOrDefaultAsync(ct) is { } already)
+                return Results.Created($"/workspaces/{already.Id}", already);
+
             var workspace = new Workspace { Id = req.Id ?? Guid.CreateVersion7(), Name = req.Name.Trim() };
             workspace.WorkspaceId = workspace.Id;
             db.Workspaces.Add(workspace);
@@ -82,7 +89,7 @@ public static class WorkspaceEndpoints
                 join u in db.Users on m.UserId equals u.Id
                 where m.WorkspaceId == ws && !m.IsDeleted
                 orderby m.Role descending, u.DisplayName
-                select new MemberDto(u.Id, u.Email!, u.DisplayName, m.Role)).ToListAsync(ct))
+                select new MemberDto(u.Id, u.Email!, u.DisplayName, m.Role, m.Version, m.ChangeSeq)).ToListAsync(ct))
             .WithTags("Members");
 
         ws.MapPost("/members", async (Guid ws, AddMemberRequest req, RafDbContext db, CancellationToken ct) =>
@@ -95,21 +102,15 @@ public static class WorkspaceEndpoints
             var existing = await db.WorkspaceMembers.FirstOrDefaultAsync(m => m.WorkspaceId == ws && m.UserId == req.UserId, ct);
             if (existing is { IsDeleted: false }) return Problems.Conflict("El usuario ya es miembro del workspace.");
 
-            if (existing is null)
+            var member = existing ?? db.WorkspaceMembers.Add(new WorkspaceMember
             {
-                db.WorkspaceMembers.Add(new WorkspaceMember
-                {
-                    Id = Guid.CreateVersion7(), WorkspaceId = ws, UserId = req.UserId, Role = req.Role,
-                });
-            }
-            else
-            {
-                existing.IsDeleted = false;
-                existing.Role = req.Role;
-            }
+                Id = Guid.CreateVersion7(), WorkspaceId = ws, UserId = req.UserId, Role = req.Role,
+            }).Entity;
+            member.IsDeleted = false;
+            member.Role = req.Role;
             await db.SaveChangesAsync(ct);
             return Results.Created($"/workspaces/{ws}/members/{user.Id}",
-                new MemberDto(user.Id, user.Email!, user.DisplayName, req.Role));
+                new MemberDto(user.Id, user.Email!, user.DisplayName, req.Role, member.Version, member.ChangeSeq));
         }).WithTags("Members").RequireWorkspaceRole(WorkspaceRole.Owner);
 
         ws.MapPut("/members/{userId:guid}", async (Guid ws, Guid userId, UpdateMemberRequest req, RafDbContext db, CancellationToken ct) =>

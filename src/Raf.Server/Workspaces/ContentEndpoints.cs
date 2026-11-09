@@ -16,6 +16,8 @@ public static class ContentEndpoints
 {
     public static void MapContentEndpoints(this RouteGroupBuilder ws)
     {
+        ws.MapGet("/changes", GetChangesAsync).WithTags("Sync")
+            .WithSummary("Cambios posteriores a 'since', incluidos los borrados, respetando el rol del usuario.");
         MapEnvironments(ws.MapGroup("/environments").WithTags("Environments"));
         MapVariables(ws.MapGroup("/variables").WithTags("Variables"));
         MapApps(ws.MapGroup("/apps").WithTags("Apps"));
@@ -26,6 +28,104 @@ public static class ContentEndpoints
 
     private static IQueryable<T> In<T>(this DbSet<T> set, Guid ws) where T : SyncEntity =>
         set.Where(x => x.WorkspaceId == ws && !x.IsDeleted);
+
+    /// <summary>
+    /// Reintento de un alta cuya respuesta se perdió: si el id ya existe en este workspace devuelve el elemento.
+    /// Si fue borrado mientras tanto, no se resucita.
+    /// </summary>
+    private static async Task<IResult?> RetriedCreateAsync<T>(
+        DbSet<T> set, Guid ws, Guid? id, string kind, Func<T, object> toDto, CancellationToken ct) where T : SyncEntity
+    {
+        if (id is null) return null;
+        var existing = await set.FirstOrDefaultAsync(x => x.Id == id && x.WorkspaceId == ws, ct);
+        if (existing is null) return null;
+        return existing.IsDeleted
+            ? Problems.Conflict("El elemento ya fue eliminado.")
+            : Results.Created($"/workspaces/{ws}/{kind}/{id}", toDto(existing));
+    }
+
+    // ---------- Feed de cambios ----------
+
+    private const int DefaultChangesLimit = 500;
+    private const int MaxChangesLimit = 2000;
+
+    private static async Task<IResult> GetChangesAsync(
+        Guid ws, long? since, int? limit, HttpContext http, RafDbContext db, CancellationToken ct)
+    {
+        var from = Math.Max(since ?? 0, 0);
+        var take = Math.Clamp(limit ?? DefaultChangesLimit, 1, MaxChangesLimit);
+        var role = http.GetRole();
+
+        var seqs = new List<long>();
+        seqs.AddRange(await NextSeqsAsync(db.Workspaces, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.WorkspaceMembers, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Environments, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Variables, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Apps, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Folders, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Requests, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Samples, ws, from, take, ct));
+
+        if (seqs.Count == 0)
+            return Results.Ok(new ChangesResponse(from, false, role, null, [], [], [], [], [], [], [], []));
+
+        seqs.Sort();
+        var cutoff = seqs[Math.Min(take, seqs.Count) - 1];
+
+        var workspaces = await SliceAsync(db.Workspaces, ws, from, cutoff, ct);
+        var members = await SliceAsync(db.WorkspaceMembers, ws, from, cutoff, ct);
+        var environments = await SliceAsync(db.Environments, ws, from, cutoff, ct);
+        var variables = await SliceAsync(db.Variables, ws, from, cutoff, ct);
+        var apps = await SliceAsync(db.Apps, ws, from, cutoff, ct);
+        var folders = await SliceAsync(db.Folders, ws, from, cutoff, ct);
+        var requests = await SliceAsync(db.Requests, ws, from, cutoff, ct);
+        var samples = await SliceAsync(db.Samples, ws, from, cutoff, ct);
+
+        var hasMore =
+            await HasLaterAsync(db.Workspaces, ws, cutoff, ct) || await HasLaterAsync(db.WorkspaceMembers, ws, cutoff, ct) ||
+            await HasLaterAsync(db.Environments, ws, cutoff, ct) || await HasLaterAsync(db.Variables, ws, cutoff, ct) ||
+            await HasLaterAsync(db.Apps, ws, cutoff, ct) || await HasLaterAsync(db.Folders, ws, cutoff, ct) ||
+            await HasLaterAsync(db.Requests, ws, cutoff, ct) || await HasLaterAsync(db.Samples, ws, cutoff, ct);
+
+        var userIds = members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
+        var users = await db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
+
+        var deleted = new List<DeletedItem>();
+        void Tombstones<T>(ChangeKind kind, IEnumerable<T> items, Func<T, Guid>? id = null) where T : SyncEntity =>
+            deleted.AddRange(items.Where(x => x.IsDeleted).Select(x => new DeletedItem(kind, id?.Invoke(x) ?? x.Id, x.ChangeSeq)));
+
+        Tombstones(ChangeKind.Workspace, workspaces);
+        Tombstones(ChangeKind.Member, members, m => m.UserId);
+        Tombstones(ChangeKind.Environment, environments);
+        Tombstones(ChangeKind.Variable, variables);
+        Tombstones(ChangeKind.App, apps);
+        Tombstones(ChangeKind.Folder, folders);
+        Tombstones(ChangeKind.Request, requests);
+        Tombstones(ChangeKind.Sample, samples);
+
+        var canSee = role >= WorkspaceRole.Editor;
+        return Results.Ok(new ChangesResponse(
+            cutoff, hasMore, role,
+            workspaces.Where(w => !w.IsDeleted).Select(w => new WorkspaceDto(w.Id, w.Name, role, w.Version, w.ChangeSeq)).FirstOrDefault(),
+            members.Where(m => !m.IsDeleted && users.ContainsKey(m.UserId))
+                .Select(m => new MemberDto(m.UserId, users[m.UserId].Email!, users[m.UserId].DisplayName, m.Role, m.Version, m.ChangeSeq)).ToList(),
+            environments.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
+            variables.Where(x => !x.IsDeleted).Select(x => x.ToDto(canSee)).ToList(),
+            apps.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
+            folders.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
+            requests.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
+            samples.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
+            deleted));
+    }
+
+    private static Task<List<long>> NextSeqsAsync<T>(DbSet<T> set, Guid ws, long since, int take, CancellationToken ct) where T : SyncEntity =>
+        set.Where(x => x.WorkspaceId == ws && x.ChangeSeq > since).OrderBy(x => x.ChangeSeq).Select(x => x.ChangeSeq).Take(take).ToListAsync(ct);
+
+    private static Task<List<T>> SliceAsync<T>(DbSet<T> set, Guid ws, long since, long cutoff, CancellationToken ct) where T : SyncEntity =>
+        set.Where(x => x.WorkspaceId == ws && x.ChangeSeq > since && x.ChangeSeq <= cutoff).ToListAsync(ct);
+
+    private static Task<bool> HasLaterAsync<T>(DbSet<T> set, Guid ws, long cutoff, CancellationToken ct) where T : SyncEntity =>
+        set.AnyAsync(x => x.WorkspaceId == ws && x.ChangeSeq > cutoff, ct);
 
     private static void SoftDelete(IEnumerable<SyncEntity> entities)
     {
@@ -44,6 +144,8 @@ public static class ContentEndpoints
         g.MapPost("/", async (Guid ws, CreateEnvironmentRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
+            if (await RetriedCreateAsync(db.Environments, ws, req.Id, "environments", x => x.ToDto(), ct) is { } retried) return retried;
+
             var env = new WorkspaceEnvironment { Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim() };
             db.Environments.Add(env);
             await db.SaveChangesAsync(ct);
@@ -105,6 +207,8 @@ public static class ContentEndpoints
             if (req.EnvironmentId is { } envId && !await db.Environments.In(ws).AnyAsync(e => e.Id == envId, ct))
                 return Problems.BadRequest("El environment no existe.");
 
+            if (await RetriedCreateAsync(db.Variables, ws, req.Id, "variables", x => x.ToDto(canSeeSecrets: true), ct) is { } retried) return retried;
+
             var v = new Variable
             {
                 Id = req.Id ?? Guid.CreateVersion7(),
@@ -158,6 +262,8 @@ public static class ContentEndpoints
         g.MapPost("/", async (Guid ws, CreateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
+            if (await RetriedCreateAsync(db.Apps, ws, req.Id, "apps", x => x.ToDto(), ct) is { } retried) return retried;
+
             var a = new App { Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Order = req.Order };
             db.Apps.Add(a);
             await db.SaveChangesAsync(ct);
@@ -220,6 +326,8 @@ public static class ContentEndpoints
             if (req.ParentFolderId is { } parentId &&
                 !await db.Folders.In(ws).AnyAsync(f => f.Id == parentId && f.AppId == req.AppId, ct))
                 return Problems.BadRequest("La carpeta padre no existe en esa app.");
+
+            if (await RetriedCreateAsync(db.Folders, ws, req.Id, "folders", x => x.ToDto(), ct) is { } retried) return retried;
 
             var f = new Folder
             {
@@ -312,6 +420,8 @@ public static class ContentEndpoints
             if (!await FolderBelongsToAppAsync(db, ws, req.FolderId, req.AppId, ct))
                 return Problems.BadRequest("La carpeta no existe en esa app.");
 
+            if (await RetriedCreateAsync(db.Requests, ws, req.Id, "requests", x => x.ToDto(), ct) is { } retried) return retried;
+
             var r = new ApiRequest
             {
                 Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, AppId = req.AppId, FolderId = req.FolderId,
@@ -382,6 +492,8 @@ public static class ContentEndpoints
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
             if (!await db.Requests.In(ws).AnyAsync(r => r.Id == req.RequestId, ct)) return Problems.BadRequest("El request no existe.");
+
+            if (await RetriedCreateAsync(db.Samples, ws, req.Id, "samples", x => x.ToDto(), ct) is { } retried) return retried;
 
             var s = new Sample
             {

@@ -18,6 +18,7 @@ var services = builder.Services;
 // ---------- Datos ----------
 services.AddHttpContextAccessor();
 services.AddScoped<ICurrentUser, HttpCurrentUser>();
+services.AddSingleton<IChangeNotifier, NoopChangeNotifier>();
 services.AddDbContext<RafDbContext>((sp, o) =>
     o.UseNpgsql(DatabaseConfig.GetConnectionString(sp.GetRequiredService<IConfiguration>())));
 

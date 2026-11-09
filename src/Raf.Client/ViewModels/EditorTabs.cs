@@ -46,7 +46,14 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
 
     private SettingsStore Settings => Owner.Services.Settings;
 
-    public TreeNodeViewModel Node { get; }
+    public TreeNodeViewModel Node { get; private set; }
+
+    /// <summary>El árbol se reconstruyó sin que cambiara lo que muestra esta pestaña.</summary>
+    public void Rebind(TreeNodeViewModel node)
+    {
+        Node = node;
+        OnPropertyChanged(nameof(Node));
+    }
     public Guid RequestId { get; }
     public ResponseViewModel Response { get; }
     public bool CanEdit => Owner.CanEdit;
@@ -157,14 +164,6 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         {
             await SaveCoreAsync();
             Owner.ReportStatus($"Guardado: {Node.Name}");
-        }
-        catch (VersionConflictException)
-        {
-            var reload = await Owner.Services.Dialogs.ConfirmAsync(
-                "Cambió en el servidor",
-                $"Otra persona modificó \"{Node.Name}\". Podés recargar la versión del servidor, y tus cambios sin guardar se pierden.",
-                "Recargar");
-            if (reload) await GuardAsync(ReloadCoreAsync);
         }
         catch (ApiException e)
         {

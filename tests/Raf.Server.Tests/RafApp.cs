@@ -5,7 +5,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Raf.Contracts;
+using Raf.Server.Data;
 using Raf.Server.Tests;
 using Testcontainers.PostgreSql;
 
@@ -27,6 +30,8 @@ public sealed class RafApp : IAsyncLifetime
         Converters = { new JsonStringEnumConverter() },
     };
 
+    public RecordingNotifier Notifier { get; } = new();
+
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:17").Build();
     private WebApplicationFactory<Program>? _factory;
 
@@ -36,6 +41,7 @@ public sealed class RafApp : IAsyncLifetime
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Testing");
+            b.ConfigureTestServices(s => s.AddSingleton<IChangeNotifier>(Notifier));
             b.UseSetting("ConnectionStrings:Raf", _db.GetConnectionString());
             b.UseSetting("Jwt:SigningKey", Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"));
             b.UseSetting("Bootstrap:AdminEmail", AdminEmail);
@@ -52,6 +58,9 @@ public sealed class RafApp : IAsyncLifetime
     }
 
     public HttpClient Anonymous() => _factory!.CreateClient();
+
+    /// <summary>Cliente sin cabeceras propias que pasa por <paramref name="handler"/>, para simular fallos de red.</summary>
+    public HttpClient ClientWith(DelegatingHandler handler) => _factory!.CreateDefaultClient(handler);
 
     public async Task<TokenResponse> LoginRawAsync(string email, string password)
     {
@@ -89,6 +98,20 @@ public sealed class RafApp : IAsyncLifetime
         await res.EnsureStatusAsync(HttpStatusCode.OK);
         var tokens = (await res.Content.ReadFromJsonAsync<TokenResponse>(Json))!;
         return (tokens.User, WithToken(tokens.AccessToken));
+    }
+}
+
+/// <summary>Registra los avisos recibidos, para comprobar que salen después de confirmar.</summary>
+public sealed class RecordingNotifier : IChangeNotifier
+{
+    private readonly System.Collections.Concurrent.ConcurrentQueue<(Guid Workspace, long Seq)> _calls = new();
+
+    public IReadOnlyList<long> For(Guid workspace) => _calls.Where(c => c.Workspace == workspace).Select(c => c.Seq).ToList();
+
+    public ValueTask NotifyAsync(Guid workspaceId, long changeSeq)
+    {
+        _calls.Enqueue((workspaceId, changeSeq));
+        return ValueTask.CompletedTask;
     }
 }
 
