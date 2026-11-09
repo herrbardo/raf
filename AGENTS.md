@@ -25,6 +25,7 @@ Están en `.agents/skills/<nombre>/SKILL.md`. Leer el skill completo antes de ap
 | Skill | Cuándo usarlo |
 |---|---|
 | [procesar-trabajo](.agents/skills/procesar-trabajo/SKILL.md) | Cuando el usuario pide procesar, ejecutar o resolver un plan o un ticket, o escribe `CPS` |
+| [avalonia](.agents/skills/avalonia/SKILL.md) | Al escribir o modificar la UI en `src/Raf.Client`, o al mejorar el aspecto de la aplicación |
 
 ## Siglas del usuario
 
