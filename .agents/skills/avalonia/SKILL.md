@@ -98,4 +98,4 @@ Para URLs, headers y bodies usar `ctl:TextField`, no `TextBox`: resalta `{{varia
 
 1. `dotnet build`: detecta los errores de bindings compilados.
 2. `dotnet test`, si cambió lógica. Lo testeable va en `Raf.Client.Core`.
-3. Abrir la aplicación con `dotnet run --project src/Raf.Client` y probar la pantalla tocada, en ambos temas: `RAF_THEME=dark` o `RAF_THEME=light` fuerza uno sin cambiar el del sistema. El build no valida el aspecto; si no se pudo mirar, decirlo.
+3. Abrir la aplicación con `dotnet run --project src/Raf.Client` y probar la pantalla tocada, en ambos temas: la app arranca en oscuro y `RAF_THEME=light` fuerza el claro (`RAF_THEME=system` sigue al sistema). El build no valida el aspecto; si no se pudo mirar, decirlo.

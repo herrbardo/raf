@@ -50,6 +50,11 @@ public sealed partial class VariableRowViewModel : ObservableObject
         Saved is null ? !string.IsNullOrWhiteSpace(Key)
         : Key != Saved.Key || (Value ?? "") != (Saved.Value ?? "") || IsSecret != Saved.IsSecret;
 
+    // Cualquier edición vuelve viejo el aviso de "guardado".
+    partial void OnKeyChanged(string? value) => _owner.OnEdited();
+    partial void OnValueChanged(string? value) => _owner.OnEdited();
+    partial void OnIsSecretChanged(bool value) => _owner.OnEdited();
+
     public void MarkSaved(VariableDto dto)
     {
         Saved = dto;
@@ -87,6 +92,9 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     private VariableScopeViewModel? _selectedScope;
 
     [ObservableProperty] private string? _error;
+
+    /// <summary>Resultado del último guardado; se borra con la próxima edición.</summary>
+    [ObservableProperty] private string? _savedMessage;
     [ObservableProperty] private bool _isBusy;
 
     public bool CanEdit { get; } = canEdit;
@@ -113,19 +121,27 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
         SelectedScope = global;
     }
 
+    internal void OnEdited() => SavedMessage = null;
+
     internal void RemoveRow(VariableRowViewModel row)
     {
+        OnEdited();
         Scopes.First(s => s.Id == row.EnvironmentId).Rows.Remove(row);
         if (row.Saved is not null) _removed.Add(row);
     }
 
     [RelayCommand]
-    private void AddVariable() => SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null));
+    private void AddVariable()
+    {
+        OnEdited();
+        SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null));
+    }
 
     private async Task GuardAsync(Func<Task> action)
     {
         IsBusy = true;
         Error = null;
+        SavedMessage = null;
         try
         {
             await action();
@@ -180,13 +196,21 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     [RelayCommand]
     private Task SaveAsync() => GuardAsync(async () =>
     {
+        var changed = Scopes.SelectMany(s => s.Rows).Where(r => r.HasChanges).ToList();
+        var total = _removed.Count + changed.Count;
+        if (total == 0)
+        {
+            SavedMessage = "No hay cambios para guardar.";
+            return;
+        }
+
         foreach (var row in _removed.ToList())
         {
             await services.Store.DeleteVariableAsync(workspaceId, row.Saved!.Id);
             _removed.Remove(row);
         }
 
-        foreach (var row in Scopes.SelectMany(s => s.Rows).Where(r => r.HasChanges).ToList())
+        foreach (var row in changed)
         {
             var key = row.Key?.Trim() ?? "";
             row.MarkSaved(row.Saved is { } saved
@@ -195,5 +219,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
                 : await services.Store.CreateVariableAsync(
                     workspaceId, new CreateVariableRequest(key, row.Value ?? "", row.EnvironmentId, row.IsSecret)));
         }
+
+        SavedMessage = total == 1 ? "Guardado: 1 cambio." : $"Guardado: {total} cambios.";
     });
 }

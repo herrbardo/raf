@@ -4,10 +4,7 @@
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.SampleTabView"
              x:DataType="vm:SampleTabViewModel">
-  <UserControl.KeyBindings>
-    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
-    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendCommand}" />
-  </UserControl.KeyBindings>
+  <!-- Ctrl+S y Ctrl+Enter están en MainWindow: así funcionan aunque el foco no esté dentro de la pestaña -->
   <Grid RowDefinitions="Auto,Auto,*,5,*">
     <StackPanel Spacing="8" Margin="14,14,14,0">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">

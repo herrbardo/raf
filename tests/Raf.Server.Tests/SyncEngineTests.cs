@@ -168,6 +168,28 @@ public class SyncEngineTests(RafApp app)
     }
 
     [Fact]
+    public async Task Sin_conexion_el_estado_dice_por_que_y_al_volver_se_limpia()
+    {
+        var (a, _, _) = await TwoDevicesAsync();
+        var before = DateTimeOffset.Now;
+        await a.SyncAsync();
+        var synced = await a.Sync.Engine.GetStatusAsync();
+        Assert.Null(synced.LastError);
+        Assert.True(synced.LastSyncedAt >= before);
+
+        a.GoOffline();
+        Assert.False(await a.Sync.Engine.SyncOnceAsync());
+        var offline = await a.Sync.Engine.GetStatusAsync();
+        Assert.Equal(SyncState.Offline, offline.State);
+        Assert.Equal("No se pudo conectar con el servidor. (sin conexión)", offline.LastError);
+        Assert.Equal(synced.LastSyncedAt, offline.LastSyncedAt); // conserva la última que salió bien
+
+        a.GoOnline();
+        await a.SyncAsync();
+        Assert.Null((await a.Sync.Engine.GetStatusAsync()).LastError);
+    }
+
+    [Fact]
     public async Task Crear_y_borrar_sin_conexion_no_llega_al_servidor()
     {
         var (a, _, ws) = await TwoDevicesAsync();

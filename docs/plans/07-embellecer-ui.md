@@ -46,7 +46,7 @@ Al ejecutarlo, seguir el skill [avalonia](../../.agents/skills/avalonia/SKILL.md
 
 | Caso | Comportamiento |
 |---|---|
-| El sistema cambia de tema con la app abierta | Todo responde al instante, incluidos `TextField` y el resaltado de sintaxis y de variables. |
+| El sistema cambia de tema con la app abierta (con `RAF_THEME=system`) | Todo responde al instante, incluidos `TextField` y el resaltado de sintaxis y de variables. |
 | Código de estado sin respuesta (timeout, cancelado, error de red) | El chip muestra el resultado con un color neutro o de error, nunca como éxito. |
 | Método personalizado o desconocido | Badge con color neutro y el texto completo o recortado. |
 | Nombres y URLs muy largos | Se recortan con elipsis y sin mover el resto del layout. |
@@ -70,7 +70,7 @@ Al ejecutarlo, seguir el skill [avalonia](../../.agents/skills/avalonia/SKILL.md
 - **Estado en lugar de colores:** `MainViewModel.SyncBrush` se reemplazó por `IsSynced`, `IsOffline`, `IsInConflict` e `IsSyncPending`; `ResponseViewModel` suma `IsHttpError`, `IsNoResponse` y `ShowSending`. Sin respuesta (timeout, cancelado, error de red) el chip queda neutro, nunca verde.
 - **Envío sin saltos:** Enviar y Cancelar tienen el mismo ancho y ocupan el mismo lugar. Mientras se reenvía, la respuesta anterior sigue visible con una barra de progreso fina arriba.
 - **`TextField`:** fuente, colores, selección y links salen del tema; en solo lectura tiene otro fondo (Viewer y respuesta). El resaltado de JSON y XML se repinta con la paleta del tema activo al cambiarlo.
-- **Para revisar el diseño** sin cambiar el tema del sistema: variable de entorno `RAF_THEME=dark` o `RAF_THEME=light` antes de abrir la app.
+- **La app arranca en oscuro** sin importar el tema del sistema (Ticket-001). Para revisar el diseño: variable de entorno `RAF_THEME=light`, o `RAF_THEME=system` para seguir al sistema, antes de abrir la app.
 - **Barra de título integrada (punto 17): descartada.** En Windows los botones del sistema quedan encima del extremo derecho de la barra superior (sincronización y usuario), y hay que reservarles un margen distinto por sistema operativo. En macOS los semáforos ocupan el extremo izquierdo y no se pudo probar. Con la barra nativa el resultado es correcto en los tres sistemas; se puede retomar cuando haya cómo probar macOS y Linux.
 - **Commits:** el plan pedía un commit por bloque, pero el flujo del repositorio commitea recién con `CPS`. Queda un solo commit, con los bloques descriptos en el mensaje.
 - **Verificado en local** (Windows, con capturas de antes y después): pantalla principal vacía y con request abierto, respuesta exitosa y con error, Variables, Miembros, Administración, diálogo de texto, Login (incluido el error) y Connect, en ambos temas, y la ventana en su tamaño mínimo. No se probó: el cambio de tema del sistema con la app abierta, un usuario Viewer, nombres muy largos ni muchas pestañas abiertas.

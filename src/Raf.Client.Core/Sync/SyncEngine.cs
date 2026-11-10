@@ -28,6 +28,8 @@ public sealed class SyncEngine
     private CancellationTokenSource? _stop;
     private Task? _loop;
     private volatile bool _offline;
+    private volatile string? _lastError;
+    private DateTimeOffset? _lastSyncedAt;
 
     internal SyncEngine(SyncedWorkspaceStore store, ApiWorkspaceStore api, IChangeSubscriber subscriber, string lockPath)
     {
@@ -106,7 +108,7 @@ public sealed class SyncEngine
             : _offline ? SyncState.Offline
             : pending > 0 ? SyncState.Pending
             : SyncState.Synced;
-        return new SyncStatus(state, pending, conflicts);
+        return new SyncStatus(state, pending, conflicts, _lastError, _lastSyncedAt);
     }
 
     private async Task PublishStatusAsync()
@@ -133,15 +135,18 @@ public sealed class SyncEngine
 
             await RunCycleAsync(ct);
             _offline = false;
+            _lastError = null;
+            _lastSyncedAt = DateTimeOffset.Now;
             return true;
         }
         catch (SessionExpiredException)
         {
             return false; // SessionManager ya avisó: la app vuelve al login
         }
-        catch (ApiException)
+        catch (ApiException e)
         {
             _offline = true;
+            _lastError = Describe(e);
             return false;
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -149,6 +154,7 @@ public sealed class SyncEngine
             // Un fallo inesperado no debe matar el motor: se reintenta en el próximo ciclo.
             Debug.WriteLine($"Error de sincronización: {e}");
             _offline = true;
+            _lastError = $"Error inesperado: {Describe(e)}";
             return false;
         }
         finally
@@ -157,6 +163,10 @@ public sealed class SyncEngine
             if (!ct.IsCancellationRequested) await PublishStatusAsync();
         }
     }
+
+    /// <summary>El mensaje propio más la causa técnica, por ejemplo la conexión rechazada.</summary>
+    private static string Describe(Exception e) =>
+        e.InnerException is { } inner ? $"{e.Message} ({inner.Message})" : e.Message;
 
     private FileStream? TryAcquireInstanceLock()
     {

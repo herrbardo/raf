@@ -3,7 +3,7 @@
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>

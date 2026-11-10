@@ -127,7 +127,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _status;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SyncText), nameof(IsSynced), nameof(IsOffline), nameof(IsInConflict), nameof(IsSyncPending))]
+    [NotifyPropertyChangedFor(nameof(SyncText), nameof(SyncDetail), nameof(IsSynced), nameof(IsOffline), nameof(IsInConflict), nameof(IsSyncPending))]
     [NotifyCanExecuteChangedFor(nameof(OpenConflictsCommand))]
     private SyncStatus _syncStatus = new(SyncState.Pending, 0, 0);
 
@@ -151,6 +151,22 @@ public sealed partial class MainViewModel : ObservableObject
         _ when SyncStatus.Pending > 0 => $"{SyncStatus.Pending} pendientes",
         _ => "Sincronizando…",
     };
+
+    /// <summary>Tooltip del indicador: contra qué servidor, cuándo sincronizó y por qué falló.</summary>
+    public string SyncDetail
+    {
+        get
+        {
+            var lines = new List<string> { $"Servidor: {Services.Settings.Current.ServerUrl}" };
+            lines.Add(SyncStatus.LastSyncedAt is { } at
+                ? $"Última sincronización: {at:HH:mm:ss}"
+                : "Todavía no se sincronizó en esta sesión.");
+            if (SyncStatus.LastError is { } error) lines.Add($"Último error: {error}");
+            if (SyncStatus.State == SyncState.Offline) lines.Add("Se reintenta cada 15 segundos.");
+            if (HasConflicts) lines.Add("Hacé clic para resolver los conflictos.");
+            return string.Join(Environment.NewLine, lines);
+        }
+    }
 
     // Estado para la vista, que decide el aspecto con clases.
     public bool IsSynced => SyncStatus.State == SyncState.Synced;
