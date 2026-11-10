@@ -12,19 +12,29 @@ public sealed class ConfidentialOptions
     public const string LocalProvider = "local";
     public const string KmsProvider = "kms";
 
-    /// <summary>Proveedor de la clave maestra: <c>local</c> (desarrollo y tests) o <c>kms</c> (AWS).</summary>
+    /// <summary>
+    /// Proveedor de la clave maestra: <c>local</c> (la clave viene de la configuración: desarrollo, tests y Railway)
+    /// o <c>kms</c> (AWS).
+    /// </summary>
     [Required] public string Provider { get; set; } = LocalProvider;
 
-    /// <summary>Clave maestra local: 32 bytes en base64. Solo para desarrollo y tests; nunca se versiona.</summary>
+    /// <summary>Clave maestra local: 32 bytes en base64. Nunca se versiona.</summary>
     public string? LocalKey { get; set; }
+
+    /// <summary>
+    /// Permite el proveedor <c>local</c> en producción. Se activa solo donde no hay KMS y la clave maestra se guarda
+    /// en un lugar protegido, como una variable sellada de Railway. Sin esto, el servidor no arranca en producción
+    /// con <c>local</c>.
+    /// </summary>
+    public bool AllowLocalKeyInProduction { get; set; }
 
     /// <summary>Id o ARN de la clave KMS. Llega por variable de entorno desde el template.</summary>
     public string? KmsKeyId { get; set; }
 }
 
 /// <summary>
-/// Envuelve las claves de datos con una clave maestra tomada de la configuración. Solo para desarrollo y tests: el
-/// servidor se niega a arrancar con este proveedor en producción.
+/// Envuelve las claves de datos con una clave maestra tomada de la configuración. En producción solo se acepta con
+/// <see cref="ConfidentialOptions.AllowLocalKeyInProduction"/> (Railway, con la clave en una variable sellada).
 /// </summary>
 public sealed class LocalKeyWrapper : IKeyWrapper
 {
@@ -85,9 +95,12 @@ public static class ConfidentialSetup
         }
         else if (string.Equals(provider, ConfidentialOptions.LocalProvider, StringComparison.OrdinalIgnoreCase))
         {
-            if (env.IsProduction())
+            if (env.IsProduction() &&
+                !config.GetValue<bool>($"{ConfidentialOptions.Section}:{nameof(ConfidentialOptions.AllowLocalKeyInProduction)}"))
                 throw new InvalidOperationException(
-                    "El proveedor de claves 'local' es solo para desarrollo y tests: en producción hay que usar 'kms'.");
+                    "El proveedor de claves 'local' no está habilitado en producción: usar 'kms' o, donde no hay KMS y " +
+                    "la clave maestra está protegida (por ejemplo una variable sellada de Railway), activar " +
+                    "Confidential:AllowLocalKeyInProduction.");
             services.AddSingleton<IKeyWrapper, LocalKeyWrapper>();
         }
         else

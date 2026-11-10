@@ -1,5 +1,7 @@
 # Infraestructura AWS (CloudFormation)
 
+> Para desplegar en Railway en lugar de AWS, ver [railway/README.md](railway/README.md).
+
 Un solo template, [`raf.yaml`](raf.yaml), despliega el backend sobre una **VPC y un ALB que ya existen**:
 
 ```
