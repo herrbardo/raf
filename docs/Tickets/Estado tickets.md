@@ -6,8 +6,8 @@
     - Comentarios: El usuario recorrió el cliente en Windows contra el servidor local (en contenedor, puerto 5081) y dejó feedback de UX. Lo que eran funciones nuevas pasó a los tickets 012 a 020 (017, 018 y 019 quedan INCOMPLETO hasta diseñarlos). Lo que fallaba en lo existente se corrigió acá. (1) Ctrl+S no guardaba según dónde estuviera el foco: los atajos estaban en RequestTabView y SampleTabView y solo respondían con el foco dentro de la pestaña; al tocar Enviar el botón se deshabilita y el foco vuelve a la ventana, y una zona en blanco no toma foco. Ctrl+S y Ctrl+Enter pasaron a MainWindow, enlazados a la pestaña activa. (2) Guardar variables no daba feedback: EnvironmentsWindow muestra "Guardado: N cambios" o "No hay cambios para guardar" (se borra con la próxima edición), marca con un punto las filas sin guardar y acepta Ctrl+S. (3) El indicador de sincronización no decía por qué estaba "Sin conexión": SyncEngine guarda el último error con su causa técnica (antes se perdía en un Debug.WriteLine) y la hora de la última sincronización en SyncStatus, y el indicador los muestra en un tooltip junto con la URL del servidor; el tooltip antes nunca se veía porque el botón queda deshabilitado sin conflictos (ShowOnDisabled). (4) A pedido del usuario, la app arranca en tema oscuro (App.axaml); RAF_THEME=light fuerza el claro y RAF_THEME=system sigue al sistema. Se probó con dotnet build sin advertencias y dotnet test con 165 tests en verde, incluido uno nuevo en SyncEngineTests que comprueba que sin conexión el estado guarda el motivo, conserva la última sincronización buena y lo limpia al reconectar. No se probaron en la interfaz las cuatro correcciones (el usuario cerró la app antes) ni el aspecto del aviso de guardado y del punto en tema claro; tampoco se recorrieron todos los puntos del plan 02 uno por uno (sesión expirada a los 15 minutos, body grande truncado), quedan para la revisión visual del Ticket-010.
 - Ticket-002.md
     - Creado: 10/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: El usuario probó la sincronización con dos clientes abiertos a la vez en el mismo equipo contra el servidor local (contenedor, puerto 5081): cliente A con admin@raf.local y cliente B con un usuario Editor de prueba creado por la API local y sumado a "Equipo Demo". Informó que anda bien. Para poder abrir dos clientes con usuarios distintos en el mismo equipo hubo que agregar la variable de entorno RAF_DATA_DIR (AppPaths.DataDirectory en LocalStorage.cs), que reemplaza la carpeta de datos local (%LOCALAPPDATA%\RAF): sin ella las dos instancias compartían sesión, caché e historial. Sin la variable el comportamiento no cambia. Se corrió dotnet build sin advertencias y los tests de Raf.Client.Core.Tests (60) y Raf.Server.Tests (94) en verde. El corte de red justo a mitad de un push no se puede provocar a mano con precisión; lo cubre el test Un_corte_a_mitad_del_envio_continua_donde_quedo. No se probó con dos equipos distintos ni contra el entorno desplegado (eso queda para el Ticket-004). Durante la prueba apareció un bug de navegación con Tab, ajeno a la sincronización, que quedó en el Ticket-021.
 - Ticket-003.md
     - Creado: 10/11/2026
     - Estado: CREADO
@@ -77,6 +77,10 @@
     - Estado: INCOMPLETO
     - Comentarios:
 - Ticket-020.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-021.md
     - Creado: 10/11/2026
     - Estado: CREADO
     - Comentarios:

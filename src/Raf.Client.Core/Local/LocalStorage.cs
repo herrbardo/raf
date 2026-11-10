@@ -8,9 +8,14 @@ namespace Raf.Client.Core.Local;
 
 public static class AppPaths
 {
-    /// <summary>Carpeta de datos locales de la app; no se sincroniza con el perfil móvil del usuario.</summary>
-    public static string DataDirectory { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RAF");
+    /// <summary>
+    /// Carpeta de datos locales de la app; no se sincroniza con el perfil móvil del usuario.
+    /// RAF_DATA_DIR la reemplaza, para probar dos clientes con usuarios distintos en el mismo equipo.
+    /// </summary>
+    public static string DataDirectory { get; } =
+        Environment.GetEnvironmentVariable("RAF_DATA_DIR") is { Length: > 0 } custom
+            ? Path.GetFullPath(custom)
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RAF");
 }
 
 /// <summary>Almacén de secretos del sistema operativo.</summary>
