@@ -7,7 +7,10 @@ namespace Raf.Client.Core.Sync;
 
 public enum SyncState { Synced, Pending, Offline, Conflict }
 
-public sealed record SyncStatus(SyncState State, int Pending, int Conflicts);
+/// <param name="LastError">Por qué falló el último ciclo; null si terminó bien.</param>
+/// <param name="LastSyncedAt">Cuándo terminó bien el último ciclo; null si todavía no terminó ninguno.</param>
+public sealed record SyncStatus(
+    SyncState State, int Pending, int Conflicts, string? LastError = null, DateTimeOffset? LastSyncedAt = null);
 
 public enum ConflictReason
 {

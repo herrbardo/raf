@@ -20,11 +20,12 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-        // Para revisar el diseño sin cambiar el tema del sistema: RAF_THEME=dark o RAF_THEME=light.
+        // Por defecto, oscuro (D7). Para revisar el diseño: RAF_THEME=light, o RAF_THEME=system para seguir al sistema.
         RequestedThemeVariant = Environment.GetEnvironmentVariable("RAF_THEME")?.ToLowerInvariant() switch
         {
             "dark" => ThemeVariant.Dark,
             "light" => ThemeVariant.Light,
+            "system" => ThemeVariant.Default,
             _ => RequestedThemeVariant,
         };
     }

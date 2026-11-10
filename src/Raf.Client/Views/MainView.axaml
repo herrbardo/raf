@@ -13,7 +13,7 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
           <Button Classes="sync" Classes.synced="{Binding IsSynced}" Classes.offline="{Binding IsOffline}"
                   Classes.conflict="{Binding IsInConflict}" VerticalAlignment="Center"
-                  ToolTip.Tip="Estado de la sincronización. Con conflictos, abre la pantalla para resolverlos."
+                  ToolTip.Tip="{Binding SyncDetail}" ToolTip.ShowOnDisabled="True"
                   Command="{Binding OpenConflictsCommand}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <Ellipse Classes="dot" />

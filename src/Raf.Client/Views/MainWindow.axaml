@@ -6,6 +6,12 @@
         Title="RAF — Requests and Friends"
         Icon="avares://RAF/Assets/raf.png"
         Width="1280" Height="800" MinWidth="900" MinHeight="560">
+  <!-- Atajos de la pestaña activa. Van en la ventana porque el foco puede quedar fuera de la pestaña
+       (por ejemplo, después de Enviar el botón se deshabilita y el foco vuelve a la ventana). -->
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding Main.SelectedTab.SaveCommand}" />
+    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding Main.SelectedTab.SendCommand}" />
+  </Window.KeyBindings>
   <DockPanel>
     <Border DockPanel.Dock="Top" Classes="update-banner" Padding="12,6"
             IsVisible="{Binding Updates.IsReady}">
