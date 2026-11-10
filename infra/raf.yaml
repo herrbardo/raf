@@ -76,6 +76,13 @@ Parameters:
     Description: >-
       Tag de la imagen con la que corre la tarea de migraciones. infra/deploy.ps1 la actualiza y la ejecuta antes
       de pasar el servicio a esa misma imagen.
+  MinClientVersion:
+    Type: String
+    Default: "0.0.0"
+    AllowedPattern: "^\\d+\\.\\d+\\.\\d+$"
+    Description: >-
+      Versión mínima del cliente que acepta el servidor. Los clientes anteriores reciben 426 y piden actualizarse.
+      Subirla recién cuando la versión nueva esté publicada.
   DesiredCount:
     Type: Number
     Default: 0
@@ -310,6 +317,7 @@ Resources:
             - { Name: PathBase, Value: !Ref PathPrefix }
             # Las migraciones corren antes, en MigrationTaskDefinition: varias tareas no compiten por migrar.
             - { Name: Database__MigrateOnStartup, Value: "false" }
+            - { Name: Clients__MinVersion, Value: !Ref MinClientVersion }
           Secrets:
             - { Name: Db__User, ValueFrom: !Sub "${DbSecret}:username::" }
             - { Name: Db__Password, ValueFrom: !Sub "${DbSecret}:password::" }

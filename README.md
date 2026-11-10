@@ -27,6 +27,19 @@ dotnet tool restore
 dotnet ef migrations add <Nombre> --project src/Raf.Server.Data --startup-project src/Raf.Server
 ```
 
+## Publicar una versión del cliente
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+El workflow [release.yml](.github/workflows/release.yml) compila, empaqueta con Velopack y publica en GitHub Releases. Las apps instaladas encuentran la versión nueva al arrancar, la descargan en segundo plano y ofrecen reiniciar.
+
+Para obligar a los clientes viejos a actualizarse, se sube `MinClientVersion` en el stack (`Clients:MinVersion` en el servidor) **después** de publicar la versión nueva: los clientes anteriores reciben 426 y muestran la pantalla de actualización.
+
+Firma: sin certificados el workflow publica igual, pero sin firmar. Los secretos que la activan están en [docs/plans/06-distribucion.md](docs/plans/06-distribucion.md#secretos-del-repositorio).
+
 ## Estructura
 
 | Proyecto | Contenido |
@@ -35,6 +48,8 @@ dotnet ef migrations add <Nombre> --project src/Raf.Server.Data --startup-projec
 | `src/Raf.Contracts` | DTOs compartidos entre cliente y servidor |
 | `src/Raf.Server.Data` | EF Core, Identity, migraciones, sellado de `Version`/`ChangeSeq` |
 | `src/Raf.Server` | API (Minimal APIs), auth JWT, permisos |
+| `src/Raf.Client.Core` | Lógica del cliente sin UI: sesión, API, caché local y sincronización |
+| `src/Raf.Client` | App de escritorio (Avalonia) y actualizaciones (Velopack) |
 | `tests/*` | Tests de dominio e integración |
 
 Documentación: [docs/Intro.md](docs/Intro.md) · Hoja de ruta: [docs/plans/README.md](docs/plans/README.md)

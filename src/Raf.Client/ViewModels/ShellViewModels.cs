@@ -6,6 +6,7 @@ using Raf.Client.Core.Local;
 using Raf.Client.Core.Session;
 using Raf.Client.Core.Sync;
 using Raf.Client.Services;
+using Raf.Contracts;
 
 namespace Raf.Client.ViewModels;
 
@@ -22,6 +23,10 @@ public abstract partial class PageViewModel : ObservableObject
         try
         {
             await action();
+        }
+        catch (ClientOutdatedException)
+        {
+            // El shell ya muestra la pantalla de actualización (ClientVersionHandler.Outdated).
         }
         catch (ApiException e)
         {
@@ -42,13 +47,31 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty] private object? _page;
 
-    public ShellViewModel(ClientServices services)
+    public ShellViewModel(ClientServices services, UpdateService updates, ClientVersionHandler version)
     {
         _services = services;
+        Updates = updates;
+        _clientVersion = version.ClientVersion;
         services.Session.SessionExpired += () => Dispatcher.UIThread.Post(() =>
         {
-            if (Page is not LoginViewModel) ShowLogin("La sesión expiró. Volvé a iniciar sesión.");
+            if (Page is not LoginViewModel and not UpdateRequiredViewModel) ShowLogin("La sesión expiró. Volvé a iniciar sesión.");
         });
+        version.Outdated += min => Dispatcher.UIThread.Post(() => ShowUpdateRequired(min));
+    }
+
+    private readonly string _clientVersion;
+
+    public UpdateService Updates { get; }
+
+    [RelayCommand]
+    private void RestartToUpdate() => Updates.ApplyAndRestart();
+
+    /// <summary>El servidor ya no acepta esta versión: se deja de sincronizar y se ofrece actualizar.</summary>
+    public void ShowUpdateRequired(string minVersion)
+    {
+        if (Page is UpdateRequiredViewModel) return;
+        CloseSync();
+        Page = new UpdateRequiredViewModel(this, Updates, _clientVersion, minVersion);
     }
 
     public MainViewModel? Main => Page as MainViewModel;
@@ -104,7 +127,8 @@ public sealed partial class ShellViewModel : ObservableObject
         CloseSync();
         var session = _services.Session;
         var realtime = new RealtimeChangeSubscriber(
-            session.Server!, async () => await session.GetAccessTokenAsync(), TimeProvider.System, TimeSpan.FromSeconds(30));
+            session.Server!, async () => await session.GetAccessTokenAsync(), TimeProvider.System, TimeSpan.FromSeconds(30),
+            o => o.Headers[RafHeaders.ClientVersion] = _clientVersion);
         var sync = await SyncSession.OpenAsync(
             Path.Combine(AppPaths.DataDirectory, "cache"), session.Server!, session.User!.Id,
             _services.Api, _services.Secure, realtime);

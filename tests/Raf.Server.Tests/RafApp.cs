@@ -24,6 +24,7 @@ namespace Raf.Server.Tests;
 public sealed class RafApp : IAsyncLifetime
 {
     public const string AdminEmail = "admin@test.local";
+    public const string MinClientVersion = "2.1.0";
     public static readonly string AdminPassword = "Aa1" + Guid.NewGuid().ToString("N");
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -52,6 +53,7 @@ public sealed class RafApp : IAsyncLifetime
             b.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             b.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             b.UseSetting("Bootstrap:AdminMustChangePassword", "false");
+            b.UseSetting("Clients:MinVersion", MinClientVersion); // los clientes de los tests no mandan versión
             b.UseSetting("Confidential:LocalKey", Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)));
         });
         _ = _factory.Server; // arranca el host: migra y crea el admin

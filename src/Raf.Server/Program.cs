@@ -113,6 +113,7 @@ app.UseRouting();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseClientCompatibility(); // antes de la autenticación: un cliente viejo recibe 426 aunque su token haya vencido
 app.UseAuthentication();
 app.UseAuthorization();
 

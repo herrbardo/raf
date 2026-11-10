@@ -1,0 +1,101 @@
+using System.Diagnostics;
+using System.Reflection;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Raf.Contracts;
+using Velopack;
+using Velopack.Sources;
+
+namespace Raf.Client.Services;
+
+/// <summary>Versión de la app y origen de las actualizaciones, fijados al compilar.</summary>
+public static class AppIdentity
+{
+    private static readonly Assembly Entry = typeof(AppIdentity).Assembly;
+
+    /// <summary>Versión semántica sin metadatos de build ("1.2.0", "1.3.0-beta.1").</summary>
+    public static string Version { get; } = AppVersion.Display(
+        Entry.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0");
+
+    /// <summary>
+    /// URL del repositorio de GitHub donde se publican los releases. La pasa el workflow de release
+    /// (<c>-p:RafUpdateUrl=...</c>); en un build local queda vacía y las actualizaciones se desactivan.
+    /// </summary>
+    public static string? UpdateUrl { get; } = Entry.GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(a => a.Key == "RafUpdateUrl")?.Value is { Length: > 0 } url ? url : null;
+
+    public static string? ReleasesPage => UpdateUrl is null ? null : UpdateUrl.TrimEnd('/') + "/releases/latest";
+}
+
+/// <summary>
+/// Busca versiones nuevas en GitHub Releases y las descarga en segundo plano. La versión descargada se aplica al
+/// reiniciar desde el aviso o, si el usuario no lo hace, la próxima vez que se abre la app (Velopack la aplica al
+/// arrancar).
+/// </summary>
+public sealed partial class UpdateService : ObservableObject
+{
+    private readonly UpdateManager? _manager;
+    private UpdateInfo? _ready;
+
+    /// <summary>Versión descargada y lista para instalar; null si no hay.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsReady), nameof(ReadyText))]
+    private string? _readyVersion;
+
+    [ObservableProperty] private bool _isChecking;
+
+    public UpdateService()
+    {
+        if (AppIdentity.UpdateUrl is null) return;
+        try
+        {
+            var manager = new UpdateManager(new GithubSource(AppIdentity.UpdateUrl, accessToken: null, prerelease: false));
+            if (manager.IsInstalled) _manager = manager;
+        }
+        catch (Exception e)
+        {
+            Trace.TraceWarning($"Actualizaciones desactivadas: {e.Message}");
+        }
+    }
+
+    /// <summary>La app se instaló con el instalador y sabe dónde buscar versiones nuevas.</summary>
+    public bool IsSupported => _manager is not null;
+
+    public bool IsReady => ReadyVersion is not null;
+
+    public string ReadyText => $"Hay una versión nueva de RAF ({ReadyVersion}) lista para instalar.";
+
+    /// <summary>Busca y descarga la última versión. Devuelve true si quedó una lista para instalar.</summary>
+    public async Task<bool> CheckAndDownloadAsync()
+    {
+        if (_manager is null) return false;
+        if (_ready is not null) return true;
+        await Dispatcher.UIThread.InvokeAsync(() => IsChecking = true);
+        try
+        {
+            var info = await _manager.CheckForUpdatesAsync();
+            if (info is null) return false;
+            await _manager.DownloadUpdatesAsync(info);
+            _ready = info;
+            var version = info.TargetFullRelease.Version.ToString();
+            await Dispatcher.UIThread.InvokeAsync(() => ReadyVersion = version);
+            return true;
+        }
+        catch (Exception e)
+        {
+            // Sin conexión o GitHub caído: se vuelve a intentar en el próximo arranque.
+            Trace.TraceWarning($"No se pudo buscar actualizaciones: {e.Message}");
+            return false;
+        }
+        finally
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => IsChecking = false);
+        }
+    }
+
+    /// <summary>Cierra la app, instala la versión descargada y la vuelve a abrir.</summary>
+    public void ApplyAndRestart()
+    {
+        if (_manager is not null && _ready is not null) _manager.ApplyUpdatesAndRestart(_ready);
+    }
+}

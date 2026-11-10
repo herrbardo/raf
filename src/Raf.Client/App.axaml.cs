@@ -27,6 +27,7 @@ public partial class App : Application
             desktop.MainWindow = new MainWindow { DataContext = shell };
             desktop.ShutdownRequested += (_, _) => provider.Dispose();
             _ = shell.StartAsync();
+            _ = Task.Run(provider.GetRequiredService<UpdateService>().CheckAndDownloadAsync);
         }
         base.OnFrameworkInitializationCompleted();
     }
@@ -35,7 +36,10 @@ public partial class App : Application
     {
         var data = AppPaths.DataDirectory;
         var services = new ServiceCollection();
-        services.AddSingleton(new HttpClient { Timeout = TimeSpan.FromSeconds(60) });
+        var version = new ClientVersionHandler(AppIdentity.Version) { InnerHandler = new HttpClientHandler() };
+        services.AddSingleton(version);
+        services.AddSingleton(new HttpClient(version) { Timeout = TimeSpan.FromSeconds(60) });
+        services.AddSingleton<UpdateService>();
         services.AddSingleton(SecureStores.CreateDefault());
         services.AddSingleton(new SettingsStore(Path.Combine(data, "settings.json")));
         services.AddSingleton(new RunHistoryStore(Path.Combine(data, "history")));

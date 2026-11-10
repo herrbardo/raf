@@ -4,6 +4,20 @@
         x:Class="Raf.Client.Views.MainWindow"
         x:DataType="vm:ShellViewModel"
         Title="RAF — Requests and Friends"
+        Icon="avares://RAF/Assets/raf.png"
         Width="1280" Height="800" MinWidth="900" MinHeight="560">
-  <ContentControl Content="{Binding Page}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Classes="update-banner" Padding="12,6"
+            IsVisible="{Binding Updates.IsReady}">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Classes="accent" Content="Reiniciar para actualizar"
+                Command="{Binding RestartToUpdateCommand}" />
+        <TextBlock VerticalAlignment="Center" TextWrapping="Wrap">
+          <Run Text="{Binding Updates.ReadyText}" />
+          <Run Classes="caption" Text=" Si no reiniciás ahora, se instala la próxima vez que abras la app." />
+        </TextBlock>
+      </DockPanel>
+    </Border>
+    <ContentControl Content="{Binding Page}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+  </DockPanel>
 </Window>

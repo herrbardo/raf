@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             x:Class="Raf.Client.Views.UpdateRequiredView"
+             x:DataType="vm:UpdateRequiredViewModel">
+  <StackPanel Width="460" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <TextBlock Classes="title" Text="Hay que actualizar RAF" />
+    <TextBlock TextWrapping="Wrap" Text="{Binding Message}" />
+
+    <StackPanel Spacing="12" IsVisible="{Binding CanUpdateInApp}">
+      <TextBlock Classes="caption" TextWrapping="Wrap"
+                 Text="La app descarga la versión nueva y se reinicia. Tus datos locales se conservan." />
+      <Button Classes="accent" Content="Actualizar ahora" HorizontalAlignment="Right"
+              Command="{Binding UpdateNowCommand}" IsEnabled="{Binding !IsBusy}" />
+    </StackPanel>
+
+    <StackPanel Spacing="12" IsVisible="{Binding !CanUpdateInApp}">
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ManualHint}" />
+      <Button Classes="accent" Content="Abrir la página de descargas" HorizontalAlignment="Right"
+              IsVisible="{Binding CanOpenReleases}" Command="{Binding OpenReleasesCommand}" />
+    </StackPanel>
+
+    <TextBlock Classes="caption" Text="Descargando…" IsVisible="{Binding IsBusy}" />
+    <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+      <Button Classes="link" Content="Reintentar" Command="{Binding RetryCommand}" />
+      <Button Classes="link" Content="Cambiar de servidor" Command="{Binding ChangeServerCommand}" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

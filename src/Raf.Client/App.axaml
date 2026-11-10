@@ -8,6 +8,7 @@
     <DataTemplate DataType="vm:ConnectViewModel"><views:ConnectView /></DataTemplate>
     <DataTemplate DataType="vm:LoginViewModel"><views:LoginView /></DataTemplate>
     <DataTemplate DataType="vm:ChangePasswordViewModel"><views:ChangePasswordView /></DataTemplate>
+    <DataTemplate DataType="vm:UpdateRequiredViewModel"><views:UpdateRequiredView /></DataTemplate>
     <DataTemplate DataType="vm:MainViewModel"><views:MainView /></DataTemplate>
     <DataTemplate DataType="vm:RequestTabViewModel"><views:RequestTabView /></DataTemplate>
     <DataTemplate DataType="vm:SampleTabViewModel"><views:SampleTabView /></DataTemplate>
@@ -36,6 +37,10 @@
     <Style Selector="TextBlock.warning">
       <Setter Property="Foreground" Value="#D9822B" />
       <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Border.update-banner">
+      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAccentBrush}" />
+      <Setter Property="TextElement.Foreground" Value="White" />
     </Style>
     <Style Selector="Button.link">
       <Setter Property="Background" Value="Transparent" />

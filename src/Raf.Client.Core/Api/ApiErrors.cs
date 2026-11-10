@@ -22,11 +22,12 @@ public class ApiException(HttpStatusCode? status, string message, Exception? inn
 
     internal static async Task<ApiException> FromResponseAsync(HttpResponseMessage response)
     {
-        string? title = null, detail = null;
+        string? title = null, detail = null, minClientVersion = null;
         var errors = new List<string>();
         try
         {
             var text = await response.Content.ReadAsStringAsync();
+            minClientVersion = ClientVersionHandler.ReadMinVersion(text);
             using var doc = JsonDocument.Parse(text);
             var root = doc.RootElement;
             if (root.TryGetProperty("title", out var t)) title = t.GetString();
@@ -45,6 +46,8 @@ public class ApiException(HttpStatusCode? status, string message, Exception? inn
 
         if (response.StatusCode == HttpStatusCode.Conflict && title == "Conflicto de versión")
             return new VersionConflictException(message);
+        if (response.StatusCode == HttpStatusCode.UpgradeRequired)
+            return new ClientOutdatedException(message, minClientVersion);
         return new ApiException(response.StatusCode, message);
     }
 }

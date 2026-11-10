@@ -5,7 +5,15 @@
     <RootNamespace>Raf.Client</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationIcon>Assets\raf.ico</ApplicationIcon>
+    <Title>RAF</Title>
+    <Description>Cliente colaborativo para enviar requests HTTP.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\raf.png" />
+    <!-- Origen de las actualizaciones: lo pasa el workflow de release. Sin él, la app no busca versiones nuevas. -->
+    <AssemblyMetadata Include="RafUpdateUrl" Value="$(RafUpdateUrl)" Condition="'$(RafUpdateUrl)' != ''" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
@@ -14,6 +22,7 @@
     <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Velopack" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raf.Client.Core\Raf.Client.Core.csproj" />

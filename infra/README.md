@@ -21,6 +21,7 @@ Cliente ──HTTPS / WebSocket──> ALB existente (regla en {PathPrefix}/*) �
 | `HostHeader` | Opcional: dominio de la regla, si el listener atiende varios. |
 | `ListenerRulePriority` | Prioridad de la regla; no puede repetirse en ese listener. |
 | `AdminEmail` | Email del admin inicial. |
+| `MinClientVersion` | Opcional: versión mínima del cliente. Default `0.0.0` (acepta todas). Subirla después de publicar la versión nueva; ver el [README](../README.md#publicar-una-versión-del-cliente). |
 
 **Lo que crea el template:** security groups de las tareas y de la base, RDS PostgreSQL 17 (`db.t4g.micro`, 20 GB gp3 cifrado, backups de 7 días, snapshot al borrar), los secretos en Secrets Manager (credenciales de la base, clave JWT y contraseña inicial del admin), una clave KMS para las variables secretas (con rotación anual), el repositorio ECR, el cluster, las task definitions del servidor y de las migraciones, el servicio de ECS Fargate, logs en CloudWatch, el target group y la regla del listener.
 
