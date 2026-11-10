@@ -1,4 +1,4 @@
-# Despliega una versión nueva del servidor: construye y sube la imagen, migra la base con una tarea de una sola
+﻿# Despliega una versión nueva del servidor: construye y sube la imagen, migra la base con una tarea de una sola
 # ejecución y recién entonces actualiza el servicio. No guarda credenciales: usa el perfil de AWS CLI activo.
 #
 # Uso (desde la raíz del repo, con el stack ya creado; ver infra/README.md):

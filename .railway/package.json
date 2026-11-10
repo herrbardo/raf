@@ -1,0 +1,9 @@
+{
+  "name": "raf-railway-iac",
+  "private": true,
+  "description": "SDK para evaluar railway.ts (infraestructura de RAF en Railway).",
+  "type": "module",
+  "devDependencies": {
+    "railway": "3.16.0"
+  }
+}

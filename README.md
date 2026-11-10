@@ -3,7 +3,7 @@
 Cliente desktop colaborativo para enviar requests HTTP a distintas APIs y trabajar en equipo (similar a Postman).
 
 - Cliente: Avalonia (.NET 10), para Windows y macOS
-- Backend: ASP.NET Core 10 + PostgreSQL, desplegado en AWS (ALB existente → ECS Fargate). Ver [infra/](infra/README.md)
+- Backend: ASP.NET Core 10 + PostgreSQL, desplegado en AWS (ALB existente → ECS Fargate, ver [infra/](infra/README.md)) o en Railway (ver [infra/railway/](infra/railway/README.md))
 
 ## Desarrollo
 
