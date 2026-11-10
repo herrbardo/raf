@@ -1,0 +1,46 @@
+# Estado tickets
+
+- Ticket-001.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-002.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-003.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-004.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-005.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-006.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-007.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-008.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-009.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-010.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
+- Ticket-011.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
