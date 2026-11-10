@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
@@ -62,12 +63,17 @@ public sealed partial class TextField : TextEditor
     {
         // Valores locales: el control usa la clave de estilo de TextEditor y sus temas tienen prioridad.
         BorderThickness = new Thickness(1);
-        CornerRadius = new CornerRadius(3);
-        Padding = new Thickness(6, 5);
-        FontFamily = new FontFamily("Cascadia Mono,Consolas,Menlo,monospace");
+        CornerRadius = new CornerRadius(6);
+        Padding = new Thickness(8, 6);
         FontSize = 13;
         MinHeight = 32;
-        Bind(BorderBrushProperty, this.GetResourceObservable("TextControlBorderBrush"));
+        Bind(FontFamilyProperty, this.GetResourceObservable("RafMonoFont"));
+        Bind(BorderBrushProperty, this.GetResourceObservable("RafBorderBrush"));
+        Bind(ForegroundProperty, this.GetResourceObservable("RafTextBrush"));
+        TextArea.TextView[!AvaloniaEdit.Rendering.TextView.LinkTextForegroundBrushProperty] = this.GetResourceObservable("RafAccentTextBrush").ToBinding();
+        TextArea.Bind(AvaloniaEdit.Editing.TextArea.SelectionBrushProperty, this.GetResourceObservable("RafAccentSoftBrush"));
+        ApplyBackground();
+        ActualThemeVariantChanged += (_, _) => OnThemeChanged();
 
         _colorizer = new Colorizer(this);
         TextArea.TextView.LineTransformers.Add(_colorizer);
@@ -110,8 +116,8 @@ public sealed partial class TextField : TextEditor
 
         if (change.Property == BoundTextProperty) PushToEditor();
         else if (change.Property == MultilineProperty) ApplyMode();
-        else if (change.Property == SyntaxProperty)
-            SyntaxHighlighting = Syntax is { Length: > 0 } name ? HighlightingManager.Instance.GetDefinition(name) : null;
+        else if (change.Property == SyntaxProperty) ApplySyntax();
+        else if (change.Property == IsReadOnlyProperty) ApplyBackground();
         else if (change.Property == VariableHighlight.LookupProperty) AttachLookup(change.GetNewValue<VariableLookup?>());
     }
 
@@ -136,6 +142,38 @@ public sealed partial class TextField : TextEditor
     }
 
     private void Redraw() => TextArea.TextView.Redraw();
+
+    /// <summary>Solo lectura (Viewer, respuesta) con otro fondo, para distinguirlo de un campo editable.</summary>
+    private void ApplyBackground() =>
+        Bind(BackgroundProperty, this.GetResourceObservable(IsReadOnly ? "RafInputReadOnlyBrush" : "RafInputBrush"));
+
+    private void ApplySyntax()
+    {
+        if (Syntax is not { Length: > 0 } name)
+        {
+            SyntaxHighlighting = null;
+            return;
+        }
+        SyntaxPalette.Apply(this);
+        SyntaxHighlighting = HighlightingManager.Instance.GetDefinition(name);
+    }
+
+    /// <summary>Los colores de variables y de sintaxis salen del tema: al cambiarlo se vuelven a pintar.</summary>
+    private void OnThemeChanged()
+    {
+        _colorizer.Refresh();
+        if (SyntaxHighlighting is not null)
+        {
+            SyntaxPalette.Apply(this);
+            var current = SyntaxHighlighting;
+            SyntaxHighlighting = null; // fuerza a volver a colorear con la paleta nueva
+            SyntaxHighlighting = current;
+        }
+        Redraw();
+    }
+
+    internal IBrush? ThemeBrush(string key) =>
+        this.TryFindResource(key, ActualThemeVariant, out var value) ? value as IBrush : null;
 
     private void ApplyMode()
     {
@@ -177,22 +215,25 @@ public sealed partial class TextField : TextEditor
 
     private sealed partial class Colorizer(TextField owner) : DocumentColorizingTransformer
     {
-        private static readonly IBrush Known = new SolidColorBrush(Color.Parse("#2E9E6B"));
-        private static readonly IBrush Missing = new SolidColorBrush(Color.Parse("#E5484D"));
-        private static readonly IBrush Unreadable = new SolidColorBrush(Color.Parse("#D9822B"));
+        private IBrush? _known, _missing, _unreadable;
+
+        public void Refresh() => _known = _missing = _unreadable = null;
 
         protected override void ColorizeLine(DocumentLine line)
         {
             if (owner.Variables is not { } variables) return;
+            var known = _known ??= owner.ThemeBrush("RafSuccessBrush");
+            var missing = _missing ??= owner.ThemeBrush("RafDangerBrush");
+            var unreadable = _unreadable ??= owner.ThemeBrush("RafWarningBrush");
 
             var text = CurrentContext.Document.GetText(line);
             foreach (Match m in Placeholder().Matches(text))
             {
                 var key = m.Groups[1].Value;
-                var brush = !variables.IsDefined(key) ? Missing : variables.IsUnreadable(key) ? Unreadable : Known;
+                var brush = !variables.IsDefined(key) ? missing : variables.IsUnreadable(key) ? unreadable : known;
                 ChangeLinePart(line.Offset + m.Index, line.Offset + m.Index + m.Length, e =>
                 {
-                    e.TextRunProperties.SetForegroundBrush(brush);
+                    if (brush is not null) e.TextRunProperties.SetForegroundBrush(brush);
                     e.TextRunProperties.SetTypeface(new Typeface(
                         e.TextRunProperties.Typeface.FontFamily, weight: FontWeight.SemiBold));
                 });
@@ -201,5 +242,40 @@ public sealed partial class TextField : TextEditor
 
         [GeneratedRegex(VariableResolver.PlaceholderPattern)]
         private static partial Regex Placeholder();
+    }
+}
+
+/// <summary>
+/// Pinta las definiciones de sintaxis de AvaloniaEdit (JSON y XML) con los colores del tema. Las definiciones son
+/// globales y hay un solo tema activo por vez, así que alcanza con reescribirlas al cambiar de tema.
+/// </summary>
+internal static class SyntaxPalette
+{
+    private static ThemeVariant? _applied;
+
+    public static void Apply(TextField field)
+    {
+        var theme = field.ActualThemeVariant;
+        if (theme == _applied) return;
+        foreach (var name in new[] { "Json", "XML" })
+        {
+            if (HighlightingManager.Instance.GetDefinition(name) is not { } definition) continue;
+            foreach (var color in definition.NamedHighlightingColors)
+                if (field.ThemeBrush(KeyFor(color.Name)) is ISolidColorBrush brush)
+                    color.Foreground = new SimpleHighlightingBrush(brush.Color);
+        }
+        _applied = theme;
+    }
+
+    private static string KeyFor(string name)
+    {
+        bool Has(string part) => name.Contains(part, StringComparison.OrdinalIgnoreCase);
+        if (Has("Comment")) return "RafSyntaxCommentBrush";
+        if (Has("FieldName") || Has("AttributeName") || Has("Property")) return "RafSyntaxPropertyBrush";
+        if (Has("String") || Has("AttributeValue") || Has("CData")) return "RafSyntaxStringBrush";
+        if (Has("Number") || Has("Digit")) return "RafSyntaxNumberBrush";
+        if (Has("Bool") || Has("Null") || Has("Keyword") || Has("Entity")) return "RafSyntaxKeywordBrush";
+        if (Has("Tag") || Has("DocType") || Has("Declaration")) return "RafSyntaxTagBrush";
+        return "RafSyntaxPunctuationBrush";
     }
 }

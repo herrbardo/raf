@@ -1,18 +1,32 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.Views.LoginView"
              x:DataType="vm:LoginViewModel">
-  <StackPanel Width="380" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-    <TextBlock Classes="title" Text="Iniciar sesión" />
-    <TextBlock Classes="caption" Text="{Binding ServerText}" />
-    <TextBox Text="{Binding Email}" Watermark="Email" />
-    <TextBox Text="{Binding Password}" Watermark="Contraseña" PasswordChar="•" />
-    <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-    <DockPanel>
-      <Button Classes="link" Content="Cambiar de servidor" Command="{Binding ChangeServerCommand}" />
-      <Button Classes="accent" Content="Entrar" IsDefault="True" HorizontalAlignment="Right"
-              Command="{Binding LoginCommand}" IsEnabled="{Binding !IsBusy}" />
-    </DockPanel>
-  </StackPanel>
+  <ScrollViewer>
+    <Border Classes="card" Width="420" Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="14">
+        <views:BrandHeader />
+        <StackPanel Spacing="4">
+          <TextBlock Classes="title" Text="Iniciar sesión" />
+          <TextBlock Classes="caption mono" Text="{Binding ServerText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ServerText}" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="label" Text="Email" />
+          <TextBox Text="{Binding Email}" Watermark="nombre@empresa.com" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="label" Text="Contraseña" />
+          <TextBox Text="{Binding Password}" PasswordChar="•" />
+          <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+        <DockPanel Margin="0,4,0,0">
+          <Button Classes="link" Content="Cambiar de servidor" Command="{Binding ChangeServerCommand}" VerticalAlignment="Center" />
+          <Button Classes="accent" Content="Entrar" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
+                  HorizontalContentAlignment="Center" Command="{Binding LoginCommand}" IsEnabled="{Binding !IsBusy}" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
 </UserControl>

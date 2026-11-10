@@ -1,17 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.Views.ConnectView"
              x:DataType="vm:ConnectViewModel">
-  <StackPanel Width="440" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-    <TextBlock Classes="title" Text="Conectar con el servidor" />
-    <TextBlock Classes="caption" TextWrapping="Wrap"
-               Text="Indicá la URL del servidor RAF de tu equipo, incluido el subpath si lo tiene." />
-    <TextBox Text="{Binding Url}" Watermark="https://dominio/raf" />
-    <TextBlock Classes="warning" IsVisible="{Binding InsecureWarning}"
-               Text="Esta URL no usa https: tu contraseña y tus tokens viajarían sin cifrar." />
-    <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-    <Button Classes="accent" Content="Continuar" IsDefault="True" HorizontalAlignment="Right"
-            Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
-  </StackPanel>
+  <ScrollViewer>
+    <Border Classes="card" Width="440" Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="14">
+        <views:BrandHeader />
+        <StackPanel Spacing="4">
+          <TextBlock Classes="title" Text="Conectar con el servidor" />
+          <TextBlock Classes="caption" TextWrapping="Wrap"
+                     Text="Indicá la URL del servidor RAF de tu equipo, incluido el subpath si lo tiene." />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="label" Text="URL del servidor" />
+          <TextBox Text="{Binding Url}" Watermark="https://dominio/raf" />
+          <TextBlock Classes="warning" IsVisible="{Binding InsecureWarning}"
+                     Text="Esta URL no usa https: tu contraseña y tus tokens viajarían sin cifrar." />
+          <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+        <Button Classes="accent" Content="Continuar" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
+                HorizontalContentAlignment="Center" Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
 </UserControl>

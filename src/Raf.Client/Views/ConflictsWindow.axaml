@@ -1,36 +1,16 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
         x:Class="Raf.Client.Views.ConflictsWindow"
         x:DataType="vm:ConflictsViewModel"
         Title="Conflictos de sincronización"
         Width="980" Height="620" MinWidth="720" MinHeight="420"
         WindowStartupLocation="CenterOwner">
-  <Grid ColumnDefinitions="260,*" Margin="14">
-    <DockPanel Grid.Column="0" Margin="0,0,12,0">
-      <TextBlock DockPanel.Dock="Top" Classes="caption" Margin="0,0,0,6" Text="Pendientes de decisión" />
-      <ListBox ItemsSource="{Binding Conflicts}" SelectedItem="{Binding Selected}">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:ConflictRow">
-            <StackPanel Spacing="1">
-              <TextBlock FontSize="13" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-    </DockPanel>
-
-    <TextBlock Grid.Column="1" Classes="caption" HorizontalAlignment="Center" VerticalAlignment="Center"
-               Text="No quedan conflictos." IsVisible="{Binding !HasSelection}" />
-
-    <DockPanel Grid.Column="1" IsVisible="{Binding HasSelection}">
-      <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8" Text="{Binding Message}" />
-
-      <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
-        <TextBlock Classes="error" TextWrapping="Wrap" Text="{Binding Error}"
-                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button Content="Usar la mía" Command="{Binding UseLocalCommand}" IsVisible="{Binding CanUseLocal}" />
           <Button Content="Usar la del servidor" Command="{Binding UseRemoteCommand}" IsVisible="{Binding CanUseRemote}" />
           <Button Content="Recrear" Command="{Binding RecreateCommand}" IsVisible="{Binding CanRecreate}" />
@@ -38,22 +18,56 @@
           <Button Content="Descartar mi cambio" Command="{Binding DiscardCommand}" IsVisible="{Binding CanDiscard}" />
           <Button Content="Cerrar" Click="OnCloseClick" />
         </StackPanel>
+        <TextBlock Classes="error" VerticalAlignment="Center" Margin="0,0,12,0" Text="{Binding Error}"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </DockPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="270,*">
+      <Border Classes="sidebar" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="10,14,8,10">
+          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="PENDIENTES DE DECISIÓN" />
+          <ListBox ItemsSource="{Binding Conflicts}" SelectedItem="{Binding Selected}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ConflictRow">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <StackPanel Grid.Column="1" Classes="empty" IsVisible="{Binding !HasSelection}">
+        <ctl:Icon Data="{StaticResource IconCheck}" />
+        <TextBlock Classes="empty-title" Text="No quedan conflictos" />
       </StackPanel>
 
-      <Grid RowDefinitions="*,*" ColumnDefinitions="*,10,*">
-        <DockPanel Grid.Row="0" Grid.Column="0">
-          <TextBlock DockPanel.Dock="Top" Classes="caption" Text="Mi versión" />
-          <TextBox IsReadOnly="True" AcceptsReturn="True" FontFamily="monospace" Text="{Binding LocalText}" />
-        </DockPanel>
-        <DockPanel Grid.Row="0" Grid.Column="2" IsVisible="{Binding HasRemote}">
-          <TextBlock DockPanel.Dock="Top" Classes="caption" Text="Versión del servidor" />
-          <TextBox IsReadOnly="True" AcceptsReturn="True" FontFamily="monospace" Text="{Binding RemoteText}" />
-        </DockPanel>
-        <DockPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,10,0,0" IsVisible="{Binding CanEdit}">
-          <TextBlock DockPanel.Dock="Top" Classes="caption" Text="Editar y enviar" />
-          <TextBox AcceptsReturn="True" FontFamily="monospace" Text="{Binding EditedText}" />
-        </DockPanel>
-      </Grid>
-    </DockPanel>
-  </Grid>
+      <DockPanel Grid.Column="1" Margin="20,14,20,10" IsVisible="{Binding HasSelection}">
+        <Border DockPanel.Dock="Top" Classes="callout" Margin="0,0,0,12">
+          <DockPanel>
+            <ctl:Icon DockPanel.Dock="Left" Margin="0,1,10,0" VerticalAlignment="Top" Data="{StaticResource IconWarning}" />
+            <TextBlock TextWrapping="Wrap" Text="{Binding Message}" />
+          </DockPanel>
+        </Border>
+
+        <Grid RowDefinitions="*,*" ColumnDefinitions="*,12,*">
+          <DockPanel Grid.Row="0" Grid.Column="0">
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="MI VERSIÓN" />
+            <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" Text="{Binding LocalText}" />
+          </DockPanel>
+          <DockPanel Grid.Row="0" Grid.Column="2" IsVisible="{Binding HasRemote}">
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="VERSIÓN DEL SERVIDOR" />
+            <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" Text="{Binding RemoteText}" />
+          </DockPanel>
+          <DockPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,12,0,0" IsVisible="{Binding CanEdit}">
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="EDITAR Y ENVIAR" />
+            <TextBox Classes="mono" AcceptsReturn="True" Text="{Binding EditedText}" />
+          </DockPanel>
+        </Grid>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
 </Window>

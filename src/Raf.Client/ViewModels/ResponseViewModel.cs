@@ -14,15 +14,21 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     private string _raw = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPlaceholder))]
+    [NotifyPropertyChangedFor(nameof(ShowPlaceholder), nameof(ShowSending))]
     private bool _isRunning;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPlaceholder), nameof(HasBody))]
+    [NotifyPropertyChangedFor(nameof(ShowPlaceholder), nameof(ShowSending), nameof(HasBody))]
     private bool _hasResult;
 
     [ObservableProperty] private string? _statusText;
     [ObservableProperty] private bool _isSuccess;
+
+    /// <summary>El servidor respondió con 4xx o 5xx.</summary>
+    [ObservableProperty] private bool _isHttpError;
+
+    /// <summary>No hubo respuesta (timeout, cancelado o error de red): ni éxito ni código de error.</summary>
+    [ObservableProperty] private bool _isNoResponse;
     [ObservableProperty] private string? _timeText;
     [ObservableProperty] private string? _sizeText;
     [ObservableProperty] private string? _errorText;
@@ -33,6 +39,9 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     [ObservableProperty] private IReadOnlyList<ResponseHeaderRow> _headers = [];
 
     public bool ShowPlaceholder => !IsRunning && !HasResult;
+
+    /// <summary>Primer envío, sin una respuesta anterior para mostrar mientras tanto.</summary>
+    public bool ShowSending => IsRunning && !HasResult;
 
     public bool HasBody => HasResult && _result?.Body is not null;
 
@@ -46,6 +55,8 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         TimeText = FormatTime(result.Elapsed);
         StatusText = result.StatusCode is { } code ? $"{code} {result.ReasonPhrase}".TrimEnd() : OutcomeText(result.Outcome);
         IsSuccess = result.StatusCode is >= 200 and < 400;
+        IsHttpError = result.StatusCode is { } status && status is < 200 or >= 400;
+        IsNoResponse = result.StatusCode is null;
         SizeText = result.Body is { } b ? FormatSize(b.Length) : null;
         Headers = result.Headers.Select(h => new ResponseHeaderRow(h.Key, h.Value)).ToList();
 

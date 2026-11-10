@@ -4,6 +4,14 @@
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.App"
              RequestedThemeVariant="Default">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://RAF/Styles/Theme.axaml" />
+        <ResourceInclude Source="avares://RAF/Styles/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
   <Application.DataTemplates>
     <DataTemplate DataType="vm:ConnectViewModel"><views:ConnectView /></DataTemplate>
     <DataTemplate DataType="vm:LoginViewModel"><views:LoginView /></DataTemplate>
@@ -19,33 +27,13 @@
     <DataTemplate DataType="vm:ResponseViewModel"><views:ResponseView /></DataTemplate>
   </Application.DataTemplates>
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource RafAccentColorDark}" RegionColor="{StaticResource RafRegionColorDark}" />
+        <ColorPaletteResources x:Key="Light" Accent="{StaticResource RafAccentColorLight}" RegionColor="{StaticResource RafRegionColorLight}" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
     <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
-
-    <Style Selector="TextBlock.caption">
-      <Setter Property="Opacity" Value="0.7" />
-      <Setter Property="FontSize" Value="12" />
-    </Style>
-    <Style Selector="TextBlock.title">
-      <Setter Property="FontSize" Value="24" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="TextBlock.error">
-      <Setter Property="Foreground" Value="#E5484D" />
-      <Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
-    <Style Selector="TextBlock.warning">
-      <Setter Property="Foreground" Value="#D9822B" />
-      <Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
-    <Style Selector="Border.update-banner">
-      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAccentBrush}" />
-      <Setter Property="TextElement.Foreground" Value="White" />
-    </Style>
-    <Style Selector="Button.link">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Padding" Value="4,2" />
-      <Setter Property="FontSize" Value="12" />
-    </Style>
+    <StyleInclude Source="avares://RAF/Styles/Controls.axaml" />
   </Application.Styles>
 </Application>

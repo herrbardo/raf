@@ -1,6 +1,6 @@
 # Plan 07 — Embellecer la aplicación
 
-Estado: **definido**. Depende de: Plan 04, para incluir sus pantallas. Es el último plan y puede ejecutarse antes o después de los Planes 05 y 06, que casi no tocan la UI.
+Estado: **implementado, falta la prueba humana** (revisar en claro y oscuro). Depende de: Plan 04, para incluir sus pantallas. Es el último plan y puede ejecutarse antes o después de los Planes 05 y 06, que casi no tocan la UI.
 Checkpoint humano al final: revisar la aplicación en tema claro y oscuro, y dar feedback visual.
 
 ## Objetivo
@@ -60,6 +60,20 @@ Al ejecutarlo, seguir el skill [avalonia](../../.agents/skills/avalonia/SKILL.md
 - Los viewmodels exponen estado, no brushes.
 - Los textos de contraste deben ser legibles en ambos temas; el color nunca es la única señal.
 - Se ejecuta en commits separados por bloque (base, jerarquía, componentes, terminación) para poder revisar y revertir cada uno.
+
+## Cómo quedó
+
+- **Tema principal (D7): oscuro.** La paleta se diseñó primero para oscuro y claro tiene sus propios valores, no una inversión.
+- **Archivos:** `Styles/Theme.axaml` (colores de ambos temas, tipografía, radios; es el único archivo con colores literales), `Styles/Controls.axaml` (estilos por clase) y `Styles/Icons.axaml` (geometrías). `App.axaml` aplica el acento y el fondo a `FluentTheme` con `ColorPaletteResources`.
+- **Iconos:** son trazos en una grilla de 16×16 que dibuja el control propio `ctl:Icon` con el color de texto heredado, en lugar de `PathIcon`, que solo rellena. Así un icono toma el color del botón o del estado que lo contiene. No hay sets externos.
+- **Métodos HTTP:** el control `ctl:MethodBadge` toma el color de una pseudo-clase (`:get`, `:post`... y `:other` para métodos propios). El texto siempre se ve; los nombres largos se recortan con tooltip.
+- **Estado en lugar de colores:** `MainViewModel.SyncBrush` se reemplazó por `IsSynced`, `IsOffline`, `IsInConflict` e `IsSyncPending`; `ResponseViewModel` suma `IsHttpError`, `IsNoResponse` y `ShowSending`. Sin respuesta (timeout, cancelado, error de red) el chip queda neutro, nunca verde.
+- **Envío sin saltos:** Enviar y Cancelar tienen el mismo ancho y ocupan el mismo lugar. Mientras se reenvía, la respuesta anterior sigue visible con una barra de progreso fina arriba.
+- **`TextField`:** fuente, colores, selección y links salen del tema; en solo lectura tiene otro fondo (Viewer y respuesta). El resaltado de JSON y XML se repinta con la paleta del tema activo al cambiarlo.
+- **Para revisar el diseño** sin cambiar el tema del sistema: variable de entorno `RAF_THEME=dark` o `RAF_THEME=light` antes de abrir la app.
+- **Barra de título integrada (punto 17): descartada.** En Windows los botones del sistema quedan encima del extremo derecho de la barra superior (sincronización y usuario), y hay que reservarles un margen distinto por sistema operativo. En macOS los semáforos ocupan el extremo izquierdo y no se pudo probar. Con la barra nativa el resultado es correcto en los tres sistemas; se puede retomar cuando haya cómo probar macOS y Linux.
+- **Commits:** el plan pedía un commit por bloque, pero el flujo del repositorio commitea recién con `CPS`. Queda un solo commit, con los bloques descriptos en el mensaje.
+- **Verificado en local** (Windows, con capturas de antes y después): pantalla principal vacía y con request abierto, respuesta exitosa y con error, Variables, Miembros, Administración, diálogo de texto, Login (incluido el error) y Connect, en ambos temas, y la ventana en su tamaño mínimo. No se probó: el cambio de tema del sistema con la app abierta, un usuario Viewer, nombres muy largos ni muchas pestañas abiertas.
 
 ## Verificación
 

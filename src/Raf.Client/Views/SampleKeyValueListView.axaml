@@ -5,8 +5,12 @@
              x:Class="Raf.Client.Views.SampleKeyValueListView"
              x:DataType="vm:SampleKeyValueListViewModel">
   <DockPanel>
-    <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Content="+ Agregar propio"
-            Command="{Binding AddCommand}" IsVisible="{Binding CanEdit}" />
+    <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Command="{Binding AddCommand}" IsVisible="{Binding CanEdit}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
+        <TextBlock VerticalAlignment="Center" Text="Agregar propio" />
+      </StackPanel>
+    </Button>
     <ScrollViewer>
       <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
@@ -16,7 +20,7 @@
               <ctl:TextField Grid.Column="1" BoundText="{Binding Key}" IsReadOnly="{Binding KeyReadOnly}" />
               <StackPanel Grid.Column="2" Spacing="1">
                 <ctl:TextField BoundText="{Binding Value}" IsReadOnly="{Binding ValueReadOnly}" IsVisible="{Binding !IsRemoved}" />
-                <TextBlock Classes="caption" TextTrimming="CharacterEllipsis" Text="{Binding InheritedText}" IsVisible="{Binding HasInherited}" />
+                <TextBlock Classes="caption mono" TextTrimming="CharacterEllipsis" Text="{Binding InheritedText}" IsVisible="{Binding HasInherited}" />
               </StackPanel>
               <Button Grid.Column="3" Classes="link" Content="Sobreescribir" Command="{Binding OverrideCommand}" IsVisible="{Binding CanOverride}" />
               <Button Grid.Column="4" Classes="link" Content="Quitar" Command="{Binding RemoveKeyCommand}" IsVisible="{Binding CanRemove}" />

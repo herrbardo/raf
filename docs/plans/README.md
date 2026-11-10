@@ -11,7 +11,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 04 | [Colaboración y administración](04-colaboracion-admin.md) | 🧪 Implementado, falta la prueba humana | Probar flujos de admin y permisos con varios usuarios |
 | 05 | [Despliegue AWS y tiempo real](05-despliegue-aws.md) | 🧪 Implementado, falta la prueba humana | Desplegar con AWS CLI y validar |
 | 06 | [Empaquetado y distribución](06-distribucion.md) | 🧪 Implementado, falta la prueba humana | Certificados de firma y prueba de instalación |
-| 07 | [Embellecer la aplicación](07-embellecer-ui.md) | 📝 Definido | Revisar la aplicación en tema claro y oscuro, y dar feedback visual |
+| 07 | [Embellecer la aplicación](07-embellecer-ui.md) | 🧪 Implementado, falta la prueba humana | Revisar la aplicación en tema claro y oscuro, y dar feedback visual |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
@@ -25,4 +25,4 @@ Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 | D4 | Actualizaciones del cliente | Plan 06 | ✅ **GitHub Releases**, con el repo público |
 | D6 | Aplicación de actualizaciones y Mac | Plan 06 | ✅ Descarga en segundo plano y aviso de "Reiniciar para actualizar". Mac entra cuando exista la cuenta Apple Developer; hasta entonces se publica solo Windows |
 | D5 | Alcance de la primera versión | Planes 02 y 06 | ✅ `multipart` con archivos e importación de Postman quedan **para después** |
-| D7 | Tema principal del diseño | Plan 07 | Pendiente. Recomendación: **diseñar primero para oscuro** y mantener claro bien soportado |
+| D7 | Tema principal del diseño | Plan 07 | ✅ **Oscuro primero**, con claro bien soportado |

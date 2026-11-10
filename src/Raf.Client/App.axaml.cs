@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using Raf.Client.Core.Api;
 using Raf.Client.Core.Execution;
@@ -16,7 +17,17 @@ namespace Raf.Client;
 
 public partial class App : Application
 {
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+        // Para revisar el diseño sin cambiar el tema del sistema: RAF_THEME=dark o RAF_THEME=light.
+        RequestedThemeVariant = Environment.GetEnvironmentVariable("RAF_THEME")?.ToLowerInvariant() switch
+        {
+            "dark" => ThemeVariant.Dark,
+            "light" => ThemeVariant.Light,
+            _ => RequestedThemeVariant,
+        };
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {

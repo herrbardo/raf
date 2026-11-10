@@ -1,84 +1,98 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
         xmlns:dto="using:Raf.Contracts"
         x:Class="Raf.Client.Views.WorkspaceSettingsWindow"
         x:DataType="vm:WorkspaceSettingsViewModel"
         Title="{Binding Title}"
         Width="760" Height="600" MinWidth="560" MinHeight="420"
         WindowStartupLocation="CenterOwner">
-  <DockPanel Margin="14">
-    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
-      <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-      <DockPanel>
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="Salir del workspace" Command="{Binding LeaveCommand}"
-                  IsVisible="{Binding Permissions.CanLeave}" IsEnabled="{Binding !IsBusy}" />
-          <Button Content="Eliminar workspace…" Command="{Binding DeleteCommand}"
-                  IsVisible="{Binding Permissions.CanDeleteWorkspace}" IsEnabled="{Binding !IsBusy}" />
-        </StackPanel>
-        <Button HorizontalAlignment="Right" Content="Cerrar" Click="OnCloseClick" />
-      </DockPanel>
-    </StackPanel>
-
-    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,12">
-      <TextBlock Classes="caption" Text="{Binding RoleText}" />
-      <TextBlock Classes="caption" Text="Nombre" />
-      <DockPanel>
-        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Renombrar" Command="{Binding RenameCommand}"
-                IsVisible="{Binding Permissions.CanRenameWorkspace}" />
-        <TextBox Text="{Binding Name}" IsReadOnly="{Binding !Permissions.CanRenameWorkspace}" />
-      </DockPanel>
-    </StackPanel>
-
-    <Border DockPanel.Dock="Bottom" Margin="0,10,0,0" Padding="12" CornerRadius="6" BorderThickness="1"
-            BorderBrush="{DynamicResource TextControlBorderBrush}" IsVisible="{Binding Permissions.CanManageMembers}">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
       <StackPanel Spacing="8">
-        <TextBlock FontWeight="SemiBold" Text="Agregar miembro" />
-        <TextBox Text="{Binding Search}" Watermark="Buscá un usuario por nombre o email (mínimo 2 letras)" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <ComboBox MinWidth="320" ItemsSource="{Binding Candidates}" SelectedItem="{Binding Candidate}"
-                    PlaceholderText="Sin resultados">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="dto:UserSummaryDto">
-                <TextBlock>
-                  <Run Text="{Binding DisplayName}" />
-                  <Run Text=" · " />
-                  <Run Text="{Binding Email}" />
-                </TextBlock>
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-          <ComboBox Width="110" ItemsSource="{x:Static vm:MemberRowViewModel.AssignableRoles}" SelectedItem="{Binding NewMemberRole}" />
-          <Button Classes="accent" Content="Agregar" Command="{Binding AddMemberCommand}" />
-        </StackPanel>
+        <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <DockPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="danger" Content="Salir del workspace" Command="{Binding LeaveCommand}"
+                    IsVisible="{Binding Permissions.CanLeave}" IsEnabled="{Binding !IsBusy}" />
+            <Button Classes="danger" Content="Eliminar workspace…" Command="{Binding DeleteCommand}"
+                    IsVisible="{Binding Permissions.CanDeleteWorkspace}" IsEnabled="{Binding !IsBusy}" />
+          </StackPanel>
+          <Button HorizontalAlignment="Right" Content="Cerrar" Click="OnCloseClick" />
+        </DockPanel>
       </StackPanel>
     </Border>
 
-    <DockPanel>
-      <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Margin="0,0,0,6" Text="Miembros" />
-      <ScrollViewer>
-        <ItemsControl ItemsSource="{Binding Members}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:MemberRowViewModel">
-              <Grid ColumnDefinitions="*,120,Auto" ColumnSpacing="8" Margin="0,3,14,3">
-                <StackPanel Spacing="1" VerticalAlignment="Center">
-                  <TextBlock FontSize="13" Text="{Binding Name}" />
-                  <TextBlock Classes="caption" Text="{Binding Email}" />
-                </StackPanel>
-                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          ItemsSource="{x:Static vm:MemberRowViewModel.AssignableRoles}" SelectedItem="{Binding Role}"
-                          IsVisible="{Binding CanChangeRole}" />
-                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding RoleText}" IsVisible="{Binding ShowRoleText}" />
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                  <Button Classes="link" Content="Hacer Owner" Command="{Binding TransferCommand}" IsVisible="{Binding CanTransfer}" />
-                  <Button Classes="link" Content="Quitar" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}" />
-                </StackPanel>
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
+    <DockPanel Margin="20,16,20,12">
+      <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,16">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Classes="caption" VerticalAlignment="Center" Text="{Binding RoleText}" />
+          <TextBlock Classes="label" VerticalAlignment="Center" Text="NOMBRE" />
+        </DockPanel>
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Renombrar" Command="{Binding RenameCommand}"
+                  IsVisible="{Binding Permissions.CanRenameWorkspace}" />
+          <TextBox Text="{Binding Name}" IsReadOnly="{Binding !Permissions.CanRenameWorkspace}" />
+        </DockPanel>
+      </StackPanel>
+
+      <Border DockPanel.Dock="Bottom" Classes="group" Margin="0,12,0,0" IsVisible="{Binding Permissions.CanManageMembers}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="heading" Text="Agregar miembro" />
+          <TextBox Text="{Binding Search}" Watermark="Buscá un usuario por nombre o email (mínimo 2 letras)" />
+          <Grid ColumnDefinitions="*,110,Auto" ColumnSpacing="8">
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Candidates}" SelectedItem="{Binding Candidate}"
+                      PlaceholderText="Sin resultados">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="dto:UserSummaryDto">
+                  <TextBlock TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding DisplayName}" />
+                    <Run Text=" · " />
+                    <Run Classes="caption" Text="{Binding Email}" />
+                  </TextBlock>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MemberRowViewModel.AssignableRoles}" SelectedItem="{Binding NewMemberRole}" />
+            <Button Grid.Column="2" Classes="accent" Command="{Binding AddMemberCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <ctl:Icon Data="{StaticResource IconPlus}" />
+                <TextBlock VerticalAlignment="Center" Text="Agregar" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="MIEMBROS" />
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Members}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MemberRowViewModel">
+                <Border Classes="header-row" Padding="4,8">
+                  <Grid ColumnDefinitions="*,120,Auto" ColumnSpacing="8" Margin="0,0,14,0">
+                    <StackPanel Spacing="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="caption" Text="{Binding Email}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                              ItemsSource="{x:Static vm:MemberRowViewModel.AssignableRoles}" SelectedItem="{Binding Role}"
+                              IsVisible="{Binding CanChangeRole}" />
+                    <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" Margin="12,0,0,0"
+                               Text="{Binding RoleText}" IsVisible="{Binding ShowRoleText}" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                      <Button Classes="link" Content="Hacer Owner" Command="{Binding TransferCommand}" IsVisible="{Binding CanTransfer}" />
+                      <Button Classes="link" Content="Quitar" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
     </DockPanel>
   </DockPanel>
 </Window>

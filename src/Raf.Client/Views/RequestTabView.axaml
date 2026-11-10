@@ -8,28 +8,51 @@
     <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
     <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendCommand}" />
   </UserControl.KeyBindings>
-  <Grid RowDefinitions="Auto,Auto,*,4,*" Margin="10">
-    <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8">
-      <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}" IsEnabled="{Binding CanEdit}" />
+  <Grid RowDefinitions="Auto,Auto,*,5,*">
+    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,14,14,0">
+      <ComboBox Width="124" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}"
+                IsEnabled="{Binding CanEdit}" ToolTip.Tip="Método">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="x:String"><ctl:MethodBadge Classes="large" Method="{Binding}" /></DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
       <ctl:TextField Grid.Column="1" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-        <Button Classes="accent" Content="Enviar" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}" />
-        <Button Content="Cancelar" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" />
-        <Button Content="Guardar" Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" />
+        <Panel>
+          <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
+                  ToolTip.Tip="Enviar (Ctrl+Enter)">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <ctl:Icon Data="{StaticResource IconSend}" />
+              <TextBlock VerticalAlignment="Center" Text="Enviar" />
+            </StackPanel>
+          </Button>
+          <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <ctl:Icon Data="{StaticResource IconClose}" />
+              <TextBlock VerticalAlignment="Center" Text="Cancelar" />
+            </StackPanel>
+          </Button>
+        </Panel>
+        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="Guardar (Ctrl+S)">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <ctl:Icon Data="{StaticResource IconSave}" />
+            <TextBlock VerticalAlignment="Center" Text="Guardar" />
+          </StackPanel>
+        </Button>
       </StackPanel>
     </Grid>
-    <TextBlock Grid.Row="1" Classes="warning" Margin="0,6,0,0" Text="{Binding Warning}"
+    <TextBlock Grid.Row="1" Classes="warning" Margin="14,6,14,0" Text="{Binding Warning}"
                IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-    <TabControl Grid.Row="2" Padding="0,4,0,0">
-      <TabItem Header="Query" FontSize="14"><ContentControl Content="{Binding Query}" /></TabItem>
-      <TabItem Header="Headers" FontSize="14"><ContentControl Content="{Binding Headers}" /></TabItem>
-      <TabItem Header="Body" FontSize="14"><ContentControl Content="{Binding Body}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
-      <TabItem Header="Auth" FontSize="14"><ContentControl Content="{Binding Auth}" /></TabItem>
-      <TabItem Header="Opciones" FontSize="14">
-        <StackPanel Spacing="10" Margin="0,8" MaxWidth="460" HorizontalAlignment="Left">
+    <TabControl Grid.Row="2" Classes="section" Margin="14,6,14,0" Padding="0,6,0,8">
+      <TabItem Header="Query"><ContentControl Content="{Binding Query}" /></TabItem>
+      <TabItem Header="Headers"><ContentControl Content="{Binding Headers}" /></TabItem>
+      <TabItem Header="Body"><ContentControl Content="{Binding Body}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
+      <TabItem Header="Auth"><ContentControl Content="{Binding Auth}" /></TabItem>
+      <TabItem Header="Opciones">
+        <StackPanel Spacing="12" Margin="0,4" MaxWidth="460" HorizontalAlignment="Left">
           <TextBlock Classes="caption" Text="Estas opciones se guardan solo en este equipo." />
-          <StackPanel Orientation="Horizontal" Spacing="8">
+          <StackPanel Orientation="Horizontal" Spacing="10">
             <TextBlock VerticalAlignment="Center" Text="Timeout (segundos)" />
             <TextBox Width="190" Text="{Binding TimeoutText}" Watermark="{Binding TimeoutHint}" />
           </StackPanel>
@@ -38,7 +61,9 @@
       </TabItem>
     </TabControl>
 
-    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="Transparent" />
-    <ContentControl Grid.Row="4" Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    <GridSplitter Grid.Row="3" ResizeDirection="Rows" />
+    <Border Grid.Row="4" Classes="panel">
+      <ContentControl Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    </Border>
   </Grid>
 </UserControl>

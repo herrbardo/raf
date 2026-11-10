@@ -8,21 +8,48 @@
     <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
     <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendCommand}" />
   </UserControl.KeyBindings>
-  <Grid RowDefinitions="Auto,Auto,*,4,*" Margin="10">
-    <StackPanel Spacing="6">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-        <TextBlock Classes="caption" VerticalAlignment="Center" Text="Sample: lo que no sobreescribas se hereda del request." />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-          <Button Classes="accent" Content="Enviar" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}" />
-          <Button Content="Cancelar" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" />
-          <Button Content="Guardar" Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" />
+  <Grid RowDefinitions="Auto,Auto,*,5,*">
+    <StackPanel Spacing="8" Margin="14,14,14,0">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <ctl:Icon Classes="node" Data="{StaticResource IconSample}" />
+        <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap"
+                   Text="Sample: lo que no sobreescribas se hereda del request." />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+          <Panel>
+            <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
+                    ToolTip.Tip="Enviar (Ctrl+Enter)">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <ctl:Icon Data="{StaticResource IconSend}" />
+                <TextBlock VerticalAlignment="Center" Text="Enviar" />
+              </StackPanel>
+            </Button>
+            <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <ctl:Icon Data="{StaticResource IconClose}" />
+                <TextBlock VerticalAlignment="Center" Text="Cancelar" />
+              </StackPanel>
+            </Button>
+          </Panel>
+          <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="Guardar (Ctrl+S)">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <ctl:Icon Data="{StaticResource IconSave}" />
+              <TextBlock VerticalAlignment="Center" Text="Guardar" />
+            </StackPanel>
+          </Button>
         </StackPanel>
       </Grid>
 
       <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
-        <TextBlock VerticalAlignment="Center" Text="Método" />
-        <TextBlock Grid.Column="1" VerticalAlignment="Center" IsVisible="{Binding MethodInherited}" Text="{Binding InheritedMethod}" />
-        <ComboBox Grid.Column="1" Width="130" IsVisible="{Binding MethodOverridden}" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}" IsEnabled="{Binding CanEdit}" />
+        <TextBlock Classes="label" VerticalAlignment="Center" Text="Método" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding MethodInherited}">
+          <ctl:MethodBadge Classes="large" Method="{Binding InheritedMethod}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="heredado" />
+        </StackPanel>
+        <ComboBox Grid.Column="1" Width="124" IsVisible="{Binding MethodOverridden}" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}" IsEnabled="{Binding CanEdit}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="x:String"><ctl:MethodBadge Classes="large" Method="{Binding}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
         <Button Grid.Column="2" Classes="link" Content="Sobreescribir" Command="{Binding OverrideMethodCommand}">
           <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="MethodInherited" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
         </Button>
@@ -32,8 +59,9 @@
       </Grid>
 
       <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
-        <TextBlock VerticalAlignment="Center" Text="URL" />
-        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" IsVisible="{Binding UrlInherited}" Text="{Binding InheritedUrl}" />
+        <TextBlock Classes="label" VerticalAlignment="Center" Text="URL" />
+        <TextBlock Grid.Column="1" Classes="mono" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" IsVisible="{Binding UrlInherited}"
+                   Text="{Binding InheritedUrl}" ToolTip.Tip="{Binding InheritedUrl}" />
         <ctl:TextField Grid.Column="1" IsVisible="{Binding UrlOverridden}" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
         <Button Grid.Column="2" Classes="link" Content="Sobreescribir" Command="{Binding OverrideUrlCommand}">
           <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="UrlInherited" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
@@ -44,13 +72,13 @@
       </Grid>
     </StackPanel>
 
-    <TextBlock Grid.Row="1" Classes="warning" Margin="0,6,0,0" Text="{Binding Warning}"
+    <TextBlock Grid.Row="1" Classes="warning" Margin="14,6,14,0" Text="{Binding Warning}"
                IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-    <TabControl Grid.Row="2" Padding="0,4,0,0">
-      <TabItem Header="Query" FontSize="14"><ContentControl Content="{Binding Query}" /></TabItem>
-      <TabItem Header="Headers" FontSize="14"><ContentControl Content="{Binding Headers}" /></TabItem>
-      <TabItem Header="Body" FontSize="14">
+    <TabControl Grid.Row="2" Classes="section" Margin="14,6,14,0" Padding="0,6,0,8">
+      <TabItem Header="Query"><ContentControl Content="{Binding Query}" /></TabItem>
+      <TabItem Header="Headers"><ContentControl Content="{Binding Headers}" /></TabItem>
+      <TabItem Header="Body">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,4">
             <Button Classes="link" Content="Sobreescribir" Command="{Binding OverrideBodyCommand}">
@@ -62,13 +90,13 @@
           </StackPanel>
           <Grid>
             <ScrollViewer IsVisible="{Binding BodyInherited}">
-              <SelectableTextBlock TextWrapping="Wrap" Text="{Binding InheritedBody}" />
+              <SelectableTextBlock Classes="mono caption" TextWrapping="Wrap" Text="{Binding InheritedBody}" />
             </ScrollViewer>
             <ContentControl Content="{Binding Body}" IsVisible="{Binding BodyOverridden}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
           </Grid>
         </DockPanel>
       </TabItem>
-      <TabItem Header="Auth" FontSize="14">
+      <TabItem Header="Auth">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,4">
             <Button Classes="link" Content="Sobreescribir" Command="{Binding OverrideAuthCommand}">
@@ -79,13 +107,13 @@
             </Button>
           </StackPanel>
           <Grid>
-            <TextBlock IsVisible="{Binding AuthInherited}" Text="{Binding InheritedAuth}" />
+            <TextBlock Classes="caption" IsVisible="{Binding AuthInherited}" Text="{Binding InheritedAuth}" />
             <ContentControl Content="{Binding Auth}" IsVisible="{Binding AuthOverridden}" />
           </Grid>
         </DockPanel>
       </TabItem>
-      <TabItem Header="Opciones" FontSize="14">
-        <StackPanel Spacing="10" Margin="0,8" MaxWidth="460" HorizontalAlignment="Left">
+      <TabItem Header="Opciones">
+        <StackPanel Spacing="12" Margin="0,4" MaxWidth="460" HorizontalAlignment="Left">
           <TextBlock Classes="caption" Text="Se comparten con el request y se guardan solo en este equipo." />
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock VerticalAlignment="Center" Text="Timeout (segundos)" />
@@ -96,7 +124,9 @@
       </TabItem>
     </TabControl>
 
-    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="Transparent" />
-    <ContentControl Grid.Row="4" Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    <GridSplitter Grid.Row="3" ResizeDirection="Rows" />
+    <Border Grid.Row="4" Classes="panel">
+      <ContentControl Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    </Border>
   </Grid>
 </UserControl>

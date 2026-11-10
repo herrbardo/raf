@@ -61,12 +61,7 @@ public sealed class WindowDialogs : IDialogs
 
     public async Task ShowSecretAsync(string title, string message, string secret)
     {
-        var value = new TextBox
-        {
-            Text = secret,
-            IsReadOnly = true,
-            FontFamily = new Avalonia.Media.FontFamily("Cascadia Mono,Consolas,Menlo,monospace"),
-        };
+        var value = new TextBox { Text = secret, IsReadOnly = true, Classes = { "mono" } };
         var copy = new Button { Content = "Copiar" };
         var row = new DockPanel();
         DockPanel.SetDock(copy, Dock.Right);
@@ -118,7 +113,6 @@ public sealed class WindowDialogs : IDialogs
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Children = { ok },
         };
         if (cancellable)
         {
@@ -126,12 +120,15 @@ public sealed class WindowDialogs : IDialogs
             cancel.Click += (_, _) => dialog.Close(onCancel);
             buttons.Children.Add(cancel);
         }
+        buttons.Children.Add(ok);
 
-        var panel = new StackPanel { Margin = new Thickness(20), Spacing = 14 };
-        panel.Children.Add(new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
-        if (body is not null) panel.Children.Add(body);
-        panel.Children.Add(buttons);
-        dialog.Content = panel;
+        // Misma estructura que las ventanas en AXAML: contenido con margen y botones en el pie.
+        var content = new StackPanel { Margin = new Thickness(20, 18), Spacing = 14 };
+        content.Children.Add(new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        if (body is not null) content.Children.Add(body);
+        var footer = new Border { Classes = { "dialog-footer" }, Child = buttons };
+        DockPanel.SetDock(footer, Dock.Bottom);
+        dialog.Content = new DockPanel { Children = { footer, content } };
         window = dialog;
 
         return async () =>

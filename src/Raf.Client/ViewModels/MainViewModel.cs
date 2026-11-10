@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,7 +21,7 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     private readonly MainViewModel _owner;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Name), nameof(Badge))]
+    [NotifyPropertyChangedFor(nameof(Name), nameof(Method))]
     private object _dto;
 
     [ObservableProperty] private bool _isExpanded;
@@ -71,14 +70,13 @@ public sealed partial class TreeNodeViewModel : ObservableObject
         _ => 0,
     };
 
-    /// <summary>Marca corta delante del nombre.</summary>
-    public string Badge => Dto switch
-    {
-        AppDto => "▣",
-        FolderDto => "▸",
-        RequestDto r => r.Spec.Method,
-        _ => "◦",
-    };
+    /// <summary>Método del request; null en los demás nodos. La vista elige el icono según el tipo.</summary>
+    public string? Method => Dto is RequestDto r ? r.Spec.Method : null;
+
+    public bool IsApp => Kind == NodeKind.App;
+    public bool IsFolder => Kind == NodeKind.Folder;
+    public bool IsRequest => Kind == NodeKind.Request;
+    public bool IsSample => Kind == NodeKind.Sample;
 
     public bool CanEdit => _owner.CanEdit;
     public bool CanAddContainer => CanEdit && Kind is NodeKind.App or NodeKind.Folder;
@@ -101,6 +99,8 @@ public sealed record EnvironmentChoice(Guid? Id, string Name);
 public sealed record HistoryRow(RunHistoryEntry Entry)
 {
     public string Title => $"{Entry.Method} {Entry.Name}";
+    public string Method => Entry.Method;
+    public string Name => Entry.Name;
     public string Url => Entry.Url;
     public string Result =>
         (Entry.StatusCode?.ToString() ?? ResponseViewModel.OutcomeText(Entry.Outcome))
@@ -127,7 +127,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _status;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SyncText), nameof(SyncBrush))]
+    [NotifyPropertyChangedFor(nameof(SyncText), nameof(IsSynced), nameof(IsOffline), nameof(IsInConflict), nameof(IsSyncPending))]
     [NotifyCanExecuteChangedFor(nameof(OpenConflictsCommand))]
     private SyncStatus _syncStatus = new(SyncState.Pending, 0, 0);
 
@@ -144,21 +144,19 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string SyncText => SyncStatus.State switch
     {
-        SyncState.Synced => "✓ Sincronizado",
+        SyncState.Synced => "Sincronizado",
         SyncState.Offline when SyncStatus.Pending > 0 => $"Sin conexión · {SyncStatus.Pending} pendientes",
         SyncState.Offline => "Sin conexión",
-        SyncState.Conflict => $"⚠ {SyncStatus.Conflicts} en conflicto",
+        SyncState.Conflict => $"{SyncStatus.Conflicts} en conflicto",
         _ when SyncStatus.Pending > 0 => $"{SyncStatus.Pending} pendientes",
         _ => "Sincronizando…",
     };
 
-    public IBrush SyncBrush => SyncStatus.State switch
-    {
-        SyncState.Synced => Brushes.SeaGreen,
-        SyncState.Conflict => Brushes.IndianRed,
-        SyncState.Offline => Brushes.Gray,
-        _ => Brushes.DarkOrange,
-    };
+    // Estado para la vista, que decide el aspecto con clases.
+    public bool IsSynced => SyncStatus.State == SyncState.Synced;
+    public bool IsOffline => SyncStatus.State == SyncState.Offline;
+    public bool IsInConflict => SyncStatus.State == SyncState.Conflict;
+    public bool IsSyncPending => !IsSynced && !IsOffline && !IsInConflict;
 
     public void OnWindowActivated() => _sync.Engine.Kick();
 

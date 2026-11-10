@@ -44,7 +44,7 @@ public sealed partial class EjemploViewModel(IDialogs dialogs) : ObservableObjec
 - Las propiedades calculadas se avisan con `[NotifyPropertyChangedFor]`.
 - Lo que llega desde otro hilo o evento de fondo pasa por `Dispatcher.UIThread.Post(...)`.
 - Un viewmodel no abre ventanas: usa `IDialogs`. Los archivos se piden con `StorageProvider`, dentro de `WindowDialogs`. No usar `OpenFileDialog` ni `SaveFileDialog`, que están obsoletos.
-- Los viewmodels exponen estado, no colores: un `IsSuccess` o un estado, y la vista decide el aspecto. `MainViewModel.SyncBrush` es deuda; no imitarlo.
+- Los viewmodels exponen estado, no colores: un `IsSuccess` o un estado, y la vista decide el aspecto con clases.
 
 ## Vistas y bindings
 
@@ -60,9 +60,17 @@ Los compiled bindings están activos por defecto, así que falta `x:DataType` si
 
 ## Estilos y colores
 
-- Los estilos reutilizables van en clases (`TextBlock.caption`, `Button.link`); no repetir `FontSize` o márgenes en cada elemento.
-- **No agregar colores literales** en AXAML ni en C#. Usar recursos del tema con `{DynamicResource ...}`, para que respondan al cambio claro/oscuro. Los colores literales que ya existen son deuda: migrarlos al tocarlos.
-- Un color propio se define para ambas variantes:
+- **Dónde está cada cosa:** `Styles/Theme.axaml` tiene los colores de ambos temas, la tipografía y los radios; `Styles/Controls.axaml`, los estilos por clase; `Styles/Icons.axaml`, los iconos.
+- Los estilos reutilizables van en clases de `Controls.axaml`; no repetir `FontSize`, colores o márgenes en cada elemento. Las más usadas:
+  - Texto: `title`, `heading`, `caption`, `label`, `mono`, `error`, `warning`.
+  - Botones: `accent` (acción principal), `link`, `icon` (solo icono, con `ToolTip`), `ghost` (icono y texto en barras), `danger`.
+  - Superficies: `chrome`, `sidebar`, `surface`, `panel`, `card`, `group`, `dialog-footer`, `callout`.
+  - Estado: `Border.chip` con `success`, `failure` o `warning`; `Ellipse.dirty`; `StackPanel.empty` para estados vacíos y `Border.kbd` para atajos.
+  - Pestañas: `TabControl.documents` (requests abiertos) y `TabControl.section` (secciones compactas).
+- **Iconos:** `<ctl:Icon Data="{StaticResource IconPlus}" />`. Toma el color de texto heredado. Un icono nuevo es una geometría de trazo en la grilla de 16×16 de `Icons.axaml`.
+- **Métodos HTTP:** `<ctl:MethodBadge Method="{Binding Method}" />`; el color sale de los estilos.
+- **Ningún color literal fuera de `Theme.axaml`**, ni en AXAML ni en C#. Usar `{DynamicResource ...}` para que respondan al cambio claro/oscuro; desde C#, `TryFindResource` con el `ActualThemeVariant` del control.
+- Un color propio se define en `Theme.axaml` para ambas variantes:
 
 ```xml
 <ResourceDictionary.ThemeDictionaries>
@@ -90,4 +98,4 @@ Para URLs, headers y bodies usar `ctl:TextField`, no `TextBox`: resalta `{{varia
 
 1. `dotnet build`: detecta los errores de bindings compilados.
 2. `dotnet test`, si cambió lógica. Lo testeable va en `Raf.Client.Core`.
-3. Abrir la aplicación con `dotnet run --project src/Raf.Client` y probar la pantalla tocada. El build no valida el aspecto; si no se pudo mirar, decirlo.
+3. Abrir la aplicación con `dotnet run --project src/Raf.Client` y probar la pantalla tocada, en ambos temas: `RAF_THEME=dark` o `RAF_THEME=light` fuerza uno sin cambiar el del sistema. El build no valida el aspecto; si no se pudo mirar, decirlo.
