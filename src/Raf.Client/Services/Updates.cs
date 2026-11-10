@@ -24,7 +24,14 @@ public static class AppIdentity
     public static string? UpdateUrl { get; } = Entry.GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(a => a.Key == "RafUpdateUrl")?.Value is { Length: > 0 } url ? url : null;
 
-    public static string? ReleasesPage => UpdateUrl is null ? null : UpdateUrl.TrimEnd('/') + "/releases/latest";
+    /// <summary>
+    /// Versión de prueba ("1.3.0-beta.1"): se publica como prerelease y busca actualizaciones también entre los
+    /// prereleases. Una versión estable solo se actualiza a otra estable.
+    /// </summary>
+    public static bool IsPrerelease => Version.Contains('-');
+
+    public static string? ReleasesPage => UpdateUrl is null ? null
+        : UpdateUrl.TrimEnd('/') + (IsPrerelease ? "/releases" : "/releases/latest");
 }
 
 /// <summary>
@@ -49,7 +56,7 @@ public sealed partial class UpdateService : ObservableObject
         if (AppIdentity.UpdateUrl is null) return;
         try
         {
-            var manager = new UpdateManager(new GithubSource(AppIdentity.UpdateUrl, accessToken: null, prerelease: false));
+            var manager = new UpdateManager(new GithubSource(AppIdentity.UpdateUrl, accessToken: null, prerelease: AppIdentity.IsPrerelease));
             if (manager.IsInstalled) _manager = manager;
         }
         catch (Exception e)

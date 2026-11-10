@@ -37,6 +37,8 @@ jobs:
           $version = "$env:GITHUB_REF_NAME".TrimStart('v')
           if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "El tag $env:GITHUB_REF_NAME no es una versión semántica (v1.2.3)." }
           "version=$version" >> $env:GITHUB_OUTPUT
+          # v1.2.3-beta.1 se publica como prerelease: la app estable no la ve como actualización.
+          "pre=$(if ($version.Contains('-')) { '--pre' })" >> $env:GITHUB_OUTPUT
 
       - name: Publicar
         run: >-
@@ -47,7 +49,9 @@ jobs:
 
       # El release anterior permite generar el paquete delta (actualizaciones más chicas). En el primero no hay.
       - name: Bajar el release anterior
-        run: vpk download github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.GITHUB_TOKEN }} --channel win -o releases
+        run: >-
+          vpk download github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.GITHUB_TOKEN }} --channel win -o releases
+          ${{ steps.version.outputs.pre }}
         continue-on-error: true
 
       - name: Certificado de firma
@@ -85,7 +89,8 @@ jobs:
       - name: Publicar el release
         run: >-
           vpk upload github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.GITHUB_TOKEN }} -o releases
-          --channel win --publish --releaseName "RAF ${{ steps.version.outputs.version }}" --tag ${{ github.ref_name }}
+          --channel win --publish ${{ steps.version.outputs.pre }} --releaseName "RAF ${{ steps.version.outputs.version }}"
+          --tag ${{ github.ref_name }}
 
   # macOS se publica recién cuando están cargados los secretos de Apple (D6). Hasta entonces el job no corre.
   macos-habilitado:
@@ -122,7 +127,10 @@ jobs:
 
       - name: Versión
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then echo "pre=--pre" >> "$GITHUB_OUTPUT"; else echo "pre=" >> "$GITHUB_OUTPUT"; fi
 
       - name: Publicar
         run: >-
@@ -156,7 +164,7 @@ jobs:
           echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
       - name: Bajar el release anterior
-        run: vpk download github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.GITHUB_TOKEN }} --channel ${{ matrix.rid }} -o releases
+        run: vpk download github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.GITHUB_TOKEN }} --channel ${{ matrix.rid }} -o releases ${{ steps.version.outputs.pre }}
         continue-on-error: true
 
       - name: Empaquetar, firmar y notarizar
@@ -173,7 +181,7 @@ jobs:
       - name: Agregar al release
         run: >-
           vpk upload github --repoUrl ${{ env.REPO_URL }} --token ${{ secrets.GITHUB_TOKEN }} -o releases
-          --channel ${{ matrix.rid }} --merge --publish --releaseName "RAF ${{ steps.version.outputs.version }}"
+          --channel ${{ matrix.rid }} --merge --publish ${{ steps.version.outputs.pre }} --releaseName "RAF ${{ steps.version.outputs.version }}"
           --tag ${{ github.ref_name }}
 
       - name: Borrar el keychain
