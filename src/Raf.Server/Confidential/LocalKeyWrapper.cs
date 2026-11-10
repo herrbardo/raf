@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
+using Amazon.KeyManagementService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -9,12 +10,16 @@ public sealed class ConfidentialOptions
 {
     public const string Section = "Confidential";
     public const string LocalProvider = "local";
+    public const string KmsProvider = "kms";
 
-    /// <summary>Proveedor de la clave maestra. Hoy solo existe <c>local</c>; KMS llega en el Plan 05.</summary>
+    /// <summary>Proveedor de la clave maestra: <c>local</c> (desarrollo y tests) o <c>kms</c> (AWS).</summary>
     [Required] public string Provider { get; set; } = LocalProvider;
 
     /// <summary>Clave maestra local: 32 bytes en base64. Solo para desarrollo y tests; nunca se versiona.</summary>
     public string? LocalKey { get; set; }
+
+    /// <summary>Id o ARN de la clave KMS. Llega por variable de entorno desde el template.</summary>
+    public string? KmsKeyId { get; set; }
 }
 
 /// <summary>
@@ -72,13 +77,24 @@ public static class ConfidentialSetup
         var provider = config[$"{ConfidentialOptions.Section}:Provider"] ?? ConfidentialOptions.LocalProvider;
         services.AddOptions<ConfidentialOptions>().BindConfiguration(ConfidentialOptions.Section).ValidateDataAnnotations();
 
-        if (!string.Equals(provider, ConfidentialOptions.LocalProvider, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(provider, ConfidentialOptions.KmsProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            // Credenciales y región salen del entorno: en ECS, del TaskRole y de AWS_REGION.
+            services.AddSingleton<IAmazonKeyManagementService>(_ => new AmazonKeyManagementServiceClient());
+            services.AddSingleton<IKeyWrapper, KmsKeyWrapper>();
+        }
+        else if (string.Equals(provider, ConfidentialOptions.LocalProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            if (env.IsProduction())
+                throw new InvalidOperationException(
+                    "El proveedor de claves 'local' es solo para desarrollo y tests: en producción hay que usar 'kms'.");
+            services.AddSingleton<IKeyWrapper, LocalKeyWrapper>();
+        }
+        else
+        {
             throw new InvalidOperationException($"Proveedor de claves desconocido: '{provider}'.");
-        if (env.IsProduction())
-            throw new InvalidOperationException(
-                "El proveedor de claves 'local' es solo para desarrollo y tests: en producción hay que configurar KMS.");
+        }
 
-        services.AddSingleton<IKeyWrapper, LocalKeyWrapper>();
         services.AddSingleton<IConfidentialManager, EnvelopeConfidentialManager>();
         return services;
     }

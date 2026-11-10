@@ -22,14 +22,15 @@ public static class Bootstrap
     /// <summary>
     /// Aplica migraciones y cifra los secretos heredados (si <c>Database:MigrateOnStartup</c>), y crea el primer admin cuando no existe ninguno.
     /// </summary>
-    public static async Task InitializeAsync(this WebApplication app)
+    /// <param name="forceMigrate">Migra aunque <c>Database:MigrateOnStartup</c> sea false (modo <c>--migrate</c>).</param>
+    public static async Task InitializeAsync(this WebApplication app, bool forceMigrate = false)
     {
         using var scope = app.Services.CreateScope();
         var sp = scope.ServiceProvider;
         var log = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Raf.Bootstrap");
         var db = sp.GetRequiredService<RafDbContext>();
 
-        if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+        if (forceMigrate || app.Configuration.GetValue("Database:MigrateOnStartup", true))
         {
             log.LogInformation("Aplicando migraciones…");
             await db.Database.MigrateAsync();

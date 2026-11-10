@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +11,7 @@ using Raf.Server.Auth;
 using Raf.Server.Confidential;
 using Raf.Server.Data;
 using Raf.Server.Infrastructure;
+using Raf.Server.Realtime;
 using Raf.Server.Workspaces;
 using Scalar.AspNetCore;
 
@@ -19,7 +21,7 @@ var services = builder.Services;
 // ---------- Datos ----------
 services.AddHttpContextAccessor();
 services.AddScoped<ICurrentUser, HttpCurrentUser>();
-services.AddSingleton<IChangeNotifier, NoopChangeNotifier>();
+services.AddRealtime(builder.Configuration);
 services.AddDbContext<RafDbContext>((sp, o) =>
     o.UseNpgsql(DatabaseConfig.GetConnectionString(sp.GetRequiredService<IConfiguration>())));
 services.AddConfidential(builder.Configuration, builder.Environment);
@@ -52,7 +54,18 @@ services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             NameClaimType = RafClaims.Name,
             ClockSkew = TimeSpan.FromSeconds(30),
         };
-        o.Events = new JwtBearerEvents { OnTokenValidated = UserStateCheck.ValidateAsync };
+        o.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = UserStateCheck.ValidateAsync,
+            // El cliente de SignalR manda el token por query string cuando no puede usar la cabecera.
+            OnMessageReceived = ctx =>
+            {
+                if (ctx.Request.Path.StartsWithSegments(ChangesHub.Path) &&
+                    ctx.Request.Query["access_token"] is [{ Length: > 0 } token])
+                    ctx.Token = token;
+                return Task.CompletedTask;
+            },
+        };
     });
 
 services.AddAuthorizationBuilder()
@@ -113,6 +126,14 @@ app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapWorkspaceEndpoints().MapContentEndpoints();
+app.MapHub<ChangesHub>(ChangesHub.Path, o => o.Transports = HttpTransportType.WebSockets);
+
+// Paso de despliegue: `dotnet Raf.Server.dll --migrate` migra, cifra los secretos heredados y crea el admin, y termina.
+if (args.Contains("--migrate"))
+{
+    await app.InitializeAsync(forceMigrate: true);
+    return;
+}
 
 await app.InitializeAsync();
 await app.RunAsync();

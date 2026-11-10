@@ -6,6 +6,7 @@ using Raf.Server.Admin;
 using Raf.Server.Auth;
 using Raf.Server.Data;
 using Raf.Server.Infrastructure;
+using Raf.Server.Realtime;
 
 namespace Raf.Server.Workspaces;
 
@@ -92,7 +93,7 @@ public static class WorkspaceEndpoints
                 select new MemberDto(u.Id, u.Email!, u.DisplayName, m.Role, m.Version, m.ChangeSeq)).ToListAsync(ct))
             .WithTags("Members");
 
-        ws.MapPost("/members", async (Guid ws, AddMemberRequest req, RafDbContext db, CancellationToken ct) =>
+        ws.MapPost("/members", async (Guid ws, AddMemberRequest req, RafDbContext db, IChangeBus bus, CancellationToken ct) =>
         {
             if (req.Role == WorkspaceRole.Owner)
                 return Problems.BadRequest("Para hacer Owner a alguien usá la transferencia de propiedad.");
@@ -109,6 +110,8 @@ public static class WorkspaceEndpoints
             member.IsDeleted = false;
             member.Role = req.Role;
             await db.SaveChangesAsync(ct);
+            // Todavía no está en el grupo del workspace: se le avisa por su grupo de usuario.
+            await bus.PublishAsync(new BusMessage(BusEvent.UserRefresh, req.UserId), ct);
             return Results.Created($"/workspaces/{ws}/members/{user.Id}",
                 new MemberDto(user.Id, user.Email!, user.DisplayName, req.Role, member.Version, member.ChangeSeq));
         }).WithTags("Members").RequireWorkspaceRole(WorkspaceRole.Owner);

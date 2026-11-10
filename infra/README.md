@@ -3,7 +3,8 @@
 Un solo template, [`raf.yaml`](raf.yaml), despliega el backend sobre una **VPC y un ALB que ya existen**:
 
 ```
-Cliente ──> ALB existente (regla en {PathPrefix}/*) ──> Target group ──> ECS Fargate (servidor) ──> RDS PostgreSQL 17
+Cliente ──HTTPS / WebSocket──> ALB existente (regla en {PathPrefix}/*) ──> Target group ──> ECS Fargate (servidor) ──> RDS PostgreSQL 17
+                                                                                               └──> KMS (secretos)
 ```
 
 **Lo que se recibe por parámetro** (ya existe):
@@ -11,7 +12,7 @@ Cliente ──> ALB existente (regla en {PathPrefix}/*) ──> Target group ─
 | Parámetro | Para qué |
 |---|---|
 | `VpcId` | VPC del ALB. |
-| `ServiceSubnetIds` | Subredes de las tareas ECS. Necesitan salida a internet (NAT) o VPC endpoints para ECR, Secrets Manager y CloudWatch Logs. |
+| `ServiceSubnetIds` | Subredes de las tareas ECS. Necesitan salida a internet (NAT) o VPC endpoints para ECR, Secrets Manager, CloudWatch Logs y KMS. |
 | `AssignPublicIp` | `ENABLED` solo si `ServiceSubnetIds` son públicas. Default `DISABLED`. |
 | `DbSubnetIds` | Subredes privadas para RDS (mínimo 2, en zonas distintas). |
 | `AlbListenerArn` | Listener del ALB (HTTP o HTTPS) donde se agrega la regla. |
@@ -21,11 +22,15 @@ Cliente ──> ALB existente (regla en {PathPrefix}/*) ──> Target group ─
 | `ListenerRulePriority` | Prioridad de la regla; no puede repetirse en ese listener. |
 | `AdminEmail` | Email del admin inicial. |
 
-**Lo que crea el template:** security groups de las tareas y de la base, RDS PostgreSQL 17 (`db.t4g.micro`, 20 GB gp3 cifrado, backups de 7 días, snapshot al borrar), los secretos en Secrets Manager (credenciales de la base, clave JWT y contraseña inicial del admin), el repositorio ECR, el cluster, la task definition y el servicio de ECS Fargate, logs en CloudWatch, el target group y la regla del listener.
+**Lo que crea el template:** security groups de las tareas y de la base, RDS PostgreSQL 17 (`db.t4g.micro`, 20 GB gp3 cifrado, backups de 7 días, snapshot al borrar), los secretos en Secrets Manager (credenciales de la base, clave JWT y contraseña inicial del admin), una clave KMS para las variables secretas (con rotación anual), el repositorio ECR, el cluster, las task definitions del servidor y de las migraciones, el servicio de ECS Fargate, logs en CloudWatch, el target group y la regla del listener.
 
 **Subpath:** el ALB no recorta el prefijo, así que el servidor recibe `PathBase=/raf` y lo quita él mismo. La API queda en `https://<dominio>/raf/...` y el health check del target group usa `/raf/health`.
 
-**Costo aproximado** en `us-east-1`, sin contar el ALB que ya existe: **~USD 26/mes** (RDS ~15, Fargate ~9, secretos ~1.2).
+**Tiempo real:** los avisos de cambios van por WebSocket en `https://<dominio>/raf/hubs/changes`, por la misma regla del ALB. El cliente no negocia el transporte, así que no hacen falta sesiones pegajosas. Con varias tareas, los avisos se reparten entre ellas con `LISTEN/NOTIFY` de Postgres. Si el WebSocket se corta, el cliente sigue sincronizando por polling.
+
+**Migraciones:** el servicio arranca con `Database:MigrateOnStartup=false`. Las migraciones corren antes, en una tarea de una sola ejecución (`raf-<env>-migrate`) que lanza `deploy.ps1`. Esa tarea también cifra los secretos heredados y crea el admin inicial.
+
+**Costo aproximado** en `us-east-1`, sin contar el ALB que ya existe: **~USD 27/mes** (RDS ~15, Fargate ~9, secretos ~1.2, KMS ~1).
 
 ## 0. Instalar y configurar AWS CLI (una vez)
 
@@ -77,29 +82,13 @@ aws cloudformation deploy `
     AdminEmail=tu-email@dominio.com
 ```
 
-**b) Construir y subir la imagen del servidor.**
+**b) Subir la imagen, migrar y encender el servicio.** [`deploy.ps1`](deploy.ps1) construye la imagen con el commit actual como tag, la sube a ECR, corre la tarea de migraciones y espera a que termine bien. Recién entonces pasa el servicio a la imagen nueva. Los parámetros del stack que no toca conservan su valor anterior.
 
 ```powershell
-$repo = aws cloudformation describe-stacks --stack-name $stack `
-  --query "Stacks[0].Outputs[?OutputKey=='RepositoryUri'].OutputValue" --output text
-aws ecr get-login-password | docker login --username AWS --password-stdin $repo.Split('/')[0]
-
-$tag = git rev-parse --short HEAD
-docker build -f src/Raf.Server/Dockerfile -t "${repo}:${tag}" .
-docker push "${repo}:${tag}"
+.\infra\deploy.ps1 -Stack $stack -DesiredCount 1
 ```
 
-**c) Encender el servicio.** Los parámetros que no se pasan conservan su valor anterior.
-
-```powershell
-aws cloudformation deploy `
-  --template-file infra/raf.yaml `
-  --stack-name $stack `
-  --capabilities CAPABILITY_IAM `
-  --parameter-overrides ImageTag=$tag DesiredCount=1
-```
-
-**d) Verificar y obtener la contraseña del admin.**
+**c) Verificar y obtener la contraseña del admin.**
 
 ```powershell
 curl.exe https://<tu-dominio>/raf/health          # -> Healthy
@@ -113,19 +102,28 @@ Con `AdminEmail` y esa contraseña se hace el primer login; el servidor pide cam
 
 ## 2. Desplegar una nueva versión del servidor
 
-Repetir **1b** y **1c** con el nuevo `$tag`. ECS hace un despliegue sin corte; si las tareas nuevas no pasan el health check, vuelve solo a la versión anterior.
+```powershell
+.\infra\deploy.ps1 -Stack $stack
+```
+
+Si la migración falla, el script se detiene y el servicio sigue con la versión anterior. Si no, ECS hace un despliegue sin corte; si las tareas nuevas no pasan el health check, vuelve solo a la versión anterior.
+
+Las migraciones tienen que ser compatibles con la versión anterior del servidor, que sigue atendiendo mientras arrancan las tareas nuevas: agregar columnas o tablas sí, borrar o renombrar lo que la versión anterior usa, no (eso va en un despliegue posterior).
 
 ## 3. Diagnóstico
 
 ```powershell
 aws logs tail "/ecs/raf-dev-server" --follow
+aws logs tail "/ecs/raf-dev-server" --log-stream-name-prefix migrate   # tareas de migraciones
 aws ecs describe-services --cluster raf-dev --services server --query "services[0].events[:5]"
 $tg = aws cloudformation describe-stacks --stack-name $stack `
   --query "Stacks[0].Outputs[?OutputKey=='TargetGroupArn'].OutputValue" --output text
 aws elbv2 describe-target-health --target-group-arn $tg
 ```
 
-Si las tareas no arrancan con `CannotPullContainerError` o `ResourceInitializationError`, las subredes de `ServiceSubnetIds` no tienen salida a ECR o Secrets Manager (falta NAT o VPC endpoints).
+Si las tareas no arrancan con `CannotPullContainerError` o `ResourceInitializationError`, las subredes de `ServiceSubnetIds` no tienen salida a ECR o Secrets Manager (falta NAT o VPC endpoints). Si arrancan pero fallan al leer o guardar variables secretas, falta salida a KMS.
+
+Los secretos guardados en la base se pueden comprobar desde una tarea con acceso a RDS: en `"Variables"`, toda fila con `"IsSecret" = true` tiene un `"Value"` que empieza con `enc:v1:`.
 
 ## 4. Borrar todo
 
@@ -137,8 +135,8 @@ aws cloudformation delete-stack --stack-name $stack
 
 Borrar el stack quita la regla y el target group del ALB, pero no toca el ALB. RDS deja un snapshot final.
 
-## Pendiente para próximos planes
+**La clave KMS se conserva** (`DeletionPolicy: Retain`): sin ella, las variables secretas del snapshot no se pueden descifrar. Si de verdad no se va a restaurar nada, se programa su borrado a mano (KMS espera entre 7 y 30 días):
 
-- **Tiempo real** con SignalR por el ALB (Plan 05); no requiere recursos nuevos en AWS.
-- **KMS** para cifrar las variables secretas (Plan 05).
-- Mover las migraciones a un paso del despliegue cuando haya más de una tarea.
+```powershell
+aws kms schedule-key-deletion --key-id <SecretsKeyArn> --pending-window-in-days 30
+```

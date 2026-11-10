@@ -179,7 +179,9 @@ public sealed class SyncEngine
         foreach (var item in lost.Where(l => l.PendingChanges == 0 || _announcedLost.Add(l.Id))) WorkspaceLost?.Invoke(item);
 
         var changed = listChanged;
-        foreach (var workspace in await _store.GetWorkspacesForSyncAsync(ct))
+        var workspaces = await _store.GetWorkspacesForSyncAsync(ct);
+        _subscriber.Watch(workspaces.Select(w => w.Id).ToList());
+        foreach (var workspace in workspaces)
             changed |= await PullAsync(workspace, ct);
         if (changed) DataChanged?.Invoke();
 

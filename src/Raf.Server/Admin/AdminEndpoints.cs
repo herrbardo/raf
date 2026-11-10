@@ -6,6 +6,7 @@ using Raf.Domain.Entities;
 using Raf.Server.Auth;
 using Raf.Server.Data;
 using Raf.Server.Infrastructure;
+using Raf.Server.Realtime;
 
 namespace Raf.Server.Admin;
 
@@ -82,7 +83,8 @@ public static class AdminEndpoints
         }).WithSummary("Genera una nueva contraseña temporal y cierra las sesiones del usuario.");
 
         admin.MapPost("/users/{id:guid}/disable", async (
-            Guid id, ClaimsPrincipal me, UserManager<AppUser> users, RafDbContext db, TokenService tokens, CancellationToken ct) =>
+            Guid id, ClaimsPrincipal me, UserManager<AppUser> users, RafDbContext db, TokenService tokens, IChangeBus bus,
+            CancellationToken ct) =>
         {
             var user = await users.FindByIdAsync(id.ToString());
             if (user is null) return Problems.NotFound("Usuario");
@@ -93,6 +95,7 @@ public static class AdminEndpoints
             user.IsDisabled = true;
             await users.UpdateAsync(user);
             await tokens.RevokeAllAsync(user.Id, ct);
+            await bus.PublishAsync(new BusMessage(BusEvent.UserDisabled, user.Id), ct); // cierra sus conexiones en tiempo real
             return Results.Ok(user.ToDto());
         });
 
@@ -125,7 +128,8 @@ public static class AdminEndpoints
             });
         });
 
-        admin.MapPut("/workspaces/{id:guid}/owner", async (Guid id, SetOwnerRequest req, RafDbContext db, CancellationToken ct) =>
+        admin.MapPut("/workspaces/{id:guid}/owner", async (
+            Guid id, SetOwnerRequest req, RafDbContext db, IChangeBus bus, CancellationToken ct) =>
         {
             if (!await db.Workspaces.AnyAsync(w => w.Id == id && !w.IsDeleted, ct)) return Problems.NotFound("Workspace");
             var user = await db.Users.FindAsync([req.UserId], ct);
@@ -133,6 +137,7 @@ public static class AdminEndpoints
 
             await WorkspaceOwnership.SetOwnerAsync(db, id, req.UserId, ct);
             await db.SaveChangesAsync(ct);
+            await bus.PublishAsync(new BusMessage(BusEvent.UserRefresh, req.UserId), ct); // puede ser un workspace nuevo para él
             return Results.NoContent();
         }).WithSummary("Reasigna el Owner de un workspace. El Owner anterior queda como Editor.");
     }

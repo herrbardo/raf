@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Raf.Contracts;
 using Raf.Server.Data;
+using Raf.Server.Realtime;
 using Raf.Server.Tests;
 using Testcontainers.PostgreSql;
 
@@ -41,7 +42,11 @@ public sealed class RafApp : IAsyncLifetime
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Testing");
-            b.ConfigureTestServices(s => s.AddSingleton<IChangeNotifier>(Notifier));
+            b.ConfigureTestServices(s => s.AddSingleton<IChangeNotifier>(sp =>
+            {
+                Notifier.Inner = sp.GetRequiredService<BusChangeNotifier>(); // los avisos siguen llegando al hub
+                return Notifier;
+            }));
             b.UseSetting("ConnectionStrings:Raf", _db.GetConnectionString());
             b.UseSetting("Jwt:SigningKey", Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"));
             b.UseSetting("Bootstrap:AdminEmail", AdminEmail);
@@ -59,6 +64,8 @@ public sealed class RafApp : IAsyncLifetime
     }
 
     public IServiceProvider Services => _factory!.Services;
+
+    public TestServer Server => _factory!.Server;
 
     public HttpClient Anonymous() => _factory!.CreateClient();
 
@@ -104,17 +111,19 @@ public sealed class RafApp : IAsyncLifetime
     }
 }
 
-/// <summary>Registra los avisos recibidos, para comprobar que salen después de confirmar.</summary>
+/// <summary>Registra los avisos recibidos, para comprobar que salen después de confirmar, y los reenvía.</summary>
 public sealed class RecordingNotifier : IChangeNotifier
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<(Guid Workspace, long Seq)> _calls = new();
+
+    public IChangeNotifier? Inner { get; set; }
 
     public IReadOnlyList<long> For(Guid workspace) => _calls.Where(c => c.Workspace == workspace).Select(c => c.Seq).ToList();
 
     public ValueTask NotifyAsync(Guid workspaceId, long changeSeq)
     {
         _calls.Enqueue((workspaceId, changeSeq));
-        return ValueTask.CompletedTask;
+        return Inner?.NotifyAsync(workspaceId, changeSeq) ?? ValueTask.CompletedTask;
     }
 }
 

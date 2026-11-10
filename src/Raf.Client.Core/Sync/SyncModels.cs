@@ -48,11 +48,14 @@ public sealed record SyncConflict(
 /// <summary>El usuario perdió el acceso a un workspace.</summary>
 public sealed record WorkspaceLost(Guid Id, string Name, int PendingChanges);
 
-/// <summary>Avisa que puede haber cambios en el servidor. El tiempo real llega en el Plan 05.</summary>
+/// <summary>Avisa que puede haber cambios en el servidor.</summary>
 public interface IChangeSubscriber : IDisposable
 {
     event Action? ChangeAvailable;
     void Start();
+
+    /// <summary>Los workspaces del usuario, de los que interesa recibir avisos. Reemplaza la lista anterior.</summary>
+    void Watch(IReadOnlyCollection<Guid> workspaceIds) { }
 }
 
 /// <summary>Sin tiempo real: se consulta cada cierto intervalo.</summary>

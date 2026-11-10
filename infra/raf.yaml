@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
   RAF (Requests and Friends) - backend sobre una VPC y un ALB existentes: crea RDS PostgreSQL, ECR,
-  ECS Fargate, target group y una regla en el listener del ALB para servir la API bajo un subpath.
+  ECS Fargate, una clave KMS para los secretos, target group y una regla en el listener del ALB para servir la
+  API (HTTP y WebSocket) bajo un subpath.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -11,7 +12,7 @@ Metadata:
       - Label: { default: ALB existente }
         Parameters: [AlbListenerArn, AlbSecurityGroupId, PathPrefix, HostHeader, ListenerRulePriority]
       - Label: { default: Aplicacion }
-        Parameters: [EnvName, AdminEmail, ImageTag, DesiredCount, TaskCpu, TaskMemory]
+        Parameters: [EnvName, AdminEmail, ImageTag, MigrationImageTag, DesiredCount, TaskCpu, TaskMemory]
       - Label: { default: Base de datos }
         Parameters: [DbInstanceClass, DbAllocatedStorage]
 
@@ -69,6 +70,12 @@ Parameters:
     Type: String
     Default: latest
     Description: Tag de la imagen del servidor en el repositorio ECR.
+  MigrationImageTag:
+    Type: String
+    Default: latest
+    Description: >-
+      Tag de la imagen con la que corre la tarea de migraciones. infra/deploy.ps1 la actualiza y la ejecuta antes
+      de pasar el servicio a esa misma imagen.
   DesiredCount:
     Type: Number
     Default: 0
@@ -151,6 +158,31 @@ Resources:
         ExcludePunctuation: true
         RequireEachIncludedType: true
 
+  # ---------------------------------------------------------------- Cifrado de variables secretas
+  # Envuelve la clave de datos de cada workspace. Se conserva aunque se borre el stack: sin ella, los secretos
+  # guardados en la base (y en sus snapshots) no se pueden recuperar.
+  SecretsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: !Sub "RAF ${EnvName} - claves de datos de las variables secretas"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PermisosPorIam
+            Effect: Allow
+            Principal: { AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root" }
+            Action: kms:*
+            Resource: "*"
+
+  SecretsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/raf-${EnvName}-secrets"
+      TargetKeyId: !Ref SecretsKey
+
   # ---------------------------------------------------------------- Base de datos
   DbSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -225,7 +257,7 @@ Resources:
                 Action: secretsmanager:GetSecretValue
                 Resource: [!Ref DbSecret, !Ref JwtSigningKeySecret, !Ref AdminPasswordSecret]
 
-  # Rol de la aplicacion. Sin permisos por ahora; aca se agregaran los permisos de cifrado.
+  # Rol de la aplicacion: solo cifra y descifra con la clave de secretos, y siempre con un workspace como contexto.
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
@@ -235,6 +267,16 @@ Resources:
           - Effect: Allow
             Principal: { Service: ecs-tasks.amazonaws.com }
             Action: sts:AssumeRole
+      Policies:
+        - PolicyName: secrets-key
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [kms:Encrypt, kms:Decrypt]
+                Resource: !GetAtt SecretsKey.Arn
+                Condition:
+                  "Null": { "kms:EncryptionContext:workspaceId": "false" }
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -257,11 +299,56 @@ Resources:
             - ContainerPort: 8080
           Environment:
             - { Name: ASPNETCORE_ENVIRONMENT, Value: Production }
-            - { Name: PathBase, Value: !Ref PathPrefix }
             - { Name: Db__Host, Value: !GetAtt Database.Endpoint.Address }
             - { Name: Db__Port, Value: !GetAtt Database.Endpoint.Port }
             - { Name: Db__Name, Value: raf }
             - { Name: Db__SslMode, Value: Require }
+            - { Name: Confidential__Provider, Value: kms }
+            - { Name: Confidential__KmsKeyId, Value: !GetAtt SecretsKey.Arn }
+            - { Name: Bootstrap__AdminEmail, Value: !Ref AdminEmail }
+            - { Name: Bootstrap__AdminMustChangePassword, Value: "true" }
+            - { Name: PathBase, Value: !Ref PathPrefix }
+            # Las migraciones corren antes, en MigrationTaskDefinition: varias tareas no compiten por migrar.
+            - { Name: Database__MigrateOnStartup, Value: "false" }
+          Secrets:
+            - { Name: Db__User, ValueFrom: !Sub "${DbSecret}:username::" }
+            - { Name: Db__Password, ValueFrom: !Sub "${DbSecret}:password::" }
+            - { Name: Jwt__SigningKey, ValueFrom: !Ref JwtSigningKeySecret }
+            - { Name: Bootstrap__AdminPassword, ValueFrom: !Ref AdminPasswordSecret }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: server
+
+  # Tarea de una sola ejecucion: migra la base, cifra secretos heredados y crea el admin inicial. La lanza deploy.ps1.
+  MigrationTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "raf-${EnvName}-migrate"
+      Cpu: "256"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: X86_64
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: migrate
+          Image: !Sub "${Repository.RepositoryUri}:${MigrationImageTag}"
+          Essential: true
+          Command: ["--migrate"]
+          Environment:
+            - { Name: ASPNETCORE_ENVIRONMENT, Value: Production }
+            - { Name: Db__Host, Value: !GetAtt Database.Endpoint.Address }
+            - { Name: Db__Port, Value: !GetAtt Database.Endpoint.Port }
+            - { Name: Db__Name, Value: raf }
+            - { Name: Db__SslMode, Value: Require }
+            - { Name: Confidential__Provider, Value: kms }
+            - { Name: Confidential__KmsKeyId, Value: !GetAtt SecretsKey.Arn }
             - { Name: Bootstrap__AdminEmail, Value: !Ref AdminEmail }
             - { Name: Bootstrap__AdminMustChangePassword, Value: "true" }
           Secrets:
@@ -274,7 +361,7 @@ Resources:
             Options:
               awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: server
+              awslogs-stream-prefix: migrate
 
   # ---------------------------------------------------------------- Integracion con el ALB existente
   TargetGroup:
@@ -291,7 +378,8 @@ Resources:
           Value: "30"
       Tags: [{ Key: Name, Value: !Sub "raf-${EnvName}" }]
 
-  # El ALB no recorta el prefijo: la app lo quita con PathBase.
+  # El ALB no recorta el prefijo: la app lo quita con PathBase. Los WebSocket de SignalR (PathPrefix/hubs/changes)
+  # pasan por la misma regla; el cliente no negocia, asi que no hacen falta sesiones pegajosas.
   ListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -353,5 +441,17 @@ Outputs:
   AdminPasswordSecretArn:
     Description: Contrasena inicial del admin.
     Value: !Ref AdminPasswordSecret
+  MigrationTaskDefinitionArn:
+    Description: Tarea de migraciones que lanza infra/deploy.ps1.
+    Value: !Ref MigrationTaskDefinition
+  ServiceSubnetIds:
+    Value: !Join [",", !Ref ServiceSubnetIds]
+  ServiceSecurityGroupId:
+    Value: !Ref ServiceSecurityGroup
+  AssignPublicIp:
+    Value: !Ref AssignPublicIp
+  SecretsKeyArn:
+    Description: Clave KMS de los secretos. Se conserva al borrar el stack.
+    Value: !GetAtt SecretsKey.Arn
   DbEndpoint:
     Value: !GetAtt Database.Endpoint.Address

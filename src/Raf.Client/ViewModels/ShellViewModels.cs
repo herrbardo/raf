@@ -102,9 +102,12 @@ public sealed partial class ShellViewModel : ObservableObject
     public async Task EnterMainAsync()
     {
         CloseSync();
+        var session = _services.Session;
+        var realtime = new RealtimeChangeSubscriber(
+            session.Server!, async () => await session.GetAccessTokenAsync(), TimeProvider.System, TimeSpan.FromSeconds(30));
         var sync = await SyncSession.OpenAsync(
-            Path.Combine(AppPaths.DataDirectory, "cache"), _services.Session.Server!, _services.Session.User!.Id,
-            _services.Api, _services.Secure);
+            Path.Combine(AppPaths.DataDirectory, "cache"), session.Server!, session.User!.Id,
+            _services.Api, _services.Secure, realtime);
         _sync = sync;
 
         var main = new MainViewModel(_services with { Store = sync.Store }, this, sync);
