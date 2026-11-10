@@ -15,7 +15,8 @@
         </StackPanel>
         <StackPanel Spacing="6">
           <TextBlock Classes="label" Text="URL del servidor" />
-          <TextBox Text="{Binding Url}" Watermark="https://dominio/raf" />
+          <AutoCompleteBox Text="{Binding Url}" ItemsSource="{Binding RecentServers}"
+                           FilterMode="Contains" MinimumPrefixLength="0" Watermark="https://dominio/raf" />
           <TextBlock Classes="warning" IsVisible="{Binding InsecureWarning}"
                      Text="Esta URL no usa https: tu contraseña y tus tokens viajarían sin cifrar." />
           <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
