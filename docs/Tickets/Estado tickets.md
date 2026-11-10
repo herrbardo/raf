@@ -84,3 +84,7 @@
     - Creado: 10/11/2026
     - Estado: CREADO
     - Comentarios:
+- Ticket-022.md
+    - Creado: 10/11/2026
+    - Estado: CREADO
+    - Comentarios:
