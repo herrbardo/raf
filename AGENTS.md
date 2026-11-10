@@ -6,6 +6,10 @@ RAF (Requests and Friends) es un cliente desktop colaborativo para enviar reques
 
 El repositorio es público. Antes de escribir código, documentación o commits, leer y cumplir [CLAUDE.md](CLAUDE.md): **nada de claves ni de nombres de infraestructura existente**.
 
+## Idioma
+
+Al usuario se le escribe siempre en español rioplatense: respuestas, reportes, preguntas y resúmenes. Los textos de la UI, la documentación y los mensajes de commit también van en español.
+
 ## Dónde está el trabajo
 
 - Hoja de ruta, orden de ejecución y decisiones: [docs/plans/README.md](docs/plans/README.md).
