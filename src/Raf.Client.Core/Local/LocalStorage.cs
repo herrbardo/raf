@@ -169,8 +169,24 @@ public sealed record RequestLocalOptions(int? TimeoutSeconds = null, bool Accept
 
 public sealed class LocalSettings
 {
+    public const int MaxRecentServers = 10;
+
     public string? ServerUrl { get; set; }
+
+    /// <summary>Servidores a los que se conectó este equipo, del más reciente al más viejo. Alimentan el autocompletar.</summary>
+    public List<string> RecentServers { get; set; } = new();
+
     public string? LastEmail { get; set; }
+
+    /// <summary>Elige el servidor y lo pone primero en los recientes, sin repetirlo.</summary>
+    public void RememberServer(string url)
+    {
+        ServerUrl = url;
+        RecentServers.RemoveAll(u => string.Equals(u, url, StringComparison.OrdinalIgnoreCase));
+        RecentServers.Insert(0, url);
+        if (RecentServers.Count > MaxRecentServers)
+            RecentServers.RemoveRange(MaxRecentServers, RecentServers.Count - MaxRecentServers);
+    }
     public Guid? LastWorkspaceId { get; set; }
     public int DefaultTimeoutSeconds { get; set; } = 30;
 

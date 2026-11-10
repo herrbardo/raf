@@ -148,6 +148,12 @@ public sealed partial class ConnectViewModel(ClientServices services, ShellViewM
     [NotifyPropertyChangedFor(nameof(InsecureWarning))]
     private string? _url = services.Settings.Current.ServerUrl;
 
+    /// <summary>Servidores usados antes en este equipo; si no hay lista todavía, al menos el último.</summary>
+    public IReadOnlyList<string> RecentServers { get; } =
+        services.Settings.Current.RecentServers is { Count: > 0 } recent ? recent.ToList()
+        : services.Settings.Current.ServerUrl is { } last ? [last]
+        : [];
+
     public bool InsecureWarning =>
         ServerUrl.Normalize(Url) is { Scheme: "http", IsLoopback: false };
 
@@ -163,7 +169,7 @@ public sealed partial class ConnectViewModel(ClientServices services, ShellViewM
 
         await services.Api.CheckServerAsync(server);
         services.Session.SetServer(server);
-        services.Settings.Update(s => s.ServerUrl = server.ToString());
+        services.Settings.Update(s => s.RememberServer(server.ToString()));
         shell.ShowLogin();
     });
 }
