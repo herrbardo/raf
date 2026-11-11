@@ -16,6 +16,7 @@ concurrency:
 env:
   PACK_ID: RequestsAndFriends # define la carpeta de instalación: distinta de la de datos (%LOCALAPPDATA%\RAF)
   PACK_TITLE: RAF
+  PACK_AUTHORS: Herr Bardo # editor que muestra el sistema al instalar
   VPK_VERSION: 1.2.161 # igual a la versión del paquete Velopack del cliente
   REPO_URL: ${{ github.server_url }}/${{ github.repository }}
 
@@ -71,7 +72,7 @@ jobs:
         run: |
           $vpkArgs = @(
             'pack', '--packId', $env:PACK_ID, '--packVersion', '${{ steps.version.outputs.version }}',
-            '--packDir', 'publish', '--mainExe', 'RAF.exe', '--packTitle', $env:PACK_TITLE,
+            '--packDir', 'publish', '--mainExe', 'RAF.exe', '--packTitle', $env:PACK_TITLE, '--packAuthors', $env:PACK_AUTHORS,
             '--icon', 'src/Raf.Client/Assets/raf.ico', '--channel', 'win', '-o', 'releases')
           if ($env:CERT_PATH) {
             $vpkArgs += '--signParams', "/f `"$env:CERT_PATH`" /p $env:CERT_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256"
@@ -173,7 +174,7 @@ jobs:
           INSTALLER_IDENTITY: ${{ secrets.MACOS_INSTALLER_IDENTITY }}
         run: >-
           vpk pack --packId $PACK_ID --packVersion ${{ steps.version.outputs.version }} --packDir publish
-          --mainExe RAF --packTitle $PACK_TITLE --icon src/Raf.Client/Assets/raf.icns
+          --mainExe RAF --packTitle $PACK_TITLE --packAuthors "$PACK_AUTHORS" --icon src/Raf.Client/Assets/raf.icns
           --channel ${{ matrix.rid }} -o releases
           --signAppIdentity "$APP_IDENTITY" --signInstallIdentity "$INSTALLER_IDENTITY"
           --notaryProfile raf-notary --keychain "$KEYCHAIN"
