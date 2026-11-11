@@ -8,5 +8,8 @@
     <!-- El workflow de release la reemplaza con el tag (v1.2.3 -> 1.2.3). -->
     <Version>0.1.0</Version>
     <Product>RAF — Requests and Friends</Product>
+    <Authors>Herr Bardo</Authors>
+    <Company>Herr Bardo</Company>
+    <Copyright>© 2026 Herr Bardo</Copyright>
   </PropertyGroup>
 </Project>
