@@ -1,0 +1,35 @@
+# TEMPORAL (Ticket-009): prueba la importación de los certificados de Apple sin publicar nada. Se borra al cerrar el ticket.
+name: Diagnóstico de firma macOS
+
+on:
+  push:
+    branches: [ticket-009-publicar-macos]
+
+jobs:
+  llavero:
+    runs-on: macos-latest
+    steps:
+      - name: Probar los .p12
+        env:
+          APP_CERT: ${{ secrets.MACOS_APP_CERTIFICATE_P12 }}
+          INSTALLER_CERT: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "Largo de la contraseña: ${#CERT_PASSWORD}"
+          echo "Largo de los base64: ${#APP_CERT} y ${#INSTALLER_CERT}"
+          printf '%s' "$CERT_PASSWORD" | LC_ALL=C grep -q '[^0-9a-f]' && echo "La contraseña tiene caracteres fuera de hex" || echo "La contraseña es hex"
+          keychain="$RUNNER_TEMP/diag.keychain-db"
+          security create-keychain -p diag "$keychain"
+          security unlock-keychain -p diag "$keychain"
+          i=0
+          for cert in "$APP_CERT" "$INSTALLER_CERT"; do
+            i=$((i+1))
+            printf '%s' "$cert" | base64 --decode > "$RUNNER_TEMP/c$i.p12"
+            echo "--- p12 $i: $(wc -c < "$RUNNER_TEMP/c$i.p12") bytes"
+            openssl pkcs12 -in "$RUNNER_TEMP/c$i.p12" -passin env:CERT_PASSWORD -noout && echo "openssl abre el p12 con la contraseña" || echo "openssl NO abre el p12"
+            security import "$RUNNER_TEMP/c$i.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain" || echo "security import falló"
+          done
+          security find-identity -v -p codesigning "$keychain" || true
+          security find-identity -v "$keychain" || true
+          security delete-keychain "$keychain"
+          rm -f "$RUNNER_TEMP"/c*.p12
