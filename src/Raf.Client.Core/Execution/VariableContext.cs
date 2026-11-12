@@ -30,6 +30,9 @@ public sealed class VariableContext
 
     public bool IsDefined(string key) => _winners.ContainsKey(key);
 
+    /// <summary>Las variables vigentes, una por nombre, ya con la precedencia aplicada.</summary>
+    public IReadOnlyList<VariableDto> Effective => _ordered;
+
     /// <summary>La variable existe pero el usuario no puede leer su valor (secreta, rol Viewer).</summary>
     public bool IsUnreadable(string key) => _winners.TryGetValue(key, out var v) && v.Value is null;
 

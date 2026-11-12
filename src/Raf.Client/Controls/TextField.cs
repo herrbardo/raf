@@ -7,7 +7,9 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using AvaloniaEdit;
+using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
+using AvaloniaEdit.Editing;
 using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.Rendering;
 using Raf.Client.Core.Execution;
@@ -79,6 +81,12 @@ public sealed partial class TextField : TextEditor
         TextArea.TextView.LineTransformers.Add(_colorizer);
         TextChanged += OnEditorTextChanged;
         TextArea.AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        TextArea.TextEntered += OnTextEntered;
+        // Un carácter que no puede ir en un nombre (como } o un espacio) termina la variable: se cierra la lista.
+        TextArea.TextEntering += (_, e) =>
+        {
+            if (_completion is not null && e.Text is { Length: > 0 } t && !t.All(VariableCompletion.IsNameChar)) _completion.Close();
+        };
         ApplyMode();
     }
 
@@ -184,7 +192,75 @@ public sealed partial class TextField : TextEditor
 
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (!Multiline && e.Key == Key.Enter) e.Handled = true;
+        if (e.Key == Key.Space && e.KeyModifiers == KeyModifiers.Control)
+        {
+            e.Handled = OpenCompletion(onlyRightAfterBraces: false);
+            return;
+        }
+        // Con la lista abierta, Enter elige la variable: lo maneja la lista.
+        if (!Multiline && e.Key == Key.Enter && _completion is null) e.Handled = true;
+    }
+
+    private CompletionWindow? _completion;
+
+    private void OnTextEntered(object? sender, TextInputEventArgs e)
+    {
+        if (e.Text == "{") OpenCompletion(onlyRightAfterBraces: true);
+    }
+
+    /// <summary>
+    /// Abre la lista de variables si el cursor está dentro de un <c>{{</c> sin cerrar. Al escribir, solo justo
+    /// después de <c>{{</c>; con Ctrl+Espacio, también en medio de un nombre, que se filtra y se reemplaza entero.
+    /// </summary>
+    private bool OpenCompletion(bool onlyRightAfterBraces)
+    {
+        if (_completion is not null || IsReadOnly || Variables is not { } variables) return false;
+
+        var caret = CaretOffset;
+        var line = Document.GetLineByOffset(caret);
+        if (VariableCompletion.FindQuery(Document.GetText(line), caret - line.Offset) is not var (start, end)) return false;
+        if (onlyRightAfterBraces && (start != caret - line.Offset || end != start)) return false;
+
+        var suggestions = VariableCompletion.Suggestions(variables);
+        if (suggestions.Count == 0) return false;
+
+        var window = new CompletionWindow(TextArea)
+        {
+            StartOffset = line.Offset + start,
+            EndOffset = line.Offset + end,
+            MinWidth = 280,
+        };
+        foreach (var suggestion in suggestions) window.CompletionList.CompletionData.Add(new VariableCompletionData(suggestion));
+        window.Closed += (_, _) => _completion = null;
+        _completion = window;
+        window.Show();
+
+        var query = Document.GetText(window.StartOffset, caret - window.StartOffset);
+        if (query.Length > 0) window.CompletionList.SelectItem(query);
+        return true;
+    }
+
+    private sealed class VariableCompletionData(VariableSuggestion suggestion) : ICompletionData
+    {
+        public IImage? Image => null;
+        public string Text => suggestion.Key;
+        public object Content => suggestion.Key;
+        public object Description => suggestion.Description;
+        public double Priority => 0;
+
+        public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
+        {
+            var document = textArea.Document;
+            var line = document.GetLineByOffset(completionSegment.EndOffset);
+            var after = document.GetText(completionSegment.EndOffset, line.EndOffset - completionSegment.EndOffset);
+            var insertion = VariableCompletion.Insertion(suggestion.Key, after);
+            var offset = completionSegment.Offset;
+            document.Replace(completionSegment, insertion);
+
+            // Si el cierre ya estaba, el cursor queda después de él, como si se lo hubiera escrito.
+            var close = insertion.EndsWith("}}", StringComparison.Ordinal) ? 0 : after.IndexOf("}}", StringComparison.Ordinal) + 2;
+            textArea.Caret.Offset = offset + insertion.Length + close;
+        }
     }
 
     private void PushToEditor()
