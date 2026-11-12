@@ -5,7 +5,19 @@ using Raf.Client.Services;
 
 namespace Raf.Client.ViewModels;
 
-public sealed record ResponseHeaderRow(string Name, string Value);
+/// <summary>Un header de la respuesta, con lo que ofrece su menú contextual.</summary>
+public sealed partial class ResponseHeaderRow(string name, string value, ResponseViewModel owner)
+{
+    public string Name { get; } = name;
+    public string Value { get; } = value;
+
+    public string ToText() => $"{Name}: {Value}";
+
+    [RelayCommand] private Task CopyName() => owner.CopyAsync(Name);
+    [RelayCommand] private Task CopyValue() => owner.CopyAsync(Value);
+    [RelayCommand] private Task CopyLine() => owner.CopyAsync(ToText());
+    [RelayCommand] private Task CopyAll() => owner.CopyAsync(string.Join(Environment.NewLine, owner.Headers.Select(h => h.ToText())));
+}
 
 /// <summary>Una línea de la consola del request.</summary>
 public sealed record RunEventRow(RunEvent Event)
@@ -105,7 +117,7 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         IsHttpError = result.StatusCode is { } status && status is < 200 or >= 400;
         IsNoResponse = result.StatusCode is null;
         SizeText = result.Body is { } b ? FormatSize(b.Length) : null;
-        Headers = result.Headers.Select(h => new ResponseHeaderRow(h.Key, h.Value)).ToList();
+        Headers = result.Headers.Select(h => new ResponseHeaderRow(h.Key, h.Value, this)).ToList();
         Events = result.Events.Select(e => new RunEventRow(e)).ToList();
         // Se abre con el request enviado elegido: es lo primero que se quiere ver.
         SelectedEvent = Events.FirstOrDefault(e => e.Event.Kind == RunEventKind.Request) ?? Events.FirstOrDefault();
@@ -113,6 +125,9 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
 
         _raw = result.Body?.GetPreviewText() ?? "";
         _formatted = ResponseFormatter.Format(_raw, result.Body?.MediaType);
+        IsStructured = _formatted.Format != ResponseFormat.Plain;
+        PathMenuText = _formatted.Format == ResponseFormat.Xml ? "Copiar ruta (XPath)" : "Copiar ruta (JSON path)";
+        MenuNode = null;
         TruncatedText = result.Body is { IsTruncated: true } body
             ? $"Se muestran los primeros {FormatSize(body.Preview.Length)} de {FormatSize(body.Length)}. Guardá el archivo para ver el contenido completo."
             : null;
@@ -148,6 +163,62 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
             await dialogs.InfoAsync("No se pudo guardar", e.Message);
         }
     }
+
+    // ---- Menú contextual del body ----
+
+    /// <summary>El body es JSON o XML válido: el menú ofrece valor, clave y ruta.</summary>
+    [ObservableProperty] private bool _isStructured;
+    [ObservableProperty] private string _pathMenuText = "Copiar ruta";
+
+    /// <summary>El nodo de la línea donde se abrió el menú; null si no hay ninguno.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMenuNode), nameof(HasMenuKey))]
+    [NotifyCanExecuteChangedFor(nameof(CopyNodeValueCommand), nameof(CopyNodeKeyCommand), nameof(CopyNodePathCommand))]
+    private ResponseNode? _menuNode;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CopySelectionCommand))]
+    private string? _menuSelection;
+
+    private string _menuLine = "";
+
+    public bool HasMenuNode => MenuNode is not null;
+    public bool HasMenuKey => MenuNode?.Key is not null;
+    private bool HasMenuSelection => !string.IsNullOrEmpty(MenuSelection);
+
+    /// <summary>Lo llama la vista antes de abrir el menú, con la posición del clic (o del cursor) y la selección.</summary>
+    public void PrepareBodyMenu(int offset, string? selection)
+    {
+        var text = BodyText ?? "";
+        offset = Math.Clamp(offset, 0, text.Length);
+        MenuNode = _formatted is { } f ? ResponseLocator.Find(text, f.Format, offset) : null;
+        MenuSelection = selection;
+
+        var start = offset == 0 ? 0 : text.LastIndexOf('\n', offset - 1) + 1;
+        var end = text.IndexOf('\n', offset);
+        _menuLine = text[start..(end < 0 ? text.Length : end)].TrimEnd('\r');
+    }
+
+    [RelayCommand(CanExecute = nameof(HasMenuNode))]
+    private Task CopyNodeValue() => CopyAsync(MenuNode?.Value);
+
+    [RelayCommand(CanExecute = nameof(HasMenuKey))]
+    private Task CopyNodeKey() => CopyAsync(MenuNode?.Key);
+
+    [RelayCommand(CanExecute = nameof(HasMenuNode))]
+    private Task CopyNodePath() => CopyAsync(MenuNode?.Path);
+
+    [RelayCommand(CanExecute = nameof(HasMenuSelection))]
+    private Task CopySelection() => CopyAsync(MenuSelection);
+
+    [RelayCommand]
+    private Task CopyBodyLine() => CopyAsync(_menuLine);
+
+    [RelayCommand]
+    private Task CopyBody() => CopyAsync(BodyText);
+
+    public Task CopyAsync(string? text) =>
+        CopyToClipboard is { } copy && text is not null ? copy(text) : Task.CompletedTask;
 
     [RelayCommand]
     private async Task CopyConsoleAsync()
