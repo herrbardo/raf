@@ -1,6 +1,6 @@
 # Plan 07 — Embellecer la aplicación
 
-Estado: **implementado, falta la prueba humana** (revisar en claro y oscuro). Depende de: Plan 04, para incluir sus pantallas. Es el último plan y puede ejecutarse antes o después de los Planes 05 y 06, que casi no tocan la UI.
+Estado: **implementado y revisado** (Ticket-010). Depende de: Plan 04, para incluir sus pantallas. Es el último plan y puede ejecutarse antes o después de los Planes 05 y 06, que casi no tocan la UI.
 Checkpoint humano al final: revisar la aplicación en tema claro y oscuro, y dar feedback visual.
 
 ## Objetivo
