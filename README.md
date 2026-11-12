@@ -38,7 +38,7 @@ El workflow [release.yml](.github/workflows/release.yml) compila, empaqueta con 
 
 Para obligar a los clientes viejos a actualizarse, se sube `MinClientVersion` en el stack (`Clients:MinVersion` en el servidor) **después** de publicar la versión nueva: los clientes anteriores reciben 426 y muestran la pantalla de actualización.
 
-Firma: sin certificados el workflow publica igual, pero sin firmar. Los secretos que la activan están en [docs/plans/06-distribucion.md](docs/plans/06-distribucion.md#secretos-del-repositorio).
+Firma: macOS se publica firmado y notarizado. Windows se publica sin firmar por decisión (D8), así que SmartScreen advierte al instalar. Los secretos que activan cada firma están en [docs/plans/06-distribucion.md](docs/plans/06-distribucion.md#secretos-del-repositorio).
 
 ## Estructura
 

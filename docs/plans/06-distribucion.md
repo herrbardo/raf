@@ -27,7 +27,9 @@ Los binarios no incluyen la URL del servidor: la indica cada usuario al configur
 
 Los pasos de firma se activan solo si existen los secretos en GitHub, así el workflow funciona desde antes de tener los certificados.
 
-La cuenta de Apple Developer todavía no existe: hasta tenerla, el workflow publica solo Windows. Los builds de macOS se activan cuando estén cargados sus secretos.
+**Windows se publica sin firmar (D8).** Se decidió no comprar un certificado por ahora: el instalador sale sin firma, SmartScreen advierte al instalar ("Windows protegió su PC" → "Más información" → "Ejecutar de todas formas") y el editor figura como desconocido. Las actualizaciones automáticas no se ven afectadas. El paso de firma del workflow queda como está, por si se retoma (ver "Si se retoma la firma de Windows").
+
+**macOS se publica firmado y notarizado** desde el Ticket-009, con los secretos `MACOS_*` cargados.
 
 ## Verificación
 
@@ -44,7 +46,7 @@ La cuenta de Apple Developer todavía no existe: hasta tenerla, el workflow publ
 - **Aviso de actualización:** una franja arriba de la ventana, en cualquier pantalla, con "Reiniciar para actualizar". Si se cierra la app sin reiniciar, `VelopackApp.Run()` aplica la versión descargada en el próximo arranque.
 - **Compatibilidad (`Clients:MinVersion`):** el cliente manda `X-Raf-Client-Version` en cada llamada, también en el WebSocket. Si es menor a la mínima, el servidor responde **426** antes de autenticar, en cualquier ruta salvo `/health`. El cliente lo detecta en un `DelegatingHandler`, así que también se entera durante la sincronización de fondo o la renovación del token: deja de sincronizar y muestra "Hay que actualizar RAF", con "Actualizar ahora" si la app se instaló con el instalador o un link a la página de releases si no. Una llamada sin la cabecera (curl, scripts) no se controla. La etiqueta de prerelease no se compara: `2.1.0-beta.1` cuenta como `2.1.0`. `GET /version` informa la versión del servidor y la mínima, sin autenticación. En AWS es el parámetro `MinClientVersion` del stack.
 - **macOS:** cada arquitectura (`osx-arm64`, `osx-x64`) es un canal propio de Velopack, para que una app no descargue el paquete de la otra. El job corre solo si existen los tres secretos de Apple obligatorios; si no, el release queda solo con Windows y el workflow lo avisa.
-- **Firma en Windows:** con un certificado `.pfx` (signtool). Azure Trusted Signing también lo soporta `vpk` (`--azureTrustedSignFile`), pero requiere login en Azure desde el workflow: se agrega si se elige esa opción.
+- **Firma en Windows:** no se usa (D8). El workflow tiene preparado el camino con un certificado `.pfx` (signtool), que se activa solo si existen los secretos `WINDOWS_CERTIFICATE_*`.
 - **Ícono:** provisorio, en `src/Raf.Client/Assets` (`raf.ico`, `raf.icns` y `raf.png`). Para cambiarlo alcanza con reemplazar esos tres archivos.
 - **Verificado en local:** `dotnet publish` para `win-x64` y `vpk pack` generan `RequestsAndFriends-win-Setup.exe`, el paquete completo y el portable. La versión y la URL de actualizaciones quedan en el binario, y la app publicada arranca. No se probó la instalación ni el workflow en GitHub. Las opciones de `vpk` para macOS no se pueden comprobar desde Windows: el primer release con los secretos de Apple es la prueba.
 
@@ -67,7 +69,16 @@ Se cargan en *Settings → Secrets and variables → Actions*. Ninguno es obliga
 
 Para pasar un archivo a base64 en PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx")) | Set-Clipboard`.
 
+## Si se retoma la firma de Windows
+
+Lo que se averiguó en el Ticket-007:
+
+- Desde 2023 las autoridades no entregan la clave privada en un `.pfx` exportable: va en un token físico o en un HSM en la nube. El paso actual del workflow (`.pfx` + signtool vía `vpk --signParams`) va a tener que adaptarse al proveedor elegido.
+- Azure Trusted Signing / Artifact Signing (USD 9.99/mes) solo admite personas individuales de Estados Unidos y Canadá, así que no aplica.
+- La opción evaluada fue Certum Open Source Code Signing en la nube (SimplySign). Pide documentos de identidad y del proyecto, y falta resolver cómo habilitar su sesión (código de la app del celular) desde GitHub Actions.
+- Aun firmado, SmartScreen sigue advirtiendo hasta que el certificado junte reputación por descargas, sin plazo publicado; lo que cambia de inmediato es que el editor aparece con nombre.
+
 ## Requiere del usuario
 
-- Certificado de Windows y cuenta Apple Developer, cargados como secretos del repositorio.
-- Ícono y nombre definitivos.
+- Nada pendiente: macOS ya tiene sus secretos y Windows se publica sin firmar (D8).
+- Los certificados de Apple vencen el 12/12/2027: renovarlos antes para no cortar la publicación de macOS.
