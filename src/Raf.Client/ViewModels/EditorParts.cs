@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Raf.Client.Core.Execution;
 using Raf.Domain.Requests;
 
 namespace Raf.Client.ViewModels;
@@ -81,10 +82,17 @@ public sealed partial class BodyEditorViewModel : EditorPart
     public static BodyType[] Types { get; } = Enum.GetValues<BodyType>();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsText), nameof(IsForm), nameof(Syntax))]
+    [NotifyPropertyChangedFor(nameof(IsText), nameof(IsForm), nameof(Syntax), nameof(CanFormat))]
+    [NotifyCanExecuteChangedFor(nameof(FormatCommand))]
     private BodyType _type;
 
     [ObservableProperty] private string? _content;
+
+    /// <summary>Resultado del último formateo; se borra con la próxima edición.</summary>
+    [ObservableProperty] private string? _formatNotice;
+    [ObservableProperty] private bool _formatFailed;
+
+    private bool _formatting;
 
     public BodyEditorViewModel(bool canEdit)
     {
@@ -107,11 +115,15 @@ public sealed partial class BodyEditorViewModel : EditorPart
         _ => null,
     };
 
+    /// <summary>Formatear aplica a JSON y XML, y solo si se puede editar.</summary>
+    public bool CanFormat => CanEdit && BodyFormatter.Supports(Type);
+
     public void Load(BodySpec body)
     {
         Type = body.Type;
         Content = body.Content;
         Form.Load(body.Form ?? []);
+        FormatNotice = null;
     }
 
     public BodySpec ToSpec() => Type switch
@@ -121,9 +133,40 @@ public sealed partial class BodyEditorViewModel : EditorPart
         var t => new BodySpec(t, Content ?? ""),
     };
 
-    partial void OnTypeChanged(BodyType value) => RaiseChanged();
+    [RelayCommand(CanExecute = nameof(CanFormat))]
+    private void Format()
+    {
+        var result = BodyFormatter.Format(Content ?? "", Type);
+        if (!result.Succeeded)
+        {
+            FormatFailed = true;
+            FormatNotice = result.Error;
+            return;
+        }
 
-    partial void OnContentChanged(string? value) => RaiseChanged();
+        FormatFailed = false;
+        if (result.Text == Content)
+        {
+            FormatNotice = "El body ya tenía formato.";
+            return;
+        }
+        _formatting = true;
+        Content = result.Text;
+        _formatting = false;
+        FormatNotice = "Body formateado.";
+    }
+
+    partial void OnTypeChanged(BodyType value)
+    {
+        FormatNotice = null;
+        RaiseChanged();
+    }
+
+    partial void OnContentChanged(string? value)
+    {
+        if (!_formatting) FormatNotice = null;
+        RaiseChanged();
+    }
 }
 
 public sealed partial class AuthEditorViewModel(bool canEdit) : EditorPart

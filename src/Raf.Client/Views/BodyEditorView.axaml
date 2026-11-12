@@ -4,9 +4,20 @@
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.BodyEditorView"
              x:DataType="vm:BodyEditorViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding FormatCommand}" />
+  </UserControl.KeyBindings>
   <DockPanel>
-    <ComboBox DockPanel.Dock="Top" Width="190" Margin="0,4,0,6" ItemsSource="{Binding AvailableTypes}"
-              SelectedItem="{Binding Type}" IsEnabled="{Binding CanEdit}" />
+    <DockPanel DockPanel.Dock="Top" Margin="0,4,0,6">
+      <ComboBox DockPanel.Dock="Left" Width="190" ItemsSource="{Binding AvailableTypes}"
+                SelectedItem="{Binding Type}" IsEnabled="{Binding CanEdit}" />
+      <Button DockPanel.Dock="Left" Classes="link" Margin="12,0,0,0" VerticalAlignment="Center" Content="Formatear"
+              Command="{Binding FormatCommand}" IsVisible="{Binding CanFormat}"
+              ToolTip.Tip="Dar formato al JSON o XML del body (Ctrl+Shift+F)" />
+      <TextBlock Classes="caption" Classes.warning="{Binding FormatFailed}" Margin="12,0,0,0" VerticalAlignment="Center"
+                 TextTrimming="CharacterEllipsis" Text="{Binding FormatNotice}" ToolTip.Tip="{Binding FormatNotice}"
+                 IsVisible="{Binding FormatNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    </DockPanel>
     <Grid>
       <ctl:TextField Multiline="True" BoundText="{Binding Content}" Syntax="{Binding Syntax}"
                      IsReadOnly="{Binding IsReadOnly}" IsVisible="{Binding IsText}" />
