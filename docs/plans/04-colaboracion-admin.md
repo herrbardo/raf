@@ -1,6 +1,6 @@
 # Plan 04 — Colaboración y administración
 
-Estado: **implementado, falta la prueba humana**. Depende de: Plan 03.
+Estado: **implementado y probado** (Ticket-003). Depende de: Plan 03.
 Checkpoint humano al final: probar flujos de admin y permisos con varios usuarios.
 
 Los endpoints de administración y miembros ya existen desde el Plan 01. Este plan agrega las pantallas y el cifrado de secretos.
