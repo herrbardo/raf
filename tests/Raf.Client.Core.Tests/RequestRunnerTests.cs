@@ -56,6 +56,11 @@ public sealed class EchoServer : IAsyncLifetime
             return "tarde";
         });
         app.MapGet("/big", () => Results.Text(new string('x', RequestRunner.PreviewLimit + 1000)));
+        app.Map("/redirect/{code:int}", (int code, HttpContext http) =>
+        {
+            http.Response.StatusCode = code;
+            http.Response.Headers.Location = "/echo";
+        });
         app.Map("/echo", async (HttpContext http) =>
         {
             using var reader = new StreamReader(http.Request.Body, Encoding.UTF8);
@@ -304,6 +309,158 @@ public sealed class RequestRunnerTests(EchoServer server) : IClassFixture<EchoSe
         var url = RequestRunner.DescribeUrl(spec, null, vars);
         Assert.Contains("api.local", url);
         Assert.DoesNotContain("valor-secreto", url);
+    }
+
+    private static string AllText(RunResult result) =>
+        string.Join('\n', result.Events.Select(e => e.Title + '\n' + e.Detail));
+
+    [Fact]
+    public async Task Consola_muestra_request_conexion_respuesta_body_y_total()
+    {
+        var spec = Spec(Echo) with
+        {
+            Headers = [new KeyValueItem("X-Test", "uno")],
+            Body = new BodySpec(BodyType.Text, "hola"),
+        };
+        using var result = await _runner.RunAsync(new RunInput(spec, null, VariableContext.Empty, Defaults));
+
+        var kinds = result.Events.Select(e => e.Kind).ToList();
+        Assert.Equal(RunEventKind.Request, kinds[0]);
+        Assert.Equal(RunEventKind.Summary, kinds[^1]);
+        Assert.Contains(RunEventKind.Response, kinds);
+        Assert.Contains(RunEventKind.Body, kinds);
+        Assert.True(kinds.Contains(RunEventKind.Connect) || kinds.Contains(RunEventKind.Reused));
+
+        var request = result.Events[0];
+        Assert.StartsWith("POST " + server.Url, request.Title);
+        Assert.Contains("X-Test: uno", request.Detail);
+        Assert.Contains("Content-Length: 4", request.Detail);
+        Assert.EndsWith("hola", request.Detail);
+        Assert.Contains("Total:", result.Events[^1].Title);
+        Assert.Contains("Espera de la respuesta", result.Events[^1].Detail);
+    }
+
+    [Fact]
+    public async Task Consola_informa_dns_y_conexion_nueva_y_despues_la_reutiliza()
+    {
+        // Un runner propio, para que la primera vez no haya conexiones abiertas.
+        using var runner = new RequestRunner();
+        var spec = Spec(Echo.Replace("127.0.0.1", "localhost"), "GET");
+
+        using var first = await runner.RunAsync(new RunInput(spec, null, VariableContext.Empty, Defaults));
+        var dns = Assert.Single(first.Events, e => e.Kind == RunEventKind.Dns);
+        Assert.StartsWith("DNS: localhost →", dns.Title);
+        Assert.Contains(first.Events, e => e.Kind == RunEventKind.Connect);
+
+        using var second = await runner.RunAsync(new RunInput(spec, null, VariableContext.Empty, Defaults));
+        Assert.Contains(second.Events, e => e.Kind == RunEventKind.Reused);
+        Assert.DoesNotContain(second.Events, e => e.Kind is RunEventKind.Dns or RunEventKind.Connect);
+    }
+
+    [Fact]
+    public async Task Consola_enmascara_los_secretos()
+    {
+        var vars = VariableContext.From(
+            [Var("s", "clave secreta", secret: true), Var("p", "pass-secreto", secret: true), Var("t", "tok-secreto", secret: true)], null);
+        var spec = Spec(Echo) with
+        {
+            QueryParams = [new KeyValueItem("q", "{{s}}")],
+            Headers = [new KeyValueItem("X-Test", "{{t}}")],
+            Body = new BodySpec(BodyType.FormUrlEncoded, Form: [new KeyValueItem("f", "{{s}}")]),
+            Auth = new AuthSpec(AuthType.Basic, Username: "ana", Password: "{{p}}"),
+        };
+
+        using var result = await _runner.RunAsync(new RunInput(spec, null, vars, Defaults));
+        Assert.Equal(200, result.StatusCode);
+
+        var text = AllText(result);
+        foreach (var secret in new[] { "clave secreta", "clave%20secreta", "clave+secreta", "pass-secreto", "tok-secreto" })
+            Assert.DoesNotContain(secret, text);
+        var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes("ana:pass-secreto"));
+        Assert.DoesNotContain(basic, text);
+        Assert.Contains("Basic ***", text);
+        Assert.Contains("X-Test: ***", text);
+    }
+
+    [Fact]
+    public async Task Consola_avisa_las_variables_sin_valor()
+    {
+        var spec = Spec(Echo) with { Headers = [new KeyValueItem("X-Test", "{{falta}}")] };
+        using var result = await _runner.RunAsync(new RunInput(spec, null, VariableContext.Empty, Defaults));
+        var warning = Assert.Single(result.Events, e => e.Kind == RunEventKind.Variables);
+        Assert.Equal(RunEventLevel.Warning, warning.Level);
+        Assert.Contains("falta", warning.Detail);
+    }
+
+    [Theory]
+    [InlineData(302, "GET", "")]
+    [InlineData(303, "GET", "")]
+    [InlineData(307, "POST", "hola")]
+    [InlineData(308, "POST", "hola")]
+    public async Task Sigue_redirecciones_como_HttpClient_y_las_muestra(int code, string method, string body)
+    {
+        var spec = Spec(server.Url + "/redirect/" + code) with
+        {
+            Body = new BodySpec(BodyType.Text, "hola"),
+            Auth = new AuthSpec(AuthType.Bearer, Token: "abc"),
+        };
+        using var result = await _runner.RunAsync(new RunInput(spec, null, VariableContext.Empty, Defaults));
+
+        Assert.Equal(200, result.StatusCode);
+        var echo = result.Body!.GetPreviewText().Split('\n').Select(l => l.Split('=', 2)).ToDictionary(p => p[0], p => p[1]);
+        Assert.Equal(method, echo["method"]);
+        Assert.Equal(body, echo["body"]);
+        Assert.Equal("", echo["authorization"]);
+
+        var redirect = Assert.Single(result.Events, e => e.Kind == RunEventKind.Redirect);
+        Assert.Equal($"Redirección {code} → {method} {server.Url}/echo", redirect.Title);
+        Assert.Contains("Authorization", redirect.Detail);
+        Assert.Equal(2, result.Events.Count(e => e.Kind == RunEventKind.Request));
+        Assert.Equal(2, result.Events.Count(e => e.Kind == RunEventKind.Response));
+    }
+
+    [Fact]
+    public async Task Consola_muestra_el_handshake_tls_y_el_certificado()
+    {
+        var spec = Spec(server.HttpsUrl + "/echo", "GET");
+        using var result = await _runner.RunAsync(new RunInput(
+            spec, null, VariableContext.Empty, Defaults with { AcceptInvalidCertificates = true }));
+
+        var tls = Assert.Single(result.Events, e => e.Kind == RunEventKind.Tls);
+        Assert.StartsWith("Handshake TLS 1.", tls.Title);
+        Assert.Contains("Certificado: CN=localhost", tls.Detail);
+        Assert.Contains("acepta certificados inválidos", tls.Detail);
+    }
+
+    [Fact]
+    public async Task Consola_explica_el_error_de_conexion()
+    {
+        var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+
+        using var result = await _runner.RunAsync(new RunInput(
+            Spec($"http://127.0.0.1:{port}/", "GET"), null, VariableContext.Empty, Defaults));
+
+        Assert.Equal(RunOutcome.Failed, result.Outcome);
+        Assert.Contains(result.Events, e => e.Kind == RunEventKind.Request);
+        Assert.DoesNotContain(result.Events, e => e.Kind == RunEventKind.Connect);
+        var error = Assert.Single(result.Events, e => e.Kind == RunEventKind.Error);
+        Assert.Equal(RunEventLevel.Error, error.Level);
+        Assert.Contains("SocketException [ConnectionRefused]", error.Detail);
+        Assert.Contains("antes de recibir la respuesta", error.Detail);
+    }
+
+    [Fact]
+    public async Task Consola_marca_el_timeout_y_la_etapa()
+    {
+        using var result = await _runner.RunAsync(new RunInput(
+            Spec(server.Url + "/slow", "GET"), null, VariableContext.Empty, new RunOptions(TimeSpan.FromMilliseconds(300))));
+        var error = Assert.Single(result.Events, e => e.Kind == RunEventKind.Error);
+        Assert.StartsWith("Timeout:", error.Title);
+        Assert.Contains("antes de recibir la respuesta", error.Detail);
+        Assert.Equal(RunEventKind.Summary, result.Events[^1].Kind);
     }
 
     [Theory]

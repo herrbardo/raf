@@ -7,6 +7,39 @@ namespace Raf.Client.ViewModels;
 
 public sealed record ResponseHeaderRow(string Name, string Value);
 
+/// <summary>Una línea de la consola del request.</summary>
+public sealed record RunEventRow(RunEvent Event)
+{
+    public string At => "+" + RunFormat.Time(Event.At);
+    public string? Duration => Event.Duration is { } d ? RunFormat.Time(d) : null;
+    public string Stage => StageText(Event.Kind);
+    public string Title => Event.Title;
+    public string? Detail => Event.Detail;
+    public bool HasDetail => Detail is not null;
+    public bool IsWarning => Event.Level == RunEventLevel.Warning;
+    public bool IsError => Event.Level == RunEventLevel.Error;
+
+    /// <summary>El evento y su detalle, para copiar y pegar en un reporte.</summary>
+    public string ToText() =>
+        $"{At} [{Stage}] {Title}" + (Duration is null ? "" : $" ({Duration})")
+        + (Detail is null ? "" : Environment.NewLine + Detail);
+
+    public static string StageText(RunEventKind kind) => kind switch
+    {
+        RunEventKind.Variables => "Variables",
+        RunEventKind.Request => "Request",
+        RunEventKind.Dns => "DNS",
+        RunEventKind.Connect => "Conexión",
+        RunEventKind.Tls => "TLS",
+        RunEventKind.Reused => "Conexión",
+        RunEventKind.Response => "Respuesta",
+        RunEventKind.Redirect => "Redirección",
+        RunEventKind.Body => "Body",
+        RunEventKind.Error => "Error",
+        _ => "Total",
+    };
+}
+
 public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObject, IDisposable
 {
     private RunResult? _result;
@@ -38,6 +71,20 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     [ObservableProperty] private bool _showRaw;
     [ObservableProperty] private IReadOnlyList<ResponseHeaderRow> _headers = [];
 
+    /// <summary>Consola de la última ejecución. No se guarda: se pierde al cerrar la pestaña.</summary>
+    [ObservableProperty] private IReadOnlyList<RunEventRow> _events = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedDetail))]
+    private RunEventRow? _selectedEvent;
+
+    [ObservableProperty] private string? _consoleNotice;
+
+    public bool HasSelectedDetail => SelectedEvent?.Detail is not null;
+
+    /// <summary>Lo implementa la vista, que copia al portapapeles.</summary>
+    public Func<string, Task>? CopyToClipboard { get; set; }
+
     public bool ShowPlaceholder => !IsRunning && !HasResult;
 
     /// <summary>Primer envío, sin una respuesta anterior para mostrar mientras tanto.</summary>
@@ -59,6 +106,10 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         IsNoResponse = result.StatusCode is null;
         SizeText = result.Body is { } b ? FormatSize(b.Length) : null;
         Headers = result.Headers.Select(h => new ResponseHeaderRow(h.Key, h.Value)).ToList();
+        Events = result.Events.Select(e => new RunEventRow(e)).ToList();
+        // Se abre con el request enviado elegido: es lo primero que se quiere ver.
+        SelectedEvent = Events.FirstOrDefault(e => e.Event.Kind == RunEventKind.Request) ?? Events.FirstOrDefault();
+        ConsoleNotice = null;
 
         _raw = result.Body?.GetPreviewText() ?? "";
         _formatted = ResponseFormatter.Format(_raw, result.Body?.MediaType);
@@ -98,6 +149,15 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         }
     }
 
+    [RelayCommand]
+    private async Task CopyConsoleAsync()
+    {
+        if (CopyToClipboard is null || Events.Count == 0) return;
+        var text = string.Join(Environment.NewLine, Events.Select(e => e.ToText()));
+        await CopyToClipboard(text + Environment.NewLine);
+        ConsoleNotice = Events.Count == 1 ? "Se copió 1 evento." : $"Se copiaron {Events.Count} eventos.";
+    }
+
     private static string Extension(string? mediaType) =>
         mediaType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true ? ".json"
         : mediaType?.Contains("xml", StringComparison.OrdinalIgnoreCase) == true ? ".xml"
@@ -113,15 +173,9 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         _ => "Completado",
     };
 
-    public static string FormatTime(TimeSpan t) =>
-        t.TotalSeconds >= 1 ? $"{t.TotalSeconds:0.00} s" : $"{t.TotalMilliseconds:0} ms";
+    public static string FormatTime(TimeSpan t) => RunFormat.Time(t);
 
-    public static string FormatSize(long bytes) => bytes switch
-    {
-        >= 1024 * 1024 => $"{bytes / 1024d / 1024d:0.0} MB",
-        >= 1024 => $"{bytes / 1024d:0.0} KB",
-        _ => $"{bytes} B",
-    };
+    public static string FormatSize(long bytes) => RunFormat.Size(bytes);
 
     public void Dispose() => _result?.Dispose();
 }
