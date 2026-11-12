@@ -1,0 +1,74 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
+        x:Class="Raf.Client.Views.EventConsoleWindow"
+        x:DataType="vm:EventConsoleViewModel"
+        Title="Consola de eventos — RAF"
+        Icon="avares://RAF/Assets/raf.png"
+        Width="900" Height="520" MinWidth="600" MinHeight="320"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel>
+    <!-- Filtros y acciones -->
+    <Border DockPanel.Dock="Top" Classes="chrome" Padding="10,6">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+          <TextBlock Classes="caption" VerticalAlignment="Center" Margin="0,0,8,0" Text="{Binding Notice}" />
+          <Button Classes="ghost" Content="Copiar" ToolTip.Tip="Copiar al portapapeles los eventos que se ven, con su detalle"
+                  Command="{Binding CopyCommand}" />
+          <Button Classes="ghost" Content="Limpiar" ToolTip.Tip="Borrar los eventos de la consola" Command="{Binding ClearCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ComboBox MinWidth="190" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}" ToolTip.Tip="Nivel">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:LevelFilter">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ComboBox MinWidth="190" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" ToolTip.Tip="Categoría">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:CategoryFilter">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- Detalle técnico del evento elegido -->
+    <Border DockPanel.Dock="Bottom" Classes="panel" Height="170" IsVisible="{Binding HasDetail}"
+            BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,1,0,0">
+      <DockPanel Margin="12,8">
+        <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="DETALLE" />
+        <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                 Text="{Binding Selected.Detail, FallbackValue=''}" />
+      </DockPanel>
+    </Border>
+
+    <Grid>
+      <StackPanel Classes="empty" IsVisible="{Binding !Items.Count}">
+        <ctl:Icon Data="{StaticResource IconHistory}" />
+        <TextBlock Classes="empty-title" Text="Sin eventos" />
+        <TextBlock Classes="caption" Text="Acá aparece lo que pasa con la sesión, la conexión y la sincronización." />
+      </StackPanel>
+      <ListBox Classes="events" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !!Items.Count}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:EventRow">
+            <Grid ColumnDefinitions="64,104,118,*" ColumnSpacing="10">
+              <TextBlock Classes="caption mono" VerticalAlignment="Top" Margin="0,3,0,0" Text="{Binding Time}" />
+              <Border Grid.Column="1" Classes="chip level" Classes.warning="{Binding IsWarning}" Classes.failure="{Binding IsError}"
+                      HorizontalAlignment="Left" VerticalAlignment="Top">
+                <TextBlock Text="{Binding Level}" />
+              </Border>
+              <TextBlock Grid.Column="2" Classes="caption" VerticalAlignment="Top" Margin="0,3,0,0" Text="{Binding Category}" />
+              <SelectableTextBlock Grid.Column="3" TextWrapping="Wrap" Text="{Binding Message}" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
+  </DockPanel>
+</Window>

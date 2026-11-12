@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.Reflection;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Raf.Client.Core.Diagnostics;
 using Raf.Contracts;
 using Velopack;
 using Velopack.Sources;
@@ -42,6 +42,7 @@ public static class AppIdentity
 public sealed partial class UpdateService : ObservableObject
 {
     private readonly UpdateManager? _manager;
+    private readonly EventLog _events;
     private UpdateInfo? _ready;
 
     /// <summary>Versión descargada y lista para instalar; null si no hay.</summary>
@@ -51,17 +52,23 @@ public sealed partial class UpdateService : ObservableObject
 
     [ObservableProperty] private bool _isChecking;
 
-    public UpdateService()
+    public UpdateService(EventLog events)
     {
-        if (AppIdentity.UpdateUrl is null) return;
+        _events = events;
+        if (AppIdentity.UpdateUrl is null)
+        {
+            events.Info(EventCategory.Updates, "Actualizaciones automáticas desactivadas: es un build local.");
+            return;
+        }
         try
         {
             var manager = new UpdateManager(new GithubSource(AppIdentity.UpdateUrl, accessToken: null, prerelease: AppIdentity.IsPrerelease));
             if (manager.IsInstalled) _manager = manager;
+            else events.Info(EventCategory.Updates, "Actualizaciones automáticas desactivadas: la app no se instaló con el instalador.");
         }
         catch (Exception e)
         {
-            Trace.TraceWarning($"Actualizaciones desactivadas: {e.Message}");
+            events.Warning(EventCategory.Updates, $"Actualizaciones desactivadas: {e.Message}", e.ToString());
         }
     }
 
@@ -81,17 +88,22 @@ public sealed partial class UpdateService : ObservableObject
         try
         {
             var info = await _manager.CheckForUpdatesAsync();
-            if (info is null) return false;
+            if (info is null)
+            {
+                _events.Info(EventCategory.Updates, "No hay versiones nuevas.");
+                return false;
+            }
             await _manager.DownloadUpdatesAsync(info);
             _ready = info;
             var version = info.TargetFullRelease.Version.ToString();
+            _events.Info(EventCategory.Updates, $"Se descargó la versión {version}: se instala al reiniciar.");
             await Dispatcher.UIThread.InvokeAsync(() => ReadyVersion = version);
             return true;
         }
         catch (Exception e)
         {
             // Sin conexión o GitHub caído: se vuelve a intentar en el próximo arranque.
-            Trace.TraceWarning($"No se pudo buscar actualizaciones: {e.Message}");
+            _events.Warning(EventCategory.Updates, $"No se pudo buscar actualizaciones: {e.Message}", e.ToString());
             return false;
         }
         finally

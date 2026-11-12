@@ -118,6 +118,15 @@
   <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource RafDangerBrush}" />
   </Style>
+  <!-- Botón que pide atención (consola con advertencias sin ver): color de aviso y un número al lado del icono -->
+  <Style Selector="Button.icon.attention">
+    <Setter Property="Foreground" Value="{DynamicResource RafWarningBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource RafFontSizeSmall}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.icon.attention:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource RafWarningBrush}" />
+  </Style>
 
   <!-- Botón principal: acento sólido con texto blanco en ambos temas -->
   <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">

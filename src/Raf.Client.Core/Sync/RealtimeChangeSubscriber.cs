@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
+using Raf.Client.Core.Diagnostics;
 
 namespace Raf.Client.Core.Sync;
 
@@ -17,6 +18,7 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
     private readonly HubConnection _connection;
     private readonly TimeProvider _clock;
     private readonly TimeSpan _fallbackInterval;
+    private readonly EventLog? _events;
     private readonly object _sync = new();
     private readonly CancellationTokenSource _stop = new();
     private Guid[] _watched = [];
@@ -25,10 +27,11 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
 
     public RealtimeChangeSubscriber(
         Uri server, Func<Task<string?>> accessToken, TimeProvider clock, TimeSpan fallbackInterval,
-        Action<HttpConnectionOptions>? configure = null)
+        Action<HttpConnectionOptions>? configure = null, EventLog? events = null)
     {
         _clock = clock;
         _fallbackInterval = fallbackInterval;
+        _events = events;
         _connection = new HubConnectionBuilder()
             .WithUrl(new Uri(server, "hubs/changes"), o =>
             {
@@ -42,20 +45,26 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
 
         _connection.On<Guid, long>("Changed", (_, _) => Raise());
         _connection.On("Refresh", Raise);
-        _connection.Reconnecting += _ =>
+        _connection.Reconnecting += e =>
         {
+            _events?.Warning(EventCategory.Connection,
+                $"Se cortó la conexión en tiempo real{Cause(e)}. Mientras tanto se consulta al servidor cada {Seconds(fallbackInterval)}.",
+                e?.ToString());
             SetPolling(true);
             return Task.CompletedTask;
         };
         _connection.Reconnected += async _ =>
         {
+            _events?.Info(EventCategory.Connection, "Se recuperó la conexión en tiempo real.");
             SetPolling(false);
             await SendWatchAsync();
             Raise(); // lo que pasó durante el corte se trae con un pull
         };
-        _connection.Closed += _ =>
+        _connection.Closed += e =>
         {
             // Si el servidor cierra la conexión (por ejemplo, el usuario fue deshabilitado), se reintenta de cero.
+            if (!_stop.IsCancellationRequested)
+                _events?.Warning(EventCategory.Connection, $"El servidor cerró la conexión en tiempo real{Cause(e)}. Se vuelve a conectar.", e?.ToString());
             SetPolling(true);
             if (!_stop.IsCancellationRequested) StartLoop();
             return Task.CompletedTask;
@@ -86,6 +95,10 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
 
     private void Raise() => ChangeAvailable?.Invoke();
 
+    private static string Cause(Exception? e) => e is null ? "" : $": {e.Message}";
+
+    private static string Seconds(TimeSpan t) => $"{(int)t.TotalSeconds} segundos";
+
     private void StartLoop()
     {
         lock (_sync)
@@ -103,14 +116,20 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
             try
             {
                 await _connection.StartAsync(_stop.Token);
+                _events?.Info(EventCategory.Connection,
+                    attempt == 0 ? "Conexión en tiempo real establecida." : $"Conexión en tiempo real establecida después de {attempt + 1} intentos.");
                 SetPolling(false);
                 await SendWatchAsync();
                 Raise();
                 return;
             }
-            catch (Exception) when (!_stop.IsCancellationRequested)
+            catch (Exception e) when (!_stop.IsCancellationRequested)
             {
-                // Sin servidor, sin red o sesión vencida: se sigue por polling y se reintenta.
+                // Sin servidor, sin red o sesión vencida: se sigue por polling y se reintenta. Solo se anota el primer fallo.
+                if (attempt == 0)
+                    _events?.Warning(EventCategory.Connection,
+                        $"No se pudo abrir la conexión en tiempo real: {e.Message}. Se reintenta y mientras tanto se consulta al servidor cada {Seconds(_fallbackInterval)}.",
+                        e.ToString());
                 var delay = RetryDelays[Math.Min(++attempt, RetryDelays.Length - 1)];
                 try
                 {

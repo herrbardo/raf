@@ -2,6 +2,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Local;
 using Raf.Client.Core.Session;
 using Raf.Client.Core.Sync;
@@ -15,6 +16,12 @@ public abstract partial class PageViewModel : ObservableObject
 {
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string? _error;
+
+    /// <summary>Dónde anotar los errores. Null si ya los anota otro (por ejemplo, el login lo anota la sesión).</summary>
+    public EventLog? Events { get; init; }
+
+    /// <summary>Cómo se nombra la pantalla en la consola de eventos.</summary>
+    protected virtual string EventContext => "la app";
 
     protected async Task GuardAsync(Func<Task> action)
     {
@@ -31,6 +38,8 @@ public abstract partial class PageViewModel : ObservableObject
         catch (ApiException e)
         {
             Error = e.Message;
+            var status = e.Status is { } code ? $" (HTTP {(int)code})" : "";
+            Events?.Warning(EventCategory.App, $"Error en {EventContext}{status}: {e.Message}", e.InnerException?.ToString());
         }
         finally
         {
@@ -51,17 +60,31 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         _services = services;
         Updates = updates;
+        EventConsole = new EventConsoleViewModel(services.Events);
         _clientVersion = version.ClientVersion;
         services.Session.SessionExpired += () => Dispatcher.UIThread.Post(() =>
         {
             if (Page is not LoginViewModel and not UpdateRequiredViewModel) ShowLogin("La sesión expiró. Volvé a iniciar sesión.");
         });
-        version.Outdated += min => Dispatcher.UIThread.Post(() => ShowUpdateRequired(min));
+        version.Outdated += min =>
+        {
+            services.Events.Warning(EventCategory.Connection,
+                $"El servidor exige la versión {min} o posterior y esta es la {version.ClientVersion}: se deja de sincronizar.");
+            Dispatcher.UIThread.Post(() => ShowUpdateRequired(min));
+        };
     }
 
     private readonly string _clientVersion;
 
     public UpdateService Updates { get; }
+
+    public EventConsoleViewModel EventConsole { get; }
+
+    /// <summary>Lo implementa la ventana principal, que abre la consola o la trae al frente.</summary>
+    public Action? ShowEventConsole { get; set; }
+
+    [RelayCommand]
+    private void OpenEventConsole() => ShowEventConsole?.Invoke();
 
     [RelayCommand]
     private void RestartToUpdate() => Updates.ApplyAndRestart();
@@ -99,7 +122,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public void ShowConnect()
     {
         CloseSync();
-        Page = new ConnectViewModel(_services, this);
+        Page = new ConnectViewModel(_services, this) { Events = _services.Events };
     }
 
     public void ShowLogin(string? message = null)
@@ -116,9 +139,11 @@ public sealed partial class ShellViewModel : ObservableObject
         if (sync is not null) _ = sync.DisposeAsync().AsTask();
     }
 
-    public void ShowForcedPasswordChange() => Page = new ChangePasswordViewModel(_services, this, returnTo: null);
+    public void ShowForcedPasswordChange() =>
+        Page = new ChangePasswordViewModel(_services, this, returnTo: null) { Events = _services.Events };
 
-    public void ShowPasswordChange(MainViewModel returnTo) => Page = new ChangePasswordViewModel(_services, this, returnTo);
+    public void ShowPasswordChange(MainViewModel returnTo) =>
+        Page = new ChangePasswordViewModel(_services, this, returnTo) { Events = _services.Events };
 
     public void Show(object page) => Page = page;
 
@@ -128,10 +153,10 @@ public sealed partial class ShellViewModel : ObservableObject
         var session = _services.Session;
         var realtime = new RealtimeChangeSubscriber(
             session.Server!, async () => await session.GetAccessTokenAsync(), TimeProvider.System, TimeSpan.FromSeconds(30),
-            o => o.Headers[RafHeaders.ClientVersion] = _clientVersion);
+            o => o.Headers[RafHeaders.ClientVersion] = _clientVersion, _services.Events);
         var sync = await SyncSession.OpenAsync(
             Path.Combine(AppPaths.DataDirectory, "cache"), session.Server!, session.User!.Id,
-            _services.Api, _services.Secure, realtime);
+            _services.Api, _services.Secure, realtime, _services.Events);
         _sync = sync;
 
         var main = new MainViewModel(_services with { Store = sync.Store }, this, sync);
@@ -153,6 +178,8 @@ public sealed partial class ConnectViewModel(ClientServices services, ShellViewM
         services.Settings.Current.RecentServers is { Count: > 0 } recent ? recent.ToList()
         : services.Settings.Current.ServerUrl is { } last ? [last]
         : [];
+
+    protected override string EventContext => "la conexión al servidor";
 
     public bool InsecureWarning =>
         ServerUrl.Normalize(Url) is { Scheme: "http", IsLoopback: false };
@@ -210,6 +237,8 @@ public sealed partial class ChangePasswordViewModel(
     [ObservableProperty] private string? _repeat;
 
     public bool IsForced => returnTo is null;
+
+    protected override string EventContext => "el cambio de contraseña";
 
     public string Heading => IsForced ? "Elegí una contraseña nueva" : "Cambiar contraseña";
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Local;
 using Raf.Contracts;
 
@@ -32,7 +33,8 @@ public static class ServerUrl
 /// no se cancela aunque el llamador desista (la respuesta trae el token que reemplaza al actual) y un lock de
 /// archivo la serializa entre instancias de la app.
 /// </summary>
-public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProvider clock, string lockPath)
+public sealed class SessionManager(
+    HttpClient http, ISecureStore store, TimeProvider clock, string lockPath, EventLog? events = null)
 {
     private const string StoreKey = "session";
     private static readonly TimeSpan ExpiryMargin = TimeSpan.FromSeconds(30);
@@ -57,8 +59,13 @@ public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProv
     {
         var stored = ReadStored();
         if (stored is null || stored.Server != Server?.ToString()) return false;
-        if (stored.Tokens.RefreshTokenExpiresAt <= clock.GetUtcNow()) return false;
+        if (stored.Tokens.RefreshTokenExpiresAt <= clock.GetUtcNow())
+        {
+            events?.Info(EventCategory.Session, "La sesión guardada venció: hay que volver a iniciarla.");
+            return false;
+        }
         lock (_sync) _session = stored;
+        events?.Info(EventCategory.Session, $"Se recuperó la sesión guardada en {Server} como {stored.Tokens.User.Email}.");
         return true;
     }
 
@@ -72,14 +79,21 @@ public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProv
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
+            events?.Warning(EventCategory.Session, $"No se pudo conectar con {server} para iniciar sesión: {e.Message}", e.ToString());
             throw new ApiException(null, "No se pudo conectar con el servidor.", e);
         }
 
         using (res)
         {
-            if (!res.IsSuccessStatusCode) throw await ApiException.FromResponseAsync(res);
+            if (!res.IsSuccessStatusCode)
+            {
+                var error = await ApiException.FromResponseAsync(res);
+                events?.Warning(EventCategory.Session, $"Inicio de sesión rechazado (HTTP {(int)res.StatusCode}): {error.Message}");
+                throw error;
+            }
             var tokens = (await res.Content.ReadFromJsonAsync<TokenResponse>(ClientJson.Options, ct))!;
             Adopt(tokens);
+            events?.Info(EventCategory.Session, $"Sesión iniciada en {server} como {tokens.User.Email}.");
             return tokens.User;
         }
     }
@@ -106,6 +120,7 @@ public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProv
 
     public void MarkExpired()
     {
+        events?.Warning(EventCategory.Session, "El servidor ya no acepta la sesión: hay que volver a iniciarla.");
         Clear();
         SessionExpired?.Invoke();
     }
@@ -121,6 +136,7 @@ public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProv
         var server = Server;
         Clear();
         if (refreshToken is null || server is null) return;
+        events?.Info(EventCategory.Session, "Sesión cerrada.");
 
         try
         {
@@ -171,6 +187,7 @@ public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProv
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
             {
+                events?.Warning(EventCategory.Session, $"No se pudo renovar la sesión, sin conexión con el servidor: {e.Message}", e.ToString());
                 throw new ApiException(null, "No se pudo conectar con el servidor.", e);
             }
 
@@ -181,12 +198,18 @@ public sealed class SessionManager(HttpClient http, ISecureStore store, TimeProv
                     MarkExpired();
                     throw new SessionExpiredException();
                 }
-                if (!res.IsSuccessStatusCode) throw await ApiException.FromResponseAsync(res);
+                if (!res.IsSuccessStatusCode)
+                {
+                    var error = await ApiException.FromResponseAsync(res);
+                    events?.Warning(EventCategory.Session, $"No se pudo renovar la sesión (HTTP {(int)res.StatusCode}): {error.Message}");
+                    throw error;
+                }
 
                 var tokens = (await res.Content.ReadFromJsonAsync<TokenResponse>(ClientJson.Options))!;
                 var renewed = session with { Tokens = tokens };
                 lock (_sync) _session = renewed;
                 Persist(renewed);
+                events?.Info(EventCategory.Session, "Se renovó el token de acceso.");
                 return tokens;
             }
         }

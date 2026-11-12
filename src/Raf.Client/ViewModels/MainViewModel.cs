@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Raf.Client.Controls;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Execution;
 using Raf.Client.Core.History;
 using Raf.Client.Core.Sync;
@@ -164,6 +165,7 @@ public sealed partial class MainViewModel : ObservableObject
             if (SyncStatus.LastError is { } error) lines.Add($"Último error: {error}");
             if (SyncStatus.State == SyncState.Offline) lines.Add("Se reintenta cada 15 segundos.");
             if (HasConflicts) lines.Add("Hacé clic para resolver los conflictos.");
+            lines.Add("El detalle está en la consola de eventos (Ctrl+Shift+L).");
             return string.Join(Environment.NewLine, lines);
         }
     }
@@ -290,9 +292,19 @@ public sealed partial class MainViewModel : ObservableObject
         {
             await action();
         }
+        catch (ClientOutdatedException)
+        {
+            // El shell ya muestra la pantalla de actualización y lo anota en la consola.
+        }
+        catch (SessionExpiredException)
+        {
+            // La sesión ya lo anotó y la app vuelve al login.
+        }
         catch (ApiException e)
         {
             ReportStatus(e.Message);
+            var status = e.Status is { } code ? $" (HTTP {(int)code})" : "";
+            Services.Events.Warning(EventCategory.App, $"Falló una operación{status}: {e.Message}", e.InnerException?.ToString());
         }
     }
 
@@ -719,7 +731,10 @@ public sealed partial class MainViewModel : ObservableObject
     private Task OpenWorkspaceSettingsAsync() => GuardAsync(async () =>
     {
         if (SelectedWorkspace is not { } workspace || ShowWorkspaceSettings is null) return;
-        var vm = new WorkspaceSettingsViewModel(_management, Services.Dialogs, workspace, Services.Session.User!.Id, IsAdmin);
+        var vm = new WorkspaceSettingsViewModel(_management, Services.Dialogs, workspace, Services.Session.User!.Id, IsAdmin)
+        {
+            Events = Services.Events,
+        };
         await vm.LoadAsync();
         await ShowWorkspaceSettings(vm);
 
@@ -741,7 +756,7 @@ public sealed partial class MainViewModel : ObservableObject
     private Task OpenAdminAsync() => GuardAsync(async () =>
     {
         if (ShowAdmin is null) return;
-        var vm = new AdminViewModel(_management, Services.Dialogs, Services.Session.User!.Id);
+        var vm = new AdminViewModel(_management, Services.Dialogs, Services.Session.User!.Id) { Events = Services.Events };
         await vm.LoadAsync();
         await ShowAdmin(vm);
         if (vm.Changed) await SyncNowAsync();

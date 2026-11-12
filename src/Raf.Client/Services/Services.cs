@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Execution;
 using Raf.Client.Core.History;
 using Raf.Client.Core.Local;
@@ -20,7 +21,8 @@ public sealed record ClientServices(
     SettingsStore Settings,
     RequestRunner Runner,
     RunHistoryStore History,
-    IDialogs Dialogs);
+    IDialogs Dialogs,
+    EventLog Events);
 
 public interface IDialogs
 {
