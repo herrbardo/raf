@@ -1,6 +1,6 @@
 # Plan 03 — Sincronización
 
-Estado: **implementado, falta la prueba humana**. Depende de: Plan 02.
+Estado: **implementado y probado** (Ticket-002). Depende de: Plan 02.
 Checkpoint humano al final: probar con 2 clientes y 2 usuarios en simultáneo.
 
 ## Alcance

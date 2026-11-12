@@ -1,6 +1,6 @@
 # Plan 02 — Cliente base
 
-Estado: **implementado, pendiente de la prueba humana**. Depende de: Plan 01.
+Estado: **implementado y probado** (Ticket-001). Depende de: Plan 01.
 Checkpoint humano al final: probar la app y dar feedback de UX.
 
 En este plan el cliente trabaja **siempre conectado**, contra la API. La caché local llega en el Plan 03.

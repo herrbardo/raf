@@ -1,6 +1,6 @@
 # Plan 06 — Empaquetado y distribución
 
-Estado: **implementado, falta la prueba humana** (certificados, instalación y actualización reales). Depende de: Plan 02 como mínimo; conviene ejecutarlo al final.
+Estado: **implementado y probado**: instalación y actualización en Windows sin firmar (Tickets 005, 006 y 007) y en macOS firmado (Ticket-009). Depende de: Plan 02 como mínimo; conviene ejecutarlo al final.
 Checkpoint humano al final: aportar certificados y probar instalación y actualización en ambos sistemas.
 
 ## Alcance

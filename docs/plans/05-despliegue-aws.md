@@ -1,6 +1,6 @@
 # Plan 05 — Despliegue AWS y tiempo real
 
-Estado: **implementado, falta la prueba humana** (el despliegue real). Depende de: Plan 03 (tiempo real) y Plan 04 (KMS).
+Estado: **implementado**. El despliegue real y el tiempo real se validaron en Railway (Ticket-022); el despliegue en AWS sigue pendiente (Ticket-004). Depende de: Plan 03 (tiempo real) y Plan 04 (KMS).
 Checkpoint humano al final: desplegar con AWS CLI (región `us-east-1`) y validar.
 
 Se mantiene un **único template de CloudFormation**, que despliega el usuario.
