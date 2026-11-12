@@ -11,6 +11,8 @@
   <Window.KeyBindings>
     <KeyBinding Gesture="Ctrl+S" Command="{Binding Main.SelectedTab.SaveCommand}" />
     <KeyBinding Gesture="Ctrl+Enter" Command="{Binding Main.SelectedTab.SendCommand}" />
+    <!-- La consola se abre desde cualquier pantalla, también antes de iniciar sesión. -->
+    <KeyBinding Gesture="Ctrl+Shift+L" Command="{Binding OpenEventConsoleCommand}" />
   </Window.KeyBindings>
   <DockPanel>
     <Border DockPanel.Dock="Top" Classes="update-banner" Padding="12,6"

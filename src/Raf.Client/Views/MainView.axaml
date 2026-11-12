@@ -20,6 +20,14 @@
               <TextBlock VerticalAlignment="Center" Text="{Binding SyncText}" />
             </StackPanel>
           </Button>
+          <Button Classes="icon" Classes.attention="{Binding Shell.EventConsole.HasUnseenProblems}" VerticalAlignment="Center"
+                  ToolTip.Tip="{Binding Shell.EventConsole.OpenTip}" Command="{Binding Shell.OpenEventConsoleCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <ctl:Icon Data="{StaticResource IconConsole}" />
+              <TextBlock VerticalAlignment="Center" Text="{Binding Shell.EventConsole.UnseenProblems}"
+                         IsVisible="{Binding Shell.EventConsole.HasUnseenProblems}" />
+            </StackPanel>
+          </Button>
           <Button Classes="ghost" ToolTip.Tip="{Binding RoleText}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <ctl:Icon Data="{StaticResource IconUser}" />

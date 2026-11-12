@@ -1,4 +1,5 @@
 using System.Text;
+using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Local;
 using Raf.Client.Core.Session;
 using Raf.Client.Core.Api;
@@ -35,9 +36,10 @@ internal sealed class Device : IAsyncDisposable
 {
     private readonly string _dir;
 
-    private Device(string dir, UserDto user, HttpClient raw, FaultHandler fault, SyncSession sync)
+    private Device(string dir, UserDto user, HttpClient raw, FaultHandler fault, SyncSession sync, EventLog events)
     {
         _dir = dir;
+        Events = events;
         User = user;
         Raw = raw;
         Fault = fault;
@@ -49,6 +51,7 @@ internal sealed class Device : IAsyncDisposable
     public FaultHandler Fault { get; }
     public SyncSession Sync { get; }
     public SyncedWorkspaceStore Store => Sync.Store;
+    public EventLog Events { get; }
 
     public List<WorkspaceLost> Lost { get; } = [];
 
@@ -59,12 +62,14 @@ internal sealed class Device : IAsyncDisposable
         var fault = new FaultHandler();
         var http = app.ClientWith(fault);
         var server = new Uri("http://localhost/");
-        var session = new SessionManager(http, new MemorySecureStore(), TimeProvider.System, Path.Combine(dir, "session.lock"));
+        var events = new EventLog();
+        var session = new SessionManager(http, new MemorySecureStore(), TimeProvider.System, Path.Combine(dir, "session.lock"), events);
         session.SetServer(server);
         await session.LoginAsync(user.Email, "NuevaClave123");
 
-        var sync = await SyncSession.OpenAsync(dir, server, user.Id, new RafApiClient(http, session), new MemorySecureStore(), new NoSubscriber());
-        var device = new Device(dir, user, raw, fault, sync);
+        var sync = await SyncSession.OpenAsync(
+            dir, server, user.Id, new RafApiClient(http, session), new MemorySecureStore(), new NoSubscriber(), events);
+        var device = new Device(dir, user, raw, fault, sync, events);
         sync.Engine.WorkspaceLost += device.Lost.Add;
         return device;
     }
@@ -187,6 +192,42 @@ public class SyncEngineTests(RafApp app)
         a.GoOnline();
         await a.SyncAsync();
         Assert.Null((await a.Sync.Engine.GetStatusAsync()).LastError);
+    }
+
+    [Fact]
+    public async Task La_consola_anota_el_corte_una_vez_la_recuperacion_y_lo_enviado()
+    {
+        var (a, _, ws) = await TwoDevicesAsync();
+        a.Events.Clear();
+
+        a.GoOffline();
+        await a.Store.CreateAppAsync(ws, new CreateAppRequest("Sin red"));
+        Assert.False(await a.Sync.Engine.SyncOnceAsync());
+        Assert.False(await a.Sync.Engine.SyncOnceAsync()); // el mismo motivo no se repite en cada reintento
+
+        var cut = Assert.Single(a.Events.Snapshot(), e => e.Level == EventLevel.Warning);
+        Assert.Equal(EventCategory.Sync, cut.Category);
+        Assert.Contains("No se pudo conectar con el servidor. (sin conexión)", cut.Message);
+
+        a.GoOnline();
+        await a.SyncAsync();
+        var info = a.Events.Snapshot().Where(e => e.Level == EventLevel.Info).Select(e => e.Message).ToList();
+        Assert.Contains("Se recuperó la conexión con el servidor después de 2 intentos fallidos.", info);
+        Assert.Contains("Se envió 1 cambio al servidor.", info);
+    }
+
+    [Fact]
+    public async Task La_consola_no_guarda_tokens_ni_valores_de_variables()
+    {
+        var (a, _, ws) = await TwoDevicesAsync();
+        await a.Store.CreateVariableAsync(ws, new CreateVariableRequest("clave", "valor-muy-secreto", null, true));
+        await a.SyncAsync();
+
+        var all = string.Join("\n", a.Events.Snapshot().Select(e => e.Message + e.Detail));
+        Assert.Contains("Sesión iniciada", all);
+        Assert.DoesNotContain("valor-muy-secreto", all);
+        Assert.DoesNotContain("eyJ", all);
+        Assert.DoesNotContain("NuevaClave123", all);
     }
 
     [Fact]

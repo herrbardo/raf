@@ -23,5 +23,6 @@
   <StreamGeometry x:Key="IconLayers">M8,2 L14.5,5.5 L8,9 L1.5,5.5 Z M1.5,8.5 L8,12 L14.5,8.5 M1.5,11 L8,14.5 L14.5,11</StreamGeometry>
   <StreamGeometry x:Key="IconHistory">M2.5,8 A5.5,5.5 0 1 0 4.1,4.1 M1.9,2.2 L4.1,4.1 L2.2,6.3 M8,5 V8 L10,9.3</StreamGeometry>
   <StreamGeometry x:Key="IconChevronDown">M4,6 L8,10 L12,6</StreamGeometry>
+  <StreamGeometry x:Key="IconConsole">M2.5,2.5 H13.5 V13.5 H2.5 Z M4.5,6 L6.5,8 L4.5,10 M8,10.5 H11.5</StreamGeometry>
   <StreamGeometry x:Key="IconCloudOff">M4.5,12.5 H11.5 A3,3 0 0 0 11.8,6.5 A4,4 0 0 0 4.3,7.6 A2.5,2.5 0 0 0 4.5,12.5 Z M2,2 L14,14</StreamGeometry>
 </ResourceDictionary>

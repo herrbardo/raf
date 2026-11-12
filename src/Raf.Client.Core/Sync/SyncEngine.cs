@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using System.Net;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Local;
 using Raf.Client.Core.Workspaces;
 using Raf.Contracts;
@@ -22,6 +22,7 @@ public sealed class SyncEngine
     private readonly ApiWorkspaceStore _api;
     private readonly IChangeSubscriber _subscriber;
     private readonly string _lockPath;
+    private readonly EventLog? _events;
     private readonly SemaphoreSlim _cycle = new(1, 1);
     private readonly SemaphoreSlim _kick = new(0, 1);
     private readonly HashSet<Guid> _announcedLost = [];
@@ -30,13 +31,17 @@ public sealed class SyncEngine
     private volatile bool _offline;
     private volatile string? _lastError;
     private DateTimeOffset? _lastSyncedAt;
+    private int _failedAttempts;
+    private int _pushed;
 
-    internal SyncEngine(SyncedWorkspaceStore store, ApiWorkspaceStore api, IChangeSubscriber subscriber, string lockPath)
+    internal SyncEngine(
+        SyncedWorkspaceStore store, ApiWorkspaceStore api, IChangeSubscriber subscriber, string lockPath, EventLog? events = null)
     {
         _store = store;
         _api = api;
         _subscriber = subscriber;
         _lockPath = lockPath;
+        _events = events;
         _subscriber.ChangeAvailable += Kick;
         _store.LocalChange += OnLocalChange;
     }
@@ -133,7 +138,13 @@ public sealed class SyncEngine
             using var instanceLock = TryAcquireInstanceLock();
             if (instanceLock is null) return true; // otra ventana de la app ya está sincronizando esta caché
 
+            _pushed = 0;
             await RunCycleAsync(ct);
+            if (_failedAttempts > 0)
+                _events?.Info(EventCategory.Sync, $"Se recuperó la conexión con el servidor después de {Attempts(_failedAttempts)} fallidos.");
+            if (_pushed > 0)
+                _events?.Info(EventCategory.Sync, _pushed == 1 ? "Se envió 1 cambio al servidor." : $"Se enviaron {_pushed} cambios al servidor.");
+            _failedAttempts = 0;
             _offline = false;
             _lastError = null;
             _lastSyncedAt = DateTimeOffset.Now;
@@ -145,16 +156,16 @@ public sealed class SyncEngine
         }
         catch (ApiException e)
         {
-            _offline = true;
-            _lastError = Describe(e);
+            Fail(Describe(e), e);
             return false;
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             // Un fallo inesperado no debe matar el motor: se reintenta en el próximo ciclo.
-            Debug.WriteLine($"Error de sincronización: {e}");
+            _events?.Error(EventCategory.Sync, $"Error inesperado al sincronizar: {Describe(e)}", e);
             _offline = true;
             _lastError = $"Error inesperado: {Describe(e)}";
+            _failedAttempts++;
             return false;
         }
         finally
@@ -163,6 +174,26 @@ public sealed class SyncEngine
             if (!ct.IsCancellationRequested) await PublishStatusAsync();
         }
     }
+
+    /// <summary>
+    /// Sin conexión se reintenta cada 15 segundos: a la consola va el primer fallo y cada cambio de motivo, no cada
+    /// reintento.
+    /// </summary>
+    private void Fail(string error, ApiException e)
+    {
+        if (_failedAttempts == 0 || error != _lastError)
+        {
+            var status = e.Status is { } code ? $" (HTTP {(int)code})" : "";
+            _events?.Warning(EventCategory.Sync, $"No se pudo sincronizar{status}: {error}. Se reintenta cada 15 segundos.",
+                e.InnerException?.ToString());
+        }
+        _offline = true;
+        _lastError = error;
+        _failedAttempts++;
+    }
+
+    private static string Attempts(int n) => n == 1 ? "1 intento" : $"{n} intentos";
+    private static string Changes(int n) => n == 1 ? "1 cambio" : $"{n} cambios";
 
     /// <summary>El mensaje propio más la causa técnica, por ejemplo la conexión rechazada.</summary>
     private static string Describe(Exception e) =>
@@ -186,14 +217,23 @@ public sealed class SyncEngine
         await PushAsync(e => e.Kind == ChangeKind.Workspace, ct);
 
         var (listChanged, lost) = await _store.ApplyWorkspaceListAsync(await _api.GetWorkspacesAsync(ct), ct);
-        foreach (var item in lost.Where(l => l.PendingChanges == 0 || _announcedLost.Add(l.Id))) WorkspaceLost?.Invoke(item);
+        foreach (var item in lost.Where(l => l.PendingChanges == 0 || _announcedLost.Add(l.Id)))
+        {
+            _events?.Warning(EventCategory.Sync, $"Se perdió el acceso al workspace \"{item.Name}\""
+                + (item.PendingChanges > 0 ? $" con {Changes(item.PendingChanges)} sin enviar." : "."));
+            WorkspaceLost?.Invoke(item);
+        }
 
         var changed = listChanged;
         var workspaces = await _store.GetWorkspacesForSyncAsync(ct);
         _subscriber.Watch(workspaces.Select(w => w.Id).ToList());
         foreach (var workspace in workspaces)
             changed |= await PullAsync(workspace, ct);
-        if (changed) DataChanged?.Invoke();
+        if (changed)
+        {
+            _events?.Info(EventCategory.Sync, "Llegaron cambios del servidor.");
+            DataChanged?.Invoke();
+        }
 
         await PushAsync(_ => true, ct);
 
@@ -215,6 +255,7 @@ public sealed class SyncEngine
                 var page = await _api.GetChangesAsync(workspace.Id, since, PageSize, ct);
                 if (page.MyRole != role)
                 {
+                    _events?.Info(EventCategory.Sync, $"Tu rol en \"{workspace.Name}\" cambió de {role} a {page.MyRole}.");
                     await ApplyRoleChangeAsync(workspace.Id, role, page.MyRole, ct);
                     role = page.MyRole;
                     changed = true;
@@ -258,6 +299,7 @@ public sealed class SyncEngine
             try
             {
                 await _store.AckAsync(item, await SendAsync(item, ct));
+                _pushed++;
             }
             catch (VersionConflictException e)
             {
@@ -265,6 +307,8 @@ public sealed class SyncEngine
             }
             catch (ApiException e) when (e is not SessionExpiredException && IsDefinitive(e))
             {
+                _events?.Warning(EventCategory.Sync,
+                    $"El servidor rechazó un cambio ({Describe(item)}): HTTP {(int)e.Status!.Value} — {e.Message}");
                 await HandleRejectionAsync(item, e);
             }
             catch
@@ -296,10 +340,39 @@ public sealed class SyncEngine
             throw;
         }
 
+        if (remote is not null && SyncItems.SameContent(remote, item.Dto!))
+        {
+            await _store.AckAsync(item, remote);
+            return;
+        }
+
+        _events?.Warning(EventCategory.Sync, $"Conflicto de versión al enviar un cambio ({Describe(item)}): queda para resolver a mano.");
         if (remote is null) await _store.MarkConflictAsync(item, ConflictReason.Missing, "El elemento fue eliminado en el servidor.", null);
-        else if (SyncItems.SameContent(remote, item.Dto!)) await _store.AckAsync(item, remote);
         else await _store.MarkConflictAsync(item, ConflictReason.Version, e.Message, remote);
     }
+
+    /// <summary>Qué cambio era, sin su contenido: puede tener valores secretos.</summary>
+    private static string Describe(OutboxItem item) => $"{OpText(item.Op)} de {KindText(item.Kind)}";
+
+    private static string OpText(OutboxOp op) => op switch
+    {
+        OutboxOp.Create => "alta",
+        OutboxOp.Update => "modificación",
+        OutboxOp.Delete => "baja",
+        _ => op.ToString(),
+    };
+
+    private static string KindText(ChangeKind kind) => kind switch
+    {
+        ChangeKind.Workspace => "workspace",
+        ChangeKind.Environment => "environment",
+        ChangeKind.Variable => "variable",
+        ChangeKind.App => "app",
+        ChangeKind.Folder => "carpeta",
+        ChangeKind.Request => "request",
+        ChangeKind.Sample => "sample",
+        _ => kind.ToString(),
+    };
 
     private async Task HandleRejectionAsync(OutboxItem item, ApiException e)
     {
@@ -409,7 +482,8 @@ public sealed class SyncSession : IAsyncDisposable
 
     /// <summary>Abre la caché de ese usuario en ese servidor: cada combinación tiene su propio archivo.</summary>
     public static async Task<SyncSession> OpenAsync(
-        string directory, Uri server, Guid userId, RafApiClient api, ISecureStore secure, IChangeSubscriber? subscriber = null)
+        string directory, Uri server, Guid userId, RafApiClient api, ISecureStore secure, IChangeSubscriber? subscriber = null,
+        EventLog? events = null)
     {
         var serverHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(server.ToString())))[..16];
@@ -417,7 +491,8 @@ public sealed class SyncSession : IAsyncDisposable
 
         var store = await SyncedWorkspaceStore.OpenAsync(path, secure);
         var engine = new SyncEngine(
-            store, new ApiWorkspaceStore(api), subscriber ?? new PollingChangeSubscriber(PollInterval, TimeProvider.System), path + ".lock");
+            store, new ApiWorkspaceStore(api), subscriber ?? new PollingChangeSubscriber(PollInterval, TimeProvider.System), path + ".lock",
+            events);
         return new SyncSession(store, engine);
     }
 
