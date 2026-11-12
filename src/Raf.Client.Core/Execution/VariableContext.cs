@@ -39,11 +39,18 @@ public sealed class VariableContext
     /// <summary>Resolver que deja sin reemplazar las secretas, para lo que se guarda en disco.</summary>
     public VariableResolver CreatePublicResolver() => new(Readable(includeSecrets: false));
 
-    /// <summary>Oculta los valores secretos que aparezcan en un texto.</summary>
+    /// <summary>
+    /// Oculta los valores secretos que aparezcan en un texto, también escapados como en una URL o en un
+    /// formulario (los espacios como +).
+    /// </summary>
     public string Scrub(string text)
     {
         foreach (var v in _ordered.Where(v => v.IsSecret && !string.IsNullOrEmpty(v.Value)))
-            text = text.Replace(v.Value!, "***", StringComparison.Ordinal);
+        {
+            var escaped = Uri.EscapeDataString(v.Value!);
+            foreach (var form in new[] { v.Value!, escaped, escaped.Replace("%20", "+", StringComparison.Ordinal) }.Distinct())
+                text = text.Replace(form, "***", StringComparison.Ordinal);
+        }
         return text;
     }
 

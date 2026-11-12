@@ -64,5 +64,8 @@ public sealed class RunResult : IDisposable
     public IReadOnlyList<KeyValuePair<string, string>> Headers { get; init; } = [];
     public ResponseBody? Body { get; init; }
 
+    /// <summary>Pasos de la ejecución para la consola de la pestaña, con los secretos enmascarados.</summary>
+    public IReadOnlyList<RunEvent> Events { get; init; } = [];
+
     public void Dispose() => Body?.Dispose();
 }

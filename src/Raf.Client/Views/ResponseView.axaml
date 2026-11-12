@@ -65,6 +65,44 @@
             </ItemsControl>
           </ScrollViewer>
         </TabItem>
+        <TabItem Header="Consola" ToolTip.Tip="Qué pasó en esta ejecución: request enviado, conexión, redirecciones, tiempos y errores">
+          <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding ConsoleNotice}" />
+                <Button Classes="link" Content="Copiar" Command="{Binding CopyConsoleCommand}"
+                        ToolTip.Tip="Copiar al portapapeles todos los eventos, con su detalle" />
+              </StackPanel>
+              <TextBlock Classes="caption" VerticalAlignment="Center"
+                         Text="Solo de la última ejecución; se pierde al cerrar la pestaña. Los secretos se muestran como ***." />
+            </DockPanel>
+
+            <!-- Detalle del evento elegido: request y respuesta en crudo, certificado, causa del error -->
+            <Border DockPanel.Dock="Bottom" Height="190" IsVisible="{Binding HasSelectedDetail}"
+                    BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8,0,0">
+              <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                       Text="{Binding SelectedEvent.Detail, FallbackValue=''}" />
+            </Border>
+
+            <ListBox ItemsSource="{Binding Events}" SelectedItem="{Binding SelectedEvent}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:RunEventRow">
+                  <Grid ColumnDefinitions="70,96,*,Auto" ColumnSpacing="10">
+                    <TextBlock Classes="caption mono" VerticalAlignment="Top" Margin="0,3,0,0" Text="{Binding At}" />
+                    <Border Grid.Column="1" Classes="chip" Classes.warning="{Binding IsWarning}" Classes.failure="{Binding IsError}"
+                            HorizontalAlignment="Left" VerticalAlignment="Top">
+                      <TextBlock Text="{Binding Stage}" />
+                    </Border>
+                    <SelectableTextBlock Grid.Column="2" TextWrapping="Wrap" Margin="0,2,0,0" Text="{Binding Title}" />
+                    <TextBlock Grid.Column="3" Classes="caption mono" VerticalAlignment="Top" Margin="0,3,0,0"
+                               Text="{Binding Duration}" ToolTip.Tip="Lo que tardó esta etapa" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </TabItem>
       </TabControl>
     </DockPanel>
 

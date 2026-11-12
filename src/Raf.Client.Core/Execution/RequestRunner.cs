@@ -15,6 +15,9 @@ public sealed class RequestRunner : IDisposable
     /// <summary>Tope de lo que se conserva en memoria y se muestra de un body.</summary>
     public const int PreviewLimit = 2 * 1024 * 1024;
 
+    /// <summary>Mismo tope que usaba HttpClient al seguir las redirecciones solo.</summary>
+    public const int MaxRedirects = 50;
+
     private readonly HttpClient _strict = CreateClient(acceptInvalidCertificates: false);
     private readonly HttpClient _permissive = CreateClient(acceptInvalidCertificates: true);
 
@@ -25,6 +28,9 @@ public sealed class RequestRunner : IDisposable
             AutomaticDecompression = DecompressionMethods.All,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
             UseCookies = false, // cada request envía solo las cookies que declara
+            AllowAutoRedirect = false, // las sigue RunAsync, para mostrar cada una en la consola
+            ConnectCallback = RunTrace.ConnectAsync,
+            PlaintextStreamFilter = RunTrace.ConnectionReady,
         };
         if (acceptInvalidCertificates)
             handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
@@ -55,53 +61,144 @@ public sealed class RequestRunner : IDisposable
     public async Task<RunResult> RunAsync(RunInput input, CancellationToken ct = default)
     {
         var stopwatch = Stopwatch.StartNew();
+        var trace = new RunTrace(input.Variables, input.Options);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(input.Options.Timeout);
+        var messages = new List<HttpRequestMessage>();
+        HttpResponseMessage? response = null;
 
         try
         {
-            var spec = input.Variables.CreateResolver().Resolve(Effective(input.Request, input.Sample));
-            using var message = BuildMessage(spec);
+            var resolver = input.Variables.CreateResolver();
+            var spec = resolver.Resolve(Effective(input.Request, input.Sample));
+            if (resolver.Missing.Count > 0) trace.MissingVariables(resolver.Missing);
+
+            var message = BuildMessage(spec);
+            messages.Add(message);
+            var body = message.Content is null ? null : await message.Content.ReadAsStringAsync(timeout.Token);
             var client = input.Options.AcceptInvalidCertificates ? _permissive : _strict;
 
-            // Se lee por partes para que el timeout cubra también la descarga del body.
-            using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            var body = await ReadBodyAsync(response, timeout.Token);
+            for (var redirects = 0; ; redirects++)
+            {
+                // Se lee por partes para que el timeout cubra también la descarga del body.
+                trace.BeginHop(message, body);
+                response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                trace.EndHop(response);
+
+                if (RedirectTarget(message.RequestUri!, response, trace) is not { } target) break;
+                if (redirects == MaxRedirects)
+                {
+                    trace.Warn(RunEventKind.Redirect, $"Se alcanzó el máximo de {MaxRedirects} redirecciones: se muestra la última respuesta.");
+                    break;
+                }
+
+                var next = FollowRedirect(message, response.StatusCode, target);
+                messages.Add(next);
+                trace.Redirected(message, next, response.StatusCode);
+                if (next.Content is null) body = null;
+                response.Dispose();
+                response = null;
+                message = next;
+            }
+
+            trace.BeginBody();
+            var responseBody = await ReadBodyAsync(response!, timeout.Token);
+            trace.BodyRead(responseBody);
             stopwatch.Stop();
 
             return new RunResult
             {
                 Outcome = RunOutcome.Completed,
                 Elapsed = stopwatch.Elapsed,
-                StatusCode = (int)response.StatusCode,
+                StatusCode = (int)response!.StatusCode,
                 ReasonPhrase = response.ReasonPhrase,
                 Headers = response.Headers.Concat(response.Content.Headers)
                     .SelectMany(h => h.Value.Select(v => KeyValuePair.Create(h.Key, v))).ToList(),
-                Body = body,
+                Body = responseBody,
+                Events = trace.Finish(),
             };
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            return new RunResult { Outcome = RunOutcome.Cancelled, Elapsed = stopwatch.Elapsed, Error = "Ejecución cancelada." };
+            trace.Fail(RunEventLevel.Warning, "Se canceló la ejecución");
+            return new RunResult
+            {
+                Outcome = RunOutcome.Cancelled, Elapsed = stopwatch.Elapsed, Error = "Ejecución cancelada.", Events = trace.Finish(),
+            };
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested)
         {
-            return new RunResult
-            {
-                Outcome = RunOutcome.TimedOut,
-                Elapsed = stopwatch.Elapsed,
-                Error = $"Sin respuesta después de {input.Options.Timeout.TotalSeconds:0.#} s.",
-            };
+            var error = $"Sin respuesta después de {input.Options.Timeout.TotalSeconds:0.#} s.";
+            trace.Fail(RunEventLevel.Error, "Timeout: " + error);
+            return new RunResult { Outcome = RunOutcome.TimedOut, Elapsed = stopwatch.Elapsed, Error = error, Events = trace.Finish() };
         }
         catch (Exception e) when (e is HttpRequestException or RequestBuildException or IOException)
         {
-            return new RunResult
-            {
-                Outcome = RunOutcome.Failed,
-                Elapsed = stopwatch.Elapsed,
-                Error = input.Variables.Scrub(Describe(e)),
-            };
+            var error = input.Variables.Scrub(Describe(e));
+            trace.Fail(RunEventLevel.Error, error, e is RequestBuildException ? null : e);
+            return new RunResult { Outcome = RunOutcome.Failed, Elapsed = stopwatch.Elapsed, Error = error, Events = trace.Finish() };
         }
+        finally
+        {
+            response?.Dispose();
+            foreach (var m in messages) m.Dispose(); // comparten el contenido: se libera recién al final
+        }
+    }
+
+    /// <summary>
+    /// Destino de una redirección, con las reglas que aplicaba HttpClient al seguirlas solo: Location relativo o
+    /// absoluto, se conserva el fragmento y no se pasa de HTTPS a HTTP.
+    /// </summary>
+    private static Uri? RedirectTarget(Uri from, HttpResponseMessage response, RunTrace trace)
+    {
+        if ((int)response.StatusCode is not (300 or 301 or 302 or 303 or 307 or 308)) return null;
+        if (response.Headers.Location is not { } location)
+        {
+            trace.Warn(RunEventKind.Redirect, "La respuesta es una redirección sin header Location: no se sigue.");
+            return null;
+        }
+
+        if (!location.IsAbsoluteUri) location = new Uri(from, location);
+        if (from.Fragment.Length > 0 && location.Fragment.Length == 0)
+            location = new UriBuilder(location) { Fragment = from.Fragment[1..] }.Uri;
+
+        if (location.Scheme != Uri.UriSchemeHttp && location.Scheme != Uri.UriSchemeHttps)
+        {
+            trace.Warn(RunEventKind.Redirect, $"No se sigue la redirección a {location.Scheme}: solo se siguen HTTP y HTTPS.");
+            return null;
+        }
+        if (from.Scheme == Uri.UriSchemeHttps && location.Scheme == Uri.UriSchemeHttp)
+        {
+            trace.Warn(RunEventKind.Redirect, $"No se sigue la redirección de HTTPS a HTTP: {location.AbsoluteUri}");
+            return null;
+        }
+        return location;
+    }
+
+    /// <summary>
+    /// El request siguiente de una redirección. Como HttpClient: se quita Authorization; 301, 302 y 300 pasan un
+    /// POST a GET y 303 pasa todo a GET salvo HEAD, sin body; 307 y 308 repiten método y body.
+    /// </summary>
+    private static HttpRequestMessage FollowRedirect(HttpRequestMessage from, HttpStatusCode status, Uri target)
+    {
+        var method = from.Method;
+        var toGet = (int)status switch
+        {
+            300 or 301 or 302 => method == HttpMethod.Post,
+            303 => method != HttpMethod.Get && method != HttpMethod.Head,
+            _ => false,
+        };
+
+        var next = new HttpRequestMessage(toGet ? HttpMethod.Get : method, target)
+        {
+            Version = from.Version,
+            VersionPolicy = from.VersionPolicy,
+            Content = toGet ? null : from.Content,
+        };
+        foreach (var (name, values) in from.Headers.NonValidated)
+            if (!name.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
+                next.Headers.TryAddWithoutValidation(name, values);
+        return next;
     }
 
     private static string Describe(Exception e) =>
