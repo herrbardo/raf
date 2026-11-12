@@ -46,18 +46,43 @@
                  IsVisible="{Binding TruncatedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
       <TabControl Classes="section" Padding="0,6,0,0">
         <TabItem Header="Body">
-          <ctl:TextField Multiline="True" IsReadOnly="True" HighlightVariables="False"
-                         BoundText="{Binding BodyText, Mode=OneWay}" Syntax="{Binding Syntax}" />
+          <ctl:TextField x:Name="BodyField" Multiline="True" IsReadOnly="True" HighlightVariables="False"
+                         BoundText="{Binding BodyText, Mode=OneWay}" Syntax="{Binding Syntax}">
+            <!-- Valor, clave y ruta del nodo de la línea donde se hizo clic derecho (solo JSON o XML válido) -->
+            <ctl:TextField.ContextMenu>
+              <ContextMenu Opening="OnBodyMenuOpening">
+                <MenuItem Header="Copiar valor" Command="{Binding CopyNodeValueCommand}" IsVisible="{Binding IsStructured}" />
+                <MenuItem Header="Copiar clave" Command="{Binding CopyNodeKeyCommand}" IsVisible="{Binding IsStructured}" />
+                <MenuItem Header="{Binding PathMenuText}" Command="{Binding CopyNodePathCommand}" IsVisible="{Binding IsStructured}" />
+                <Separator IsVisible="{Binding IsStructured}" />
+                <MenuItem Header="Copiar selección" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+                <MenuItem Header="Copiar línea" Command="{Binding CopyBodyLineCommand}" />
+                <MenuItem Header="Copiar todo el body" Command="{Binding CopyBodyCommand}" />
+              </ContextMenu>
+            </ctl:TextField.ContextMenu>
+          </ctl:TextField>
         </TabItem>
         <TabItem Header="Headers">
           <ScrollViewer>
             <ItemsControl ItemsSource="{Binding Headers}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ResponseHeaderRow">
-                  <Border Classes="header-row">
+                  <Border Classes="header-row" Background="Transparent">
+                    <Border.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Copiar nombre" Command="{Binding CopyNameCommand}" />
+                        <MenuItem Header="Copiar valor" Command="{Binding CopyValueCommand}" />
+                        <MenuItem Header="Copiar header (nombre: valor)" Command="{Binding CopyLineCommand}" />
+                        <Separator />
+                        <MenuItem Header="Copiar todos los headers" Command="{Binding CopyAllCommand}" />
+                      </ContextMenu>
+                    </Border.ContextMenu>
                     <Grid ColumnDefinitions="240,*" ColumnSpacing="12">
-                      <SelectableTextBlock Classes="header-name mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                      <SelectableTextBlock Grid.Column="1" Classes="mono" TextWrapping="Wrap" Text="{Binding Value}" />
+                      <!-- Sin el menú propio del texto seleccionable: manda el de la fila -->
+                      <SelectableTextBlock Classes="header-name mono" Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                           ContextFlyout="{x:Null}" />
+                      <SelectableTextBlock Grid.Column="1" Classes="mono" TextWrapping="Wrap" Text="{Binding Value}"
+                                           ContextFlyout="{x:Null}" />
                     </Grid>
                   </Border>
                 </DataTemplate>
