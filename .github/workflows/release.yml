@@ -154,6 +154,9 @@ jobs:
           security create-keychain -p "$keychain_password" "$keychain"
           security set-keychain-settings -lut 3600 "$keychain"
           security unlock-keychain -p "$keychain_password" "$keychain"
+          # Intermedio de Apple que emitió los certificados Developer ID: sin él codesign no arma la cadena.
+          curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/DeveloperIDG2CA.cer"
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain"
           for cert in "$APP_CERT" "$INSTALLER_CERT"; do
             echo "$cert" | base64 --decode > "$RUNNER_TEMP/cert.p12"
             security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
