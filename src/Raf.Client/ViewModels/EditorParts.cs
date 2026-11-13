@@ -147,13 +147,13 @@ public sealed partial class BodyEditorViewModel : EditorPart
         FormatFailed = false;
         if (result.Text == Content)
         {
-            FormatNotice = "El body ya tenía formato.";
+            FormatNotice = Texts.Body_AlreadyFormatted;
             return;
         }
         _formatting = true;
         Content = result.Text;
         _formatting = false;
-        FormatNotice = "Body formateado.";
+        FormatNotice = Texts.Body_Formatted;
     }
 
     partial void OnTypeChanged(BodyType value)
@@ -257,7 +257,8 @@ public sealed partial class SampleKeyValueRowViewModel : ObservableObject
 
     public KeyValueItem? Inherited { get; set; }
 
-    public string InheritedText => Inherited is null ? "" : $"Heredado: {Inherited.Value}{(Inherited.Enabled ? "" : " (desactivado)")}";
+    public string InheritedText => Inherited is null ? ""
+        : string.Format(Inherited.Enabled ? Texts.Sample_Inherited : Texts.Sample_InheritedDisabled, Inherited.Value);
     public bool HasInherited => Inherited is not null;
     public bool IsInherited => State == SampleRowState.Inherited;
     public bool IsOverridden => State == SampleRowState.Overridden;
@@ -266,10 +267,10 @@ public sealed partial class SampleKeyValueRowViewModel : ObservableObject
 
     public string StateText => State switch
     {
-        SampleRowState.Inherited => "Heredado",
-        SampleRowState.Overridden => "Sobreescrito",
-        SampleRowState.Removed => "Quitado",
-        _ => "Propio",
+        SampleRowState.Inherited => Texts.Sample_StateInherited,
+        SampleRowState.Overridden => Texts.Sample_StateOverridden,
+        SampleRowState.Removed => Texts.Sample_StateRemoved,
+        _ => Texts.Sample_StateOwn,
     };
 
     public bool CanEdit => _list.CanEdit;

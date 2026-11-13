@@ -49,11 +49,11 @@ public sealed class RafApiClient(HttpClient http, SessionManager session)
         {
             using var res = await http.GetAsync(new Uri(server, "health"), ct);
             if (!res.IsSuccessStatusCode)
-                throw new ApiException(res.StatusCode, $"No parece un servidor RAF: respondió {(int)res.StatusCode}.");
+                throw new ApiException(res.StatusCode, string.Format(CoreTexts.Api_NotRafServer, (int)res.StatusCode));
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            throw new ApiException(null, "No se pudo conectar con esa URL.", e);
+            throw new ApiException(null, CoreTexts.Api_CannotConnectUrl, e);
         }
     }
 
@@ -92,7 +92,7 @@ public sealed class RafApiClient(HttpClient http, SessionManager session)
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            throw new ApiException(null, "No se pudo conectar con el servidor.", e);
+            throw new ApiException(null, CoreTexts.Api_CannotConnect, e);
         }
     }
 }

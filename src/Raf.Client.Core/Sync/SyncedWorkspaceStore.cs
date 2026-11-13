@@ -166,7 +166,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
 
     private static async Task<CachedItem> FindAsync(CacheDb db, Guid ws, ChangeKind kind, Guid id, CancellationToken ct) =>
         await db.Items.FirstOrDefaultAsync(x => x.WorkspaceId == ws && x.Kind == kind && x.Id == id && !x.IsDeleted, ct)
-        ?? throw new ApiException(HttpStatusCode.NotFound, "El elemento ya no existe.");
+        ?? throw new ApiException(HttpStatusCode.NotFound, CoreTexts.Store_ItemGone);
 
     public async Task<IReadOnlyList<EnvironmentDto>> GetEnvironmentsAsync(Guid ws, CancellationToken ct = default) =>
         (await ListAsync<EnvironmentDto>(ws, ChangeKind.Environment, ct)).OrderBy(x => x.Name).ToList();
@@ -196,24 +196,24 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
 
     private static void ValidateName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new ApiException(HttpStatusCode.BadRequest, "El nombre es obligatorio.");
-        if (name.Length > 200) throw new ApiException(HttpStatusCode.BadRequest, "El nombre admite como máximo 200 caracteres.");
+        if (string.IsNullOrWhiteSpace(name)) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_NameRequired);
+        if (name.Length > 200) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_NameTooLong);
     }
 
     private static void ValidateKey(string? key)
     {
-        if (string.IsNullOrWhiteSpace(key)) throw new ApiException(HttpStatusCode.BadRequest, "La clave es obligatoria.");
-        if (key.Length > 200) throw new ApiException(HttpStatusCode.BadRequest, "La clave admite como máximo 200 caracteres.");
+        if (string.IsNullOrWhiteSpace(key)) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_KeyRequired);
+        if (key.Length > 200) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_KeyTooLong);
         if (key.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-')))
-            throw new ApiException(HttpStatusCode.BadRequest, "La clave solo admite letras, números, '_', '.' y '-'.");
+            throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_KeyChars);
     }
 
     private static async Task EnsureCanEditAsync(CacheDb db, Guid ws, CancellationToken ct)
     {
         var workspace = await db.Workspaces.AsNoTracking().FirstOrDefaultAsync(w => w.Id == ws, ct)
-            ?? throw new ApiException(HttpStatusCode.NotFound, "El workspace ya no existe.");
+            ?? throw new ApiException(HttpStatusCode.NotFound, CoreTexts.Store_WorkspaceGone);
         if (workspace.Role < WorkspaceRole.Editor || workspace.AccessLost)
-            throw new ApiException(HttpStatusCode.Forbidden, "No tenés permiso para editar este workspace.");
+            throw new ApiException(HttpStatusCode.Forbidden, CoreTexts.Store_NoEditPermission);
     }
 
     // ---------- Edición local ----------
@@ -274,7 +274,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
             await EnsureCanEditAsync(db, ws, ct);
             var rows = await db.Items.Where(x => x.WorkspaceId == ws).ToListAsync(ct);
             var target = rows.FirstOrDefault(r => r.Kind == kind && r.Id == id && !r.IsDeleted)
-                ?? throw new ApiException(HttpStatusCode.NotFound, "El elemento ya no existe.");
+                ?? throw new ApiException(HttpStatusCode.NotFound, CoreTexts.Store_ItemGone);
 
             var below = Descendants(rows, id);
             var entries = await db.Outbox.Where(e => e.WorkspaceId == ws).ToListAsync(ct);
@@ -447,7 +447,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
 
     private static async Task<OutboxEntry> ConflictAsync(CacheDb db, long id, CancellationToken ct) =>
         await db.Outbox.FirstOrDefaultAsync(e => e.Seq == id && e.State == OutboxState.Conflict, ct)
-        ?? throw new ApiException(HttpStatusCode.NotFound, "El conflicto ya fue resuelto.");
+        ?? throw new ApiException(HttpStatusCode.NotFound, CoreTexts.Store_ConflictResolved);
 
     private void Requeue(OutboxEntry entry, CachedItem row)
     {
@@ -490,7 +490,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
             }
             catch (JsonException)
             {
-                throw new ApiException(HttpStatusCode.BadRequest, "El contenido editado no es un JSON válido para este elemento.");
+                throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_EditedNotJson);
             }
 
             var merged = SyncItems.KeepIdentity(edited, current);
@@ -541,7 +541,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
         {
             var entry = await ConflictAsync(db, conflictId, ct);
             var row = await FindAnyAsync(db, entry.WorkspaceId, entry.EntityId, ct)
-                ?? throw new ApiException(HttpStatusCode.Conflict, "No quedan datos locales para recrearlo.");
+                ?? throw new ApiException(HttpStatusCode.Conflict, CoreTexts.Store_NoLocalData);
 
             var dto = Decode(row);
             var map = new Dictionary<Guid, Guid>();
@@ -558,7 +558,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     private async Task<Guid> ReviveAsync(CacheDb db, Guid ws, Guid id, CancellationToken ct)
     {
         var row = await FindAnyAsync(db, ws, id, ct)
-            ?? throw new ApiException(HttpStatusCode.Conflict, "No quedan datos locales del elemento padre para recrearlo.");
+            ?? throw new ApiException(HttpStatusCode.Conflict, CoreTexts.Store_NoLocalParent);
         if (!row.IsDeleted) return id;
         if (row.ReplacedBy is { } replacement && await FindAnyAsync(db, ws, replacement, ct) is { IsDeleted: false }) return replacement;
 

@@ -33,12 +33,12 @@ public static class VariableCompletion
             .OrderBy(v => v.Key, StringComparer.OrdinalIgnoreCase)
             .Select(v =>
             {
-                var scope = v.EnvironmentId is null ? "Global" : "Environment activo";
+                var scope = v.EnvironmentId is null ? CoreTexts.Completion_Global : CoreTexts.Completion_Environment;
                 var value = v switch
                 {
-                    { IsSecret: true, Value: null } => "secreta, tu rol no puede leerla",
-                    { IsSecret: true } => "secreta",
-                    { Value: null or "" } => "sin valor",
+                    { IsSecret: true, Value: null } => CoreTexts.Completion_SecretUnreadable,
+                    { IsSecret: true } => CoreTexts.Completion_Secret,
+                    { Value: null or "" } => CoreTexts.Completion_NoValue,
                     _ => Preview(v.Value),
                 };
                 return new VariableSuggestion(v.Key, $"{scope} · {value}");

@@ -193,7 +193,7 @@ internal static class SyncItems
             Id = c.Id, AppId = c.AppId, FolderId = c.FolderId, Version = c.Version, ChangeSeq = c.ChangeSeq,
         },
         (SampleDto e, SampleDto c) => e with { Id = c.Id, RequestId = c.RequestId, Version = c.Version, ChangeSeq = c.ChangeSeq },
-        _ => throw new ApiException(System.Net.HttpStatusCode.BadRequest, "El contenido editado no corresponde a este elemento."),
+        _ => throw new ApiException(System.Net.HttpStatusCode.BadRequest, CoreTexts.Store_EditedMismatch),
     };
 
     /// <summary>Compara el contenido, sin tener en cuenta la versión ni el número de cambio.</summary>

@@ -79,10 +79,10 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         var unreadable = keys.Where(variables.IsUnreadable).ToList();
         var undefined = keys.Except(unreadable).ToList();
         var lines = new List<string>();
-        if (undefined.Count > 0) lines.Add("Sin valor: " + string.Join(", ", undefined));
-        if (unreadable.Count > 0) lines.Add("Secretas que tu rol no puede leer: " + string.Join(", ", unreadable));
+        if (undefined.Count > 0) lines.Add(CoreTexts.Trace_Undefined + string.Join(", ", undefined));
+        if (unreadable.Count > 0) lines.Add(CoreTexts.Trace_Unreadable + string.Join(", ", unreadable));
         Add(Stopwatch.GetTimestamp(), null, RunEventKind.Variables, RunEventLevel.Warning,
-            "Hay variables sin reemplazar: se envían como {{nombre}}", string.Join(Environment.NewLine, lines));
+            CoreTexts.Trace_MissingVariables, string.Join(Environment.NewLine, lines));
     }
 
     public void BeginHop(HttpRequestMessage message, string? body)
@@ -120,7 +120,7 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
                 _connect += connect;
                 var proxy = !string.Equals(c.Host, message.RequestUri.IdnHost, StringComparison.OrdinalIgnoreCase);
                 Add(c.DnsEnd, connect, RunEventKind.Connect, RunEventLevel.Info,
-                    proxy ? $"Conexión TCP con el proxy {c.Host}:{c.Port} ({c.Remote})" : $"Conexión TCP con {c.Remote}");
+                    proxy ? string.Format(CoreTexts.Trace_ConnectProxy, $"{c.Host}:{c.Port}", c.Remote) : string.Format(CoreTexts.Trace_Connect, c.Remote));
                 ready = c.ConnectEnd;
             }
             if (c.ReadyEnd != 0)
@@ -136,8 +136,8 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         }
         else if (response is not null)
         {
-            Add(hop.Start, null, RunEventKind.Reused, RunEventLevel.Info, "Se reutilizó una conexión abierta",
-                "No hubo DNS, conexión TCP ni TLS: el request salió por una conexión que ya estaba abierta con el servidor.");
+            Add(hop.Start, null, RunEventKind.Reused, RunEventLevel.Info, CoreTexts.Trace_Reused,
+                CoreTexts.Trace_ReusedDetail);
         }
 
         if (response is null) return;
@@ -146,7 +146,7 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         _wait += wait;
         var code = (int)response.StatusCode;
         Add(_headersAt, wait, RunEventKind.Response, code >= 400 ? RunEventLevel.Warning : RunEventLevel.Info,
-            $"Respuesta {code} {response.ReasonPhrase} · HTTP/{response.Version.ToString(2)}".TrimEnd(), DescribeResponse(response));
+            string.Format(CoreTexts.Trace_Response, $"{code} {response.ReasonPhrase}".TrimEnd(), $"HTTP/{response.Version.ToString(2)}"), DescribeResponse(response));
     }
 
     public void Redirected(HttpRequestMessage from, HttpRequestMessage to, HttpStatusCode status)
@@ -154,11 +154,11 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         _redirects++;
         var notes = new List<string>();
         if (from.Headers.Authorization is not null)
-            notes.Add("No se reenvía el header Authorization: en una redirección se quita siempre.");
+            notes.Add(CoreTexts.Trace_RedirectNoAuth);
         if (from.Content is not null && to.Content is null)
-            notes.Add($"Pasa a GET y no se reenvía el body ({(int)status} con {from.Method}).");
+            notes.Add(string.Format(CoreTexts.Trace_RedirectToGet, (int)status, from.Method));
         Add(Stopwatch.GetTimestamp(), null, RunEventKind.Redirect, RunEventLevel.Info,
-            $"Redirección {(int)status} → {to.Method} {to.RequestUri!.AbsoluteUri}",
+            string.Format(CoreTexts.Trace_Redirect, (int)status, $"{to.Method} {to.RequestUri!.AbsoluteUri}"),
             notes.Count == 0 ? null : string.Join(Environment.NewLine, notes));
     }
 
@@ -174,16 +174,16 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         var download = Stopwatch.GetElapsedTime(_headersAt, now);
         _download += download;
         var title = body.Length == 0
-            ? "La respuesta no tiene body"
-            : $"Body recibido: {RunFormat.Size(body.Length)}" + (body.MediaType is { } type ? $" ({type})" : "");
+            ? CoreTexts.Trace_NoBody
+            : string.Format(CoreTexts.Trace_BodyReceived, RunFormat.Size(body.Length)) + (body.MediaType is { } type ? $" ({type})" : "");
         Add(now, download, RunEventKind.Body, RunEventLevel.Info, title);
     }
 
     /// <summary>La ejecución terminó sin respuesta completa: se cierra lo que estaba en curso y se anota el motivo.</summary>
     public void Fail(RunEventLevel level, string title, Exception? error = null)
     {
-        var stage = _hop is not null ? "Etapa: antes de recibir la respuesta."
-            : _readingBody ? "Etapa: durante la descarga del body."
+        var stage = _hop is not null ? CoreTexts.Trace_StageBeforeResponse
+            : _readingBody ? CoreTexts.Trace_StageDownload
             : null;
         EndHop(null);
 
@@ -215,12 +215,12 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
             if (time > TimeSpan.Zero) lines.Add($"{name}: {RunFormat.Time(time)}");
         }
         Stage("DNS", _dns);
-        Stage("Conexión TCP", _connect);
+        Stage(CoreTexts.Trace_TimeConnect, _connect);
         Stage("TLS", _tls);
-        Stage("Espera de la respuesta", _wait);
-        Stage("Descarga del body", _download);
-        if (_redirects > 0) lines.Add($"Redirecciones: {_redirects}");
-        Add(now, total, RunEventKind.Summary, RunEventLevel.Info, $"Total: {RunFormat.Time(total)}",
+        Stage(CoreTexts.Trace_TimeWait, _wait);
+        Stage(CoreTexts.Trace_TimeDownload, _download);
+        if (_redirects > 0) lines.Add(string.Format(CoreTexts.Trace_Redirects, _redirects));
+        Add(now, total, RunEventKind.Summary, RunEventLevel.Info, string.Format(CoreTexts.Trace_Total, RunFormat.Time(total)),
             lines.Count == 0 ? null : string.Join(Environment.NewLine, lines));
         return _events.ToList();
     }
@@ -248,7 +248,7 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         {
             text.AppendLine();
             if (body.Length <= BodyPreviewChars) text.Append(body);
-            else text.Append(body.AsSpan(0, BodyPreviewChars)).AppendLine().Append($"… (se muestran los primeros {BodyPreviewChars / 1024} KB del body)");
+            else text.Append(body.AsSpan(0, BodyPreviewChars)).AppendLine().Append(string.Format(CoreTexts.Trace_BodyPreview, BodyPreviewChars / 1024));
         }
         return text.ToString().TrimEnd();
     }
@@ -279,7 +279,7 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
         try
         {
             var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(value[6..].Trim()));
-            return variables.Scrub(decoded) == decoded ? value : "Basic *** (las credenciales usan una variable secreta)";
+            return variables.Scrub(decoded) == decoded ? value : "Basic *** " + CoreTexts.Trace_BasicMasked;
         }
         catch (FormatException)
         {
@@ -290,11 +290,11 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
     private string DescribeTls(ConnectionInfo c)
     {
         var lines = new List<string>();
-        if (c.Cipher is { } cipher) lines.Add($"Cifrado: {cipher}");
-        if (c.CertificateSubject is { } subject) lines.Add($"Certificado: {subject}");
-        if (c.CertificateIssuer is { } issuer) lines.Add($"Emitido por: {issuer}");
-        if (c.CertificateExpires is { } expires) lines.Add($"Vence: {expires:yyyy-MM-dd HH:mm}");
-        if (options.AcceptInvalidCertificates) lines.Add("Este request acepta certificados inválidos: no se validó el certificado.");
+        if (c.Cipher is { } cipher) lines.Add(string.Format(CoreTexts.Trace_Cipher, cipher));
+        if (c.CertificateSubject is { } subject) lines.Add(string.Format(CoreTexts.Trace_Certificate, subject));
+        if (c.CertificateIssuer is { } issuer) lines.Add(string.Format(CoreTexts.Trace_Issuer, issuer));
+        if (c.CertificateExpires is { } expires) lines.Add(string.Format(CoreTexts.Trace_Expires, expires.ToString("yyyy-MM-dd HH:mm")));
+        if (options.AcceptInvalidCertificates) lines.Add(CoreTexts.Trace_InsecureTls);
         return string.Join(Environment.NewLine, lines);
     }
 

@@ -27,7 +27,7 @@ public sealed record ClientServices(
 public interface IDialogs
 {
     Task<string?> PromptAsync(string title, string label, string initial = "");
-    Task<bool> ConfirmAsync(string title, string message, string accept = "Aceptar");
+    Task<bool> ConfirmAsync(string title, string message, string? accept = null);
     Task InfoAsync(string title, string message);
 
     /// <summary>Muestra un valor que no se vuelve a ver (como una contraseña temporal), con botón para copiarlo.</summary>
@@ -45,7 +45,7 @@ public sealed class WindowDialogs : IDialogs
     public async Task<string?> PromptAsync(string title, string label, string initial = "")
     {
         var input = new TextBox { Text = initial };
-        var dialog = Build<string?>(title, label, "Aceptar", true, input, () => input.Text, null, out var window);
+        var dialog = Build<string?>(title, label, Texts.Common_Accept, true, input, () => input.Text, null, out var window);
         window.Opened += (_, _) => { input.Focus(); input.SelectAll(); };
         input.KeyDown += (_, e) =>
         {
@@ -55,29 +55,29 @@ public sealed class WindowDialogs : IDialogs
         return string.IsNullOrWhiteSpace(result) ? null : result.Trim();
     }
 
-    public Task<bool> ConfirmAsync(string title, string message, string accept = "Aceptar") =>
-        Build(title, message, accept, true, null, () => true, false, out _)();
+    public Task<bool> ConfirmAsync(string title, string message, string? accept = null) =>
+        Build(title, message, accept ?? Texts.Common_Accept, true, null, () => true, false, out _)();
 
     public Task InfoAsync(string title, string message) =>
-        Build(title, message, "Aceptar", false, null, () => true, false, out _)();
+        Build(title, message, Texts.Common_Accept, false, null, () => true, false, out _)();
 
     public async Task ShowSecretAsync(string title, string message, string secret)
     {
         var value = new TextBox { Text = secret, IsReadOnly = true, Classes = { "mono" } };
-        var copy = new Button { Content = "Copiar" };
+        var copy = new Button { Content = Texts.Common_Copy };
         var row = new DockPanel();
         DockPanel.SetDock(copy, Dock.Right);
         copy.Margin = new Thickness(8, 0, 0, 0);
         row.Children.Add(copy);
         row.Children.Add(value);
 
-        var dialog = Build(title, message, "Listo", false, row, () => true, false, out var window);
+        var dialog = Build(title, message, Texts.Common_Done, false, row, () => true, false, out var window);
         copy.Click += async (_, _) =>
         {
             if (TopLevel.GetTopLevel(window)?.Clipboard is { } clipboard)
             {
                 await clipboard.SetTextAsync(secret);
-                copy.Content = "Copiada ✓";
+                copy.Content = Texts.Common_Copied;
             }
         };
         window.Opened += (_, _) => { value.Focus(); value.SelectAll(); };
@@ -89,7 +89,7 @@ public sealed class WindowDialogs : IDialogs
         var file = await Owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             SuggestedFileName = suggestedName,
-            Title = "Guardar respuesta",
+            Title = Texts.Dialog_SaveResponse,
         });
         return file is null ? null : await file.OpenWriteAsync();
     }
@@ -118,7 +118,7 @@ public sealed class WindowDialogs : IDialogs
         };
         if (cancellable)
         {
-            var cancel = new Button { Content = "Cancelar", IsCancel = true };
+            var cancel = new Button { Content = Texts.Common_Cancel, IsCancel = true };
             cancel.Click += (_, _) => dialog.Close(onCancel);
             buttons.Children.Add(cancel);
         }

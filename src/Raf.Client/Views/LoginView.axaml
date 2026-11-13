@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.Views.LoginView"
@@ -9,21 +10,24 @@
       <StackPanel Spacing="14">
         <views:BrandHeader />
         <StackPanel Spacing="4">
-          <TextBlock Classes="title" Text="Iniciar sesión" />
+          <TextBlock Classes="title" Text="{x:Static l:Texts.LoginV_Title}" />
           <TextBlock Classes="caption mono" Text="{Binding ServerText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ServerText}" />
         </StackPanel>
         <StackPanel Spacing="6">
-          <TextBlock Classes="label" Text="Email" />
-          <TextBox Text="{Binding Email}" Watermark="nombre@empresa.com" />
+          <TextBlock Classes="label" Text="{x:Static l:Texts.V_Email}" />
+          <TextBox Text="{Binding Email}" Watermark="{x:Static l:Texts.LoginV_EmailHint}" />
         </StackPanel>
         <StackPanel Spacing="6">
-          <TextBlock Classes="label" Text="Contraseña" />
+          <TextBlock Classes="label" Text="{x:Static l:Texts.V_Password}" />
           <TextBox Text="{Binding Password}" PasswordChar="•" />
           <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
         <DockPanel Margin="0,4,0,0">
-          <Button Classes="link" Content="Cambiar de servidor" Command="{Binding ChangeServerCommand}" VerticalAlignment="Center" />
-          <Button Classes="accent" Content="Entrar" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
+          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <Button Classes="link" Content="{x:Static l:Texts.V_ChangeServer}" Command="{Binding ChangeServerCommand}" />
+            <Button Classes="link" Content="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}" />
+          </StackPanel>
+          <Button Classes="accent" Content="{x:Static l:Texts.LoginV_Enter}" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
                   HorizontalContentAlignment="Center" Command="{Binding LoginCommand}" IsEnabled="{Binding !IsBusy}" />
         </DockPanel>
       </StackPanel>

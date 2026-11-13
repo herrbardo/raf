@@ -8,7 +8,7 @@ El repositorio es público. Antes de escribir código, documentación o commits,
 
 ## Idioma
 
-Al usuario se le escribe siempre en español rioplatense: respuestas, reportes, preguntas y resúmenes. Los textos de la UI, la documentación y los mensajes de commit también van en español.
+Al usuario se le escribe siempre en español rioplatense: respuestas, reportes, preguntas y resúmenes. La documentación y los mensajes de commit también van en español. Los textos de la UI salen de recursos en español (neutro) e inglés: ver la sección "Textos" del skill [avalonia](.agents/skills/avalonia/SKILL.md).
 
 ## Dónde está el trabajo
 

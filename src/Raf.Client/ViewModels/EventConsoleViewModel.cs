@@ -24,18 +24,18 @@ public sealed record EventRow(AppEvent Event)
 
     public static string LevelText(EventLevel level) => level switch
     {
-        EventLevel.Warning => "Advertencia",
-        EventLevel.Error => "Error",
-        _ => "Info",
+        EventLevel.Warning => Texts.Events_LevelWarning,
+        EventLevel.Error => Texts.Events_LevelError,
+        _ => Texts.Events_LevelInfo,
     };
 
     public static string CategoryText(EventCategory category) => category switch
     {
-        EventCategory.Session => "Sesión",
-        EventCategory.Connection => "Conexión",
-        EventCategory.Sync => "Sincronización",
-        EventCategory.Updates => "Actualizaciones",
-        _ => "App",
+        EventCategory.Session => Texts.Events_CategorySession,
+        EventCategory.Connection => Texts.Events_CategoryConnection,
+        EventCategory.Sync => Texts.Events_CategorySync,
+        EventCategory.Updates => Texts.Events_CategoryUpdates,
+        _ => Texts.Events_CategoryApp,
     };
 }
 
@@ -81,13 +81,13 @@ public sealed partial class EventConsoleViewModel : ObservableObject
 
     public IReadOnlyList<LevelFilter> Levels { get; } =
     [
-        new("Todos los niveles", EventLevel.Info),
-        new("Advertencias y errores", EventLevel.Warning),
-        new("Solo errores", EventLevel.Error),
+        new(Texts.Events_FilterAllLevels, EventLevel.Info),
+        new(Texts.Events_FilterWarnings, EventLevel.Warning),
+        new(Texts.Events_FilterErrors, EventLevel.Error),
     ];
 
     public IReadOnlyList<CategoryFilter> Categories { get; } =
-        [new("Todas las categorías", null), .. Enum.GetValues<EventCategory>().Select(c => new CategoryFilter(EventRow.CategoryText(c), c))];
+        [new(Texts.Events_FilterAllCategories, null), .. Enum.GetValues<EventCategory>().Select(c => new CategoryFilter(EventRow.CategoryText(c), c))];
 
     public ObservableCollection<EventRow> Items { get; } = [];
 
@@ -96,8 +96,8 @@ public sealed partial class EventConsoleViewModel : ObservableObject
     public bool HasUnseenProblems => UnseenProblems > 0;
 
     public string OpenTip => HasUnseenProblems
-        ? $"Consola de eventos (Ctrl+Shift+L): {UnseenProblems} advertencias o errores nuevos"
-        : "Consola de eventos (Ctrl+Shift+L)";
+        ? string.Format(Texts.Events_OpenTipUnseen, UnseenProblems)
+        : Texts.Events_OpenTip;
 
     /// <summary>Lo implementa la vista, que copia al portapapeles.</summary>
     public Func<string, Task>? CopyToClipboard { get; set; }
@@ -147,7 +147,7 @@ public sealed partial class EventConsoleViewModel : ObservableObject
         var text = new StringBuilder();
         foreach (var row in Items.Reverse()) text.AppendLine(row.ToText());
         await CopyToClipboard(text.ToString());
-        Notice = Items.Count == 1 ? "Se copió 1 evento." : $"Se copiaron {Items.Count} eventos.";
+        Notice = Items.Count == 1 ? Texts.Events_CopiedOne : string.Format(Texts.Events_CopiedMany, Items.Count);
     }
 
     [RelayCommand]

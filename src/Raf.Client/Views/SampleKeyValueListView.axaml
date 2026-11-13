@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.SampleKeyValueListView"
@@ -8,7 +9,7 @@
     <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Command="{Binding AddCommand}" IsVisible="{Binding CanEdit}">
       <StackPanel Orientation="Horizontal" Spacing="5">
         <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
-        <TextBlock VerticalAlignment="Center" Text="Agregar propio" />
+        <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.Kv_AddOwn}" />
       </StackPanel>
     </Button>
     <ScrollViewer>
@@ -22,9 +23,9 @@
                 <ctl:TextField BoundText="{Binding Value}" IsReadOnly="{Binding ValueReadOnly}" IsVisible="{Binding !IsRemoved}" />
                 <TextBlock Classes="caption mono" TextTrimming="CharacterEllipsis" Text="{Binding InheritedText}" IsVisible="{Binding HasInherited}" />
               </StackPanel>
-              <Button Grid.Column="3" Classes="link" Content="Sobreescribir" Command="{Binding OverrideCommand}" IsVisible="{Binding CanOverride}" />
-              <Button Grid.Column="4" Classes="link" Content="Quitar" Command="{Binding RemoveKeyCommand}" IsVisible="{Binding CanRemove}" />
-              <Button Grid.Column="5" Classes="link" Content="Volver a heredar" Command="{Binding InheritCommand}" IsVisible="{Binding CanInherit}" />
+              <Button Grid.Column="3" Classes="link" Content="{x:Static l:Texts.V_Override}" Command="{Binding OverrideCommand}" IsVisible="{Binding CanOverride}" />
+              <Button Grid.Column="4" Classes="link" Content="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveKeyCommand}" IsVisible="{Binding CanRemove}" />
+              <Button Grid.Column="5" Classes="link" Content="{x:Static l:Texts.V_Reinherit}" Command="{Binding InheritCommand}" IsVisible="{Binding CanInherit}" />
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

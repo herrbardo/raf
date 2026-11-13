@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.ResponseView"
@@ -7,33 +8,33 @@
   <Grid>
     <StackPanel Classes="empty" IsVisible="{Binding ShowPlaceholder}">
       <ctl:Icon Data="{StaticResource IconSend}" />
-      <TextBlock Classes="empty-title" Text="Todavía no hay respuesta" />
+      <TextBlock Classes="empty-title" Text="{x:Static l:Texts.RespV_None}" />
       <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-        <TextBlock Classes="caption" VerticalAlignment="Center" Text="Enviá el request con" />
+        <TextBlock Classes="caption" VerticalAlignment="Center" Text="{x:Static l:Texts.RespV_SendWith}" />
         <Border Classes="kbd"><TextBlock Text="Ctrl+Enter" /></Border>
       </StackPanel>
     </StackPanel>
     <StackPanel Classes="empty" IsVisible="{Binding ShowSending}">
-      <TextBlock Classes="empty-title" Text="Enviando…" />
+      <TextBlock Classes="empty-title" Text="{x:Static l:Texts.RespV_Sending}" />
     </StackPanel>
 
     <!-- La respuesta anterior queda visible mientras se envía de nuevo: el layout no salta -->
     <DockPanel IsVisible="{Binding HasResult}" Margin="14,10,14,8">
       <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-          <CheckBox MinHeight="0" Content="Ver crudo" IsChecked="{Binding ShowRaw}" IsVisible="{Binding HasBody}" />
-          <Button Classes="link" Content="Guardar a archivo" Command="{Binding SaveCommand}" IsVisible="{Binding HasBody}" />
+          <CheckBox MinHeight="0" Content="{x:Static l:Texts.RespV_Raw}" IsChecked="{Binding ShowRaw}" IsVisible="{Binding HasBody}" />
+          <Button Classes="link" Content="{x:Static l:Texts.RespV_SaveToFile}" Command="{Binding SaveCommand}" IsVisible="{Binding HasBody}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="16">
           <Border Classes="chip" Classes.success="{Binding IsSuccess}" Classes.failure="{Binding IsHttpError}"
-                  ToolTip.Tip="Código de estado">
+                  ToolTip.Tip="{x:Static l:Texts.RespV_StatusTip}">
             <TextBlock Text="{Binding StatusText}" />
           </Border>
-          <StackPanel Orientation="Horizontal" Spacing="5" ToolTip.Tip="Tiempo total">
+          <StackPanel Orientation="Horizontal" Spacing="5" ToolTip.Tip="{x:Static l:Texts.RespV_TimeTip}">
             <ctl:Icon Classes="node" Width="13" Height="13" Data="{StaticResource IconClock}" />
             <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding TimeText}" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5" ToolTip.Tip="Tamaño del cuerpo"
+          <StackPanel Orientation="Horizontal" Spacing="5" ToolTip.Tip="{x:Static l:Texts.RespV_SizeTip}"
                       IsVisible="{Binding SizeText, Converter={x:Static ObjectConverters.IsNotNull}}">
             <ctl:Icon Classes="node" Width="13" Height="13" Data="{StaticResource IconSize}" />
             <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding SizeText}" />
@@ -51,13 +52,13 @@
             <!-- Valor, clave y ruta del nodo de la línea donde se hizo clic derecho (solo JSON o XML válido) -->
             <ctl:TextField.ContextMenu>
               <ContextMenu Opening="OnBodyMenuOpening">
-                <MenuItem Header="Copiar valor" Command="{Binding CopyNodeValueCommand}" IsVisible="{Binding IsStructured}" />
-                <MenuItem Header="Copiar clave" Command="{Binding CopyNodeKeyCommand}" IsVisible="{Binding IsStructured}" />
+                <MenuItem Header="{x:Static l:Texts.RespV_CopyValue}" Command="{Binding CopyNodeValueCommand}" IsVisible="{Binding IsStructured}" />
+                <MenuItem Header="{x:Static l:Texts.RespV_CopyKey}" Command="{Binding CopyNodeKeyCommand}" IsVisible="{Binding IsStructured}" />
                 <MenuItem Header="{Binding PathMenuText}" Command="{Binding CopyNodePathCommand}" IsVisible="{Binding IsStructured}" />
                 <Separator IsVisible="{Binding IsStructured}" />
-                <MenuItem Header="Copiar selección" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
-                <MenuItem Header="Copiar línea" Command="{Binding CopyBodyLineCommand}" />
-                <MenuItem Header="Copiar todo el body" Command="{Binding CopyBodyCommand}" />
+                <MenuItem Header="{x:Static l:Texts.RespV_CopySelection}" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+                <MenuItem Header="{x:Static l:Texts.RespV_CopyLine}" Command="{Binding CopyBodyLineCommand}" />
+                <MenuItem Header="{x:Static l:Texts.RespV_CopyBody}" Command="{Binding CopyBodyCommand}" />
               </ContextMenu>
             </ctl:TextField.ContextMenu>
           </ctl:TextField>
@@ -70,11 +71,11 @@
                   <Border Classes="header-row" Background="Transparent">
                     <Border.ContextMenu>
                       <ContextMenu>
-                        <MenuItem Header="Copiar nombre" Command="{Binding CopyNameCommand}" />
-                        <MenuItem Header="Copiar valor" Command="{Binding CopyValueCommand}" />
-                        <MenuItem Header="Copiar header (nombre: valor)" Command="{Binding CopyLineCommand}" />
+                        <MenuItem Header="{x:Static l:Texts.RespV_CopyName}" Command="{Binding CopyNameCommand}" />
+                        <MenuItem Header="{x:Static l:Texts.RespV_CopyValue}" Command="{Binding CopyValueCommand}" />
+                        <MenuItem Header="{x:Static l:Texts.RespV_CopyHeader}" Command="{Binding CopyLineCommand}" />
                         <Separator />
-                        <MenuItem Header="Copiar todos los headers" Command="{Binding CopyAllCommand}" />
+                        <MenuItem Header="{x:Static l:Texts.RespV_CopyAllHeaders}" Command="{Binding CopyAllCommand}" />
                       </ContextMenu>
                     </Border.ContextMenu>
                     <Grid ColumnDefinitions="240,*" ColumnSpacing="12">
@@ -90,16 +91,16 @@
             </ItemsControl>
           </ScrollViewer>
         </TabItem>
-        <TabItem Header="Consola" ToolTip.Tip="Qué pasó en esta ejecución: request enviado, conexión, redirecciones, tiempos y errores">
+        <TabItem Header="{x:Static l:Texts.RespV_Console}" ToolTip.Tip="{x:Static l:Texts.RespV_ConsoleTip}">
           <DockPanel>
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
                 <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding ConsoleNotice}" />
-                <Button Classes="link" Content="Copiar" Command="{Binding CopyConsoleCommand}"
-                        ToolTip.Tip="Copiar al portapapeles todos los eventos, con su detalle" />
+                <Button Classes="link" Content="{x:Static l:Texts.V_Copy}" Command="{Binding CopyConsoleCommand}"
+                        ToolTip.Tip="{x:Static l:Texts.RespV_ConsoleCopyTip}" />
               </StackPanel>
               <TextBlock Classes="caption" VerticalAlignment="Center"
-                         Text="Solo de la última ejecución; se pierde al cerrar la pestaña. Los secretos se muestran como ***." />
+                         Text="{x:Static l:Texts.RespV_ConsoleHint}" />
             </DockPanel>
 
             <!-- Detalle del evento elegido: request y respuesta en crudo, certificado, causa del error -->
@@ -121,7 +122,7 @@
                     </Border>
                     <SelectableTextBlock Grid.Column="2" TextWrapping="Wrap" Margin="0,2,0,0" Text="{Binding Title}" />
                     <TextBlock Grid.Column="3" Classes="caption mono" VerticalAlignment="Top" Margin="0,3,0,0"
-                               Text="{Binding Duration}" ToolTip.Tip="Lo que tardó esta etapa" />
+                               Text="{Binding Duration}" ToolTip.Tip="{x:Static l:Texts.RespV_StageTip}" />
                   </Grid>
                 </DataTemplate>
               </ListBox.ItemTemplate>

@@ -2,11 +2,32 @@
   <PropertyGroup>
     <!-- Lo requiere el código generado por LibraryImport para el Keychain. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Los .resx sin código de idioma están en español. -->
+    <NeutralLanguage>es</NeutralLanguage>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Textos que ve el usuario: CoreTexts (mensajes de esta capa) y Texts (la interfaz). La clase tipada se
+         genera al compilar; el idioma neutro es el español y cada idioma suma un .<código>.resx. -->
+    <EmbeddedResource Update="Localization\CoreTexts.resx">
+      <StronglyTypedFileName>$(IntermediateOutputPath)CoreTexts.Designer.cs</StronglyTypedFileName>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>Raf.Client.Core.Localization</StronglyTypedNamespace>
+      <StronglyTypedClassName>CoreTexts</StronglyTypedClassName>
+      <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Localization\Texts.resx">
+      <StronglyTypedFileName>$(IntermediateOutputPath)Texts.Designer.cs</StronglyTypedFileName>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>Raf.Client.Core.Localization</StronglyTypedNamespace>
+      <StronglyTypedClassName>Texts</StronglyTypedClassName>
+      <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+    <Using Include="Raf.Client.Core.Localization" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raf.Contracts\Raf.Contracts.csproj" />

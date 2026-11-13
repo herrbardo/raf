@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Language_System" xml:space="preserve"><value>Automatic (system language)</value></data>
+  <data name="Common_Accept" xml:space="preserve"><value>OK</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Common_Copied" xml:space="preserve"><value>Copied ✓</value></data>
+  <data name="Common_Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Dialog_SaveResponse" xml:space="preserve"><value>Save response</value></data>
+  <data name="Page_ErrorIn" xml:space="preserve"><value>Error in {0}{1}: {2}</value></data>
+  <data name="Page_ContextApp" xml:space="preserve"><value>the app</value></data>
+  <data name="Page_ContextConnect" xml:space="preserve"><value>the server connection</value></data>
+  <data name="Page_ContextChangePassword" xml:space="preserve"><value>the password change</value></data>
+  <data name="Shell_SessionExpired" xml:space="preserve"><value>Your session expired. Please sign in again.</value></data>
+  <data name="Shell_Outdated" xml:space="preserve"><value>The server requires version {0} or later and this is {1}: syncing stops.</value></data>
+  <data name="Connect_InvalidUrl" xml:space="preserve"><value>Enter a valid http or https URL, including its subpath if it has one.</value></data>
+  <data name="Login_Missing" xml:space="preserve"><value>Enter your email and password.</value></data>
+  <data name="Password_HeadingForced" xml:space="preserve"><value>Choose a new password</value></data>
+  <data name="Password_Heading" xml:space="preserve"><value>Change password</value></data>
+  <data name="Password_IntroForced" xml:space="preserve"><value>Your password is temporary: you need to change it before continuing.</value></data>
+  <data name="Password_Intro" xml:space="preserve"><value>Changing it signs you out on other computers.</value></data>
+  <data name="Password_MissingFields" xml:space="preserve"><value>Fill in all the fields.</value></data>
+  <data name="Password_Mismatch" xml:space="preserve"><value>The new passwords don't match.</value></data>
+  <data name="Sync_Synced" xml:space="preserve"><value>Synced</value></data>
+  <data name="Sync_OfflinePending" xml:space="preserve"><value>Offline · {0} pending</value></data>
+  <data name="Sync_Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Sync_Conflicts" xml:space="preserve"><value>{0} in conflict</value></data>
+  <data name="Sync_Pending" xml:space="preserve"><value>{0} pending</value></data>
+  <data name="Sync_Syncing" xml:space="preserve"><value>Syncing…</value></data>
+  <data name="Sync_DetailServer" xml:space="preserve"><value>Server: {0}</value></data>
+  <data name="Sync_DetailLast" xml:space="preserve"><value>Last sync: {0}</value></data>
+  <data name="Sync_DetailNever" xml:space="preserve"><value>Not synced yet in this session.</value></data>
+  <data name="Sync_DetailError" xml:space="preserve"><value>Last error: {0}</value></data>
+  <data name="Sync_DetailRetry" xml:space="preserve"><value>Retrying every 15 seconds.</value></data>
+  <data name="Sync_DetailConflicts" xml:space="preserve"><value>Click to resolve the conflicts.</value></data>
+  <data name="Sync_DetailConsole" xml:space="preserve"><value>The details are in the event console (Ctrl+Shift+L).</value></data>
+  <data name="Main_RoleChanged" xml:space="preserve"><value>Your role in "{0}" changed: you are now {1}.</value></data>
+  <data name="Main_LostTitle" xml:space="preserve"><value>You lost access to a workspace</value></data>
+  <data name="Main_LostMessage" xml:space="preserve"><value>You no longer have access to "{0}". {1} of your changes that were not sent will be discarded.</value></data>
+  <data name="Main_LostStatus" xml:space="preserve"><value>You no longer have access to "{0}".</value></data>
+  <data name="Main_OperationFailed" xml:space="preserve"><value>An operation failed{0}: {1}</value></data>
+  <data name="Main_FirstWorkspace" xml:space="preserve"><value>Create your first workspace with the + button above.</value></data>
+  <data name="Main_UnsavedTitle" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="Main_UnsavedSwitch" xml:space="preserve"><value>If you switch workspaces, unsaved changes are lost.</value></data>
+  <data name="Main_Switch" xml:space="preserve"><value>Switch</value></data>
+  <data name="Main_NoEnvironment" xml:space="preserve"><value>No environment</value></data>
+  <data name="Main_NodeGone" xml:space="preserve"><value>That item is no longer in this workspace.</value></data>
+  <data name="Main_UnsavedClose" xml:space="preserve"><value>"{0}" has unsaved changes. Close and discard them?</value></data>
+  <data name="Main_Discard" xml:space="preserve"><value>Discard</value></data>
+  <data name="Main_NewWorkspace" xml:space="preserve"><value>New workspace</value></data>
+  <data name="Main_NewApp" xml:space="preserve"><value>New app</value></data>
+  <data name="Main_NewFolder" xml:space="preserve"><value>New folder</value></data>
+  <data name="Main_NewRequest" xml:space="preserve"><value>New request</value></data>
+  <data name="Main_NewSample" xml:space="preserve"><value>New sample</value></data>
+  <data name="Main_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Main_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Main_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Main_DeleteConfirm" xml:space="preserve"><value>Delete "{0}" and everything it contains?</value></data>
+  <data name="Main_UnsavedLogout" xml:space="preserve"><value>If you sign out, unsaved changes are lost.</value></data>
+  <data name="Main_Logout" xml:space="preserve"><value>Sign out</value></data>
+  <data name="App_Started" xml:space="preserve"><value>RAF {0} started.</value></data>
+  <data name="App_UnhandledUi" xml:space="preserve"><value>Unhandled error in the interface: {0}</value></data>
+  <data name="App_UnhandledBackground" xml:space="preserve"><value>Unhandled error in the background: {0}</value></data>
+  <data name="Admin_BadgeAdmin" xml:space="preserve"><value>Admin</value></data>
+  <data name="Admin_BadgeDisabled" xml:space="preserve"><value>Disabled</value></data>
+  <data name="Admin_BadgeTempPassword" xml:space="preserve"><value>Temporary password</value></data>
+  <data name="Admin_Owner" xml:space="preserve"><value>Owner: {0} ({1})</value></data>
+  <data name="Admin_NoOwner" xml:space="preserve"><value>No Owner</value></data>
+  <data name="Admin_MemberOne" xml:space="preserve"><value>1 member</value></data>
+  <data name="Admin_MemberMany" xml:space="preserve"><value>{0} members</value></data>
+  <data name="Admin_NewUser" xml:space="preserve"><value>New user</value></data>
+  <data name="Admin_CreateUser" xml:space="preserve"><value>Create user</value></data>
+  <data name="Admin_SaveChanges" xml:space="preserve"><value>Save changes</value></data>
+  <data name="Admin_Enable" xml:space="preserve"><value>Enable</value></data>
+  <data name="Admin_Disable" xml:space="preserve"><value>Disable</value></data>
+  <data name="Admin_MissingFields" xml:space="preserve"><value>Enter the email and the name.</value></data>
+  <data name="Admin_CreatedTitle" xml:space="preserve"><value>User created</value></data>
+  <data name="Admin_CreatedMessage" xml:space="preserve"><value>Give {0} this temporary password over a secure channel. It won't be shown again: they will have to change it on first sign-in.</value></data>
+  <data name="Admin_ResetTitle" xml:space="preserve"><value>Reset password</value></data>
+  <data name="Admin_ResetMessage" xml:space="preserve"><value>A new temporary password is generated for {0} and all their sessions are closed.</value></data>
+  <data name="Admin_Reset" xml:space="preserve"><value>Reset</value></data>
+  <data name="Admin_ResetDoneTitle" xml:space="preserve"><value>Password reset</value></data>
+  <data name="Admin_ResetDoneMessage" xml:space="preserve"><value>Give {0} this temporary password over a secure channel. It won't be shown again.</value></data>
+  <data name="Admin_DisableTitle" xml:space="preserve"><value>Disable user</value></data>
+  <data name="Admin_DisableMessage" xml:space="preserve"><value>{0} loses access immediately: their open sessions are closed.</value></data>
+  <data name="Admin_ReassignTitle" xml:space="preserve"><value>Reassign Owner</value></data>
+  <data name="Admin_ReassignMessage" xml:space="preserve"><value>{0} becomes the Owner of "{1}". The current Owner becomes an Editor.</value></data>
+  <data name="Admin_Reassign" xml:space="preserve"><value>Reassign</value></data>
+  <data name="Updates_LocalBuild" xml:space="preserve"><value>Automatic updates are off: this is a local build.</value></data>
+  <data name="Updates_NotInstalled" xml:space="preserve"><value>Automatic updates are off: the app was not installed with the installer.</value></data>
+  <data name="Updates_Disabled" xml:space="preserve"><value>Updates are off: {0}</value></data>
+  <data name="Updates_Ready" xml:space="preserve"><value>A new version of RAF ({0}) is ready to install.</value></data>
+  <data name="Updates_None" xml:space="preserve"><value>No new versions.</value></data>
+  <data name="Updates_Downloaded" xml:space="preserve"><value>Version {0} was downloaded: it installs on restart.</value></data>
+  <data name="Updates_CheckFailed" xml:space="preserve"><value>Could not check for updates: {0}</value></data>
+  <data name="Kind_Workspace" xml:space="preserve"><value>Workspace</value></data>
+  <data name="Kind_Environment" xml:space="preserve"><value>Environment</value></data>
+  <data name="Kind_Variable" xml:space="preserve"><value>Variable</value></data>
+  <data name="Kind_App" xml:space="preserve"><value>App</value></data>
+  <data name="Kind_Folder" xml:space="preserve"><value>Folder</value></data>
+  <data name="Kind_Request" xml:space="preserve"><value>Request</value></data>
+  <data name="Kind_Sample" xml:space="preserve"><value>Sample</value></data>
+  <data name="Conflicts_DiscardTitle" xml:space="preserve"><value>Discard</value></data>
+  <data name="Conflicts_DiscardMessage" xml:space="preserve"><value>Your change will be lost. Continue?</value></data>
+  <data name="Body_AlreadyFormatted" xml:space="preserve"><value>The body was already formatted.</value></data>
+  <data name="Body_Formatted" xml:space="preserve"><value>Body formatted.</value></data>
+  <data name="Sample_Inherited" xml:space="preserve"><value>Inherited: {0}</value></data>
+  <data name="Sample_InheritedDisabled" xml:space="preserve"><value>Inherited: {0} (disabled)</value></data>
+  <data name="Sample_StateInherited" xml:space="preserve"><value>Inherited</value></data>
+  <data name="Sample_StateOverridden" xml:space="preserve"><value>Overridden</value></data>
+  <data name="Sample_StateRemoved" xml:space="preserve"><value>Removed</value></data>
+  <data name="Sample_StateOwn" xml:space="preserve"><value>Own</value></data>
+  <data name="Tab_TimeoutDefault" xml:space="preserve"><value>{0} (default)</value></data>
+  <data name="Tab_NoValue" xml:space="preserve"><value>No value: {0}</value></data>
+  <data name="Tab_UnreadableSecrets" xml:space="preserve"><value>Secrets not available to your role: {0}</value></data>
+  <data name="Tab_SecretsTitle" xml:space="preserve"><value>Secrets not available</value></data>
+  <data name="Tab_SecretsMessage" xml:space="preserve"><value>This request uses secret variables your role can't read ({0}). It will be sent with those variables not replaced.</value></data>
+  <data name="Tab_RunAnyway" xml:space="preserve"><value>Run anyway</value></data>
+  <data name="Tab_Saved" xml:space="preserve"><value>Saved: {0}</value></data>
+  <data name="Tab_NoBody" xml:space="preserve"><value>No body</value></data>
+  <data name="Tab_NoAuth" xml:space="preserve"><value>No authentication</value></data>
+  <data name="Tab_ApiKeyIn" xml:space="preserve"><value>ApiKey ({0}, in {1})</value></data>
+  <data name="Env_HiddenForRole" xml:space="preserve"><value>Hidden for your role</value></data>
+  <data name="Env_Globals" xml:space="preserve"><value>Globals</value></data>
+  <data name="Env_NewTitle" xml:space="preserve"><value>New environment</value></data>
+  <data name="Env_RenameTitle" xml:space="preserve"><value>Rename environment</value></data>
+  <data name="Env_DeleteMessage" xml:space="preserve"><value>Delete the environment "{0}" and its variables?</value></data>
+  <data name="Env_NoChanges" xml:space="preserve"><value>There are no changes to save.</value></data>
+  <data name="Env_SavedOne" xml:space="preserve"><value>Saved: 1 change.</value></data>
+  <data name="Env_SavedMany" xml:space="preserve"><value>Saved: {0} changes.</value></data>
+  <data name="Env_CloseUnsaved" xml:space="preserve"><value>Close and discard the changes to the variables?</value></data>
+  <data name="Events_LevelWarning" xml:space="preserve"><value>Warning</value></data>
+  <data name="Events_LevelError" xml:space="preserve"><value>Error</value></data>
+  <data name="Events_LevelInfo" xml:space="preserve"><value>Info</value></data>
+  <data name="Events_CategorySession" xml:space="preserve"><value>Session</value></data>
+  <data name="Events_CategoryConnection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Events_CategorySync" xml:space="preserve"><value>Sync</value></data>
+  <data name="Events_CategoryUpdates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Events_CategoryApp" xml:space="preserve"><value>App</value></data>
+  <data name="Events_FilterAllLevels" xml:space="preserve"><value>All levels</value></data>
+  <data name="Events_FilterWarnings" xml:space="preserve"><value>Warnings and errors</value></data>
+  <data name="Events_FilterErrors" xml:space="preserve"><value>Errors only</value></data>
+  <data name="Events_FilterAllCategories" xml:space="preserve"><value>All categories</value></data>
+  <data name="Events_OpenTipUnseen" xml:space="preserve"><value>Event console (Ctrl+Shift+L): {0} new warnings or errors</value></data>
+  <data name="Events_OpenTip" xml:space="preserve"><value>Event console (Ctrl+Shift+L)</value></data>
+  <data name="Events_CopiedOne" xml:space="preserve"><value>Copied 1 event.</value></data>
+  <data name="Events_CopiedMany" xml:space="preserve"><value>Copied {0} events.</value></data>
+  <data name="Stage_Variables" xml:space="preserve"><value>Variables</value></data>
+  <data name="Stage_Request" xml:space="preserve"><value>Request</value></data>
+  <data name="Stage_Dns" xml:space="preserve"><value>DNS</value></data>
+  <data name="Stage_Connect" xml:space="preserve"><value>Connection</value></data>
+  <data name="Stage_Tls" xml:space="preserve"><value>TLS</value></data>
+  <data name="Stage_Response" xml:space="preserve"><value>Response</value></data>
+  <data name="Stage_Redirect" xml:space="preserve"><value>Redirect</value></data>
+  <data name="Stage_Body" xml:space="preserve"><value>Body</value></data>
+  <data name="Stage_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Stage_Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Response_CopyPathXml" xml:space="preserve"><value>Copy path (XPath)</value></data>
+  <data name="Response_CopyPathJson" xml:space="preserve"><value>Copy path (JSON path)</value></data>
+  <data name="Response_CopyPath" xml:space="preserve"><value>Copy path</value></data>
+  <data name="Response_Truncated" xml:space="preserve"><value>Showing the first {0} of {1}. Save the file to see the full content.</value></data>
+  <data name="Response_FileName" xml:space="preserve"><value>response</value></data>
+  <data name="Response_SaveFailed" xml:space="preserve"><value>Could not save</value></data>
+  <data name="Outcome_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Outcome_TimedOut" xml:space="preserve"><value>Timeout</value></data>
+  <data name="Outcome_Failed" xml:space="preserve"><value>Error</value></data>
+  <data name="Outcome_Completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="Window_ExitUnsaved" xml:space="preserve"><value>Some tabs have unsaved changes. Exit and discard them?</value></data>
+  <data name="Window_Exit" xml:space="preserve"><value>Exit</value></data>
+  <data name="Update_Incompatible" xml:space="preserve"><value>This version of RAF ({0}) is no longer compatible with the server.</value></data>
+  <data name="Update_IncompatibleMin" xml:space="preserve"><value>This version of RAF ({0}) is no longer compatible with the server, which requires {1} or later.</value></data>
+  <data name="Update_HowInstaller" xml:space="preserve"><value>Download and install the latest version. Your local data is kept.</value></data>
+  <data name="Update_HowAdmin" xml:space="preserve"><value>Ask the server administrator for the new version. Your local data is kept.</value></data>
+  <data name="Update_NotFound" xml:space="preserve"><value>No new version was found or it could not be downloaded. Check the connection and try again.</value></data>
+  <data name="Update_BrowserFailed" xml:space="preserve"><value>Could not open the browser. The new version is at {0}</value></data>
+  <data name="Ws_Me" xml:space="preserve"><value>{0} (you)</value></data>
+  <data name="Ws_Title" xml:space="preserve"><value>Workspace "{0}"</value></data>
+  <data name="Ws_Role" xml:space="preserve"><value>Your role: {0}</value></data>
+  <data name="Ws_DeleteTitle" xml:space="preserve"><value>Delete workspace</value></data>
+  <data name="Ws_DeletePrompt" xml:space="preserve"><value>"{0}" is deleted with all its content, for all its members. To confirm, type the workspace name.</value></data>
+  <data name="Ws_DeleteMismatch" xml:space="preserve"><value>The name doesn't match: the workspace was not deleted.</value></data>
+  <data name="Ws_LeaveTitle" xml:space="preserve"><value>Leave the workspace</value></data>
+  <data name="Ws_LeaveMessage" xml:space="preserve"><value>You will stop seeing "{0}". To come back, the Owner has to add you again.</value></data>
+  <data name="Ws_Leave" xml:space="preserve"><value>Leave</value></data>
+  <data name="Ws_RemoveTitle" xml:space="preserve"><value>Remove member</value></data>
+  <data name="Ws_RemoveMessage" xml:space="preserve"><value>{0} loses access to "{1}".</value></data>
+  <data name="Ws_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Ws_TransferTitle" xml:space="preserve"><value>Transfer ownership</value></data>
+  <data name="Ws_TransferMessage" xml:space="preserve"><value>{0} becomes the Owner of "{1}" and you become an Editor. You will no longer be able to manage members or delete the workspace.</value></data>
+  <data name="Ws_Transfer" xml:space="preserve"><value>Transfer</value></data>
+  <data name="V_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="V_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="V_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="V_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="V_Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="V_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="V_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="V_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="V_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="V_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="V_Value" xml:space="preserve"><value>Value</value></data>
+  <data name="V_Password" xml:space="preserve"><value>Password</value></data>
+  <data name="V_Email" xml:space="preserve"><value>Email</value></data>
+  <data name="V_Unsaved" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="V_Send" xml:space="preserve"><value>Send</value></data>
+  <data name="V_SendTip" xml:space="preserve"><value>Send (Ctrl+Enter)</value></data>
+  <data name="V_SaveTip" xml:space="preserve"><value>Save (Ctrl+S)</value></data>
+  <data name="V_Options" xml:space="preserve"><value>Options</value></data>
+  <data name="V_Timeout" xml:space="preserve"><value>Timeout (seconds)</value></data>
+  <data name="V_AcceptInvalidCerts" xml:space="preserve"><value>Accept invalid certificates (internal APIs)</value></data>
+  <data name="V_Override" xml:space="preserve"><value>Override</value></data>
+  <data name="V_Reinherit" xml:space="preserve"><value>Inherit again</value></data>
+  <data name="V_ChangeServer" xml:space="preserve"><value>Change server</value></data>
+  <data name="V_Variables" xml:space="preserve"><value>Variables</value></data>
+  <data name="Console_Title" xml:space="preserve"><value>Event console — RAF</value></data>
+  <data name="Console_CopyTip" xml:space="preserve"><value>Copy the visible events to the clipboard, with their details</value></data>
+  <data name="Console_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Console_ClearTip" xml:space="preserve"><value>Clear the console events</value></data>
+  <data name="Console_Level" xml:space="preserve"><value>Level</value></data>
+  <data name="Console_Category" xml:space="preserve"><value>Category</value></data>
+  <data name="Console_Detail" xml:space="preserve"><value>DETAILS</value></data>
+  <data name="Console_Empty" xml:space="preserve"><value>No events</value></data>
+  <data name="Console_EmptyHint" xml:space="preserve"><value>What happens with the session, the connection and syncing shows up here.</value></data>
+  <data name="AdminW_Title" xml:space="preserve"><value>Server administration</value></data>
+  <data name="AdminW_Users" xml:space="preserve"><value>Users</value></data>
+  <data name="AdminW_Search" xml:space="preserve"><value>Search by name or email</value></data>
+  <data name="AdminW_Pick" xml:space="preserve"><value>Pick a user from the list or create a new one.</value></data>
+  <data name="AdminW_EmailLabel" xml:space="preserve"><value>Email (it's the sign-in username)</value></data>
+  <data name="AdminW_ServerAdmin" xml:space="preserve"><value>Server admin</value></data>
+  <data name="AdminW_ResetPassword" xml:space="preserve"><value>Reset password</value></data>
+  <data name="AdminW_CantDisableSelf" xml:space="preserve"><value>You can't disable your own account.</value></data>
+  <data name="AdminW_Workspaces" xml:space="preserve"><value>Workspaces</value></data>
+  <data name="AdminW_ReassignHint" xml:space="preserve"><value>Reassigning the Owner helps when the current one was disabled or left the team. The previous Owner becomes an Editor.</value></data>
+  <data name="AdminW_NewOwner" xml:space="preserve"><value>New Owner</value></data>
+  <data name="WsW_Leave" xml:space="preserve"><value>Leave the workspace</value></data>
+  <data name="WsW_Delete" xml:space="preserve"><value>Delete workspace…</value></data>
+  <data name="WsW_NameHeader" xml:space="preserve"><value>NAME</value></data>
+  <data name="WsW_AddMember" xml:space="preserve"><value>Add member</value></data>
+  <data name="WsW_SearchUser" xml:space="preserve"><value>Search a user by name or email (at least 2 letters)</value></data>
+  <data name="WsW_NoResults" xml:space="preserve"><value>No results</value></data>
+  <data name="WsW_Members" xml:space="preserve"><value>MEMBERS</value></data>
+  <data name="WsW_MakeOwner" xml:space="preserve"><value>Make Owner</value></data>
+  <data name="EnvW_Title" xml:space="preserve"><value>Environments and variables</value></data>
+  <data name="EnvW_Scope" xml:space="preserve"><value>SCOPE</value></data>
+  <data name="EnvW_New" xml:space="preserve"><value>New</value></data>
+  <data name="EnvW_AddVariable" xml:space="preserve"><value>Add variable</value></data>
+  <data name="EnvW_KeyHeader" xml:space="preserve"><value>KEY</value></data>
+  <data name="EnvW_ValueHeader" xml:space="preserve"><value>VALUE</value></data>
+  <data name="EnvW_SecretHeader" xml:space="preserve"><value>SECRET</value></data>
+  <data name="EnvW_SecretTip" xml:space="preserve"><value>Secret: stored encrypted and shown hidden</value></data>
+  <data name="EnvW_Show" xml:space="preserve"><value>Show</value></data>
+  <data name="Auth_Token" xml:space="preserve"><value>Token</value></data>
+  <data name="Auth_User" xml:space="preserve"><value>Username</value></data>
+  <data name="Auth_SendIn" xml:space="preserve"><value>Send in</value></data>
+  <data name="BodyV_Format" xml:space="preserve"><value>Format</value></data>
+  <data name="BodyV_FormatTip" xml:space="preserve"><value>Format the body's JSON or XML (Ctrl+Shift+F)</value></data>
+  <data name="MainW_Restart" xml:space="preserve"><value>Restart to update</value></data>
+  <data name="MainW_RestartHint" xml:space="preserve"><value> If you don't restart now, it installs the next time you open the app.</value></data>
+  <data name="Req_Method" xml:space="preserve"><value>Method</value></data>
+  <data name="Req_OptionsHint" xml:space="preserve"><value>These options are saved only on this computer.</value></data>
+  <data name="ConfW_Title" xml:space="preserve"><value>Sync conflicts</value></data>
+  <data name="ConfW_UseMine" xml:space="preserve"><value>Use mine</value></data>
+  <data name="ConfW_UseServer" xml:space="preserve"><value>Use the server's</value></data>
+  <data name="ConfW_Recreate" xml:space="preserve"><value>Recreate</value></data>
+  <data name="ConfW_SaveEdited" xml:space="preserve"><value>Save the edited version</value></data>
+  <data name="ConfW_DiscardMine" xml:space="preserve"><value>Discard my change</value></data>
+  <data name="ConfW_Pending" xml:space="preserve"><value>AWAITING DECISION</value></data>
+  <data name="ConfW_None" xml:space="preserve"><value>No conflicts left</value></data>
+  <data name="ConfW_Mine" xml:space="preserve"><value>MY VERSION</value></data>
+  <data name="ConfW_Server" xml:space="preserve"><value>SERVER VERSION</value></data>
+  <data name="ConfW_Edit" xml:space="preserve"><value>EDIT AND SEND</value></data>
+  <data name="Sample_Hint" xml:space="preserve"><value>Sample: whatever you don't override is inherited from the request.</value></data>
+  <data name="Sample_InheritedLower" xml:space="preserve"><value>inherited</value></data>
+  <data name="Sample_OptionsHint" xml:space="preserve"><value>Shared with the request and saved only on this computer.</value></data>
+  <data name="LoginV_Title" xml:space="preserve"><value>Sign in</value></data>
+  <data name="LoginV_EmailHint" xml:space="preserve"><value>name@company.com</value></data>
+  <data name="LoginV_Enter" xml:space="preserve"><value>Sign in</value></data>
+  <data name="ConnV_Title" xml:space="preserve"><value>Connect to the server</value></data>
+  <data name="ConnV_Intro" xml:space="preserve"><value>Enter your team's RAF server URL, including its subpath if it has one.</value></data>
+  <data name="ConnV_UrlLabel" xml:space="preserve"><value>Server URL</value></data>
+  <data name="ConnV_UrlHint" xml:space="preserve"><value>https://domain/raf</value></data>
+  <data name="ConnV_Insecure" xml:space="preserve"><value>This URL doesn't use https: your password and tokens would travel unencrypted.</value></data>
+  <data name="ConnV_Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="Kv_Include" xml:space="preserve"><value>Include when sending</value></data>
+  <data name="Kv_AddOwn" xml:space="preserve"><value>Add own</value></data>
+  <data name="UpdV_Title" xml:space="preserve"><value>RAF needs an update</value></data>
+  <data name="UpdV_Auto" xml:space="preserve"><value>The app downloads the new version and restarts. Your local data is kept.</value></data>
+  <data name="UpdV_Now" xml:space="preserve"><value>Update now</value></data>
+  <data name="UpdV_OpenDownloads" xml:space="preserve"><value>Open the downloads page</value></data>
+  <data name="UpdV_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="MainV_Admin" xml:space="preserve"><value>Server administration…</value></data>
+  <data name="MainV_ChangePassword" xml:space="preserve"><value>Change password</value></data>
+  <data name="MainV_Logout" xml:space="preserve"><value>Sign out</value></data>
+  <data name="MainV_Workspace" xml:space="preserve"><value>Workspace</value></data>
+  <data name="MainV_NewWorkspace" xml:space="preserve"><value>New workspace</value></data>
+  <data name="MainV_WorkspaceSettings" xml:space="preserve"><value>Workspace name and members</value></data>
+  <data name="MainV_Environment" xml:space="preserve"><value>Environment</value></data>
+  <data name="MainV_ActiveEnvironment" xml:space="preserve"><value>Active environment</value></data>
+  <data name="MainV_Collection" xml:space="preserve"><value>Collection</value></data>
+  <data name="MainV_NewApp" xml:space="preserve"><value>New app</value></data>
+  <data name="MainV_App" xml:space="preserve"><value>App</value></data>
+  <data name="MainV_EmptyCollection" xml:space="preserve"><value>The collection is empty</value></data>
+  <data name="MainV_EmptyCollectionHint" xml:space="preserve"><value>Create an app with “+ App” to group its requests.</value></data>
+  <data name="MainV_NewFolder" xml:space="preserve"><value>New folder</value></data>
+  <data name="MainV_NewRequest" xml:space="preserve"><value>New request</value></data>
+  <data name="MainV_NewSample" xml:space="preserve"><value>New sample</value></data>
+  <data name="MainV_MoveUp" xml:space="preserve"><value>Move up</value></data>
+  <data name="MainV_MoveDown" xml:space="preserve"><value>Move down</value></data>
+  <data name="MainV_History" xml:space="preserve"><value>History</value></data>
+  <data name="MainV_NoHistory" xml:space="preserve"><value>No history</value></data>
+  <data name="MainV_NoHistoryHint" xml:space="preserve"><value>The requests you send from this computer show up here.</value></data>
+  <data name="MainV_NoTabs" xml:space="preserve"><value>No request open</value></data>
+  <data name="MainV_NoTabsHint" xml:space="preserve"><value>Pick a request from the tree to edit and send it.</value></data>
+  <data name="MainV_Sends" xml:space="preserve"><value>sends</value></data>
+  <data name="MainV_Saves" xml:space="preserve"><value>saves</value></data>
+  <data name="MainV_Preferences" xml:space="preserve"><value>Preferences…</value></data>
+  <data name="PwdV_Current" xml:space="preserve"><value>Current password</value></data>
+  <data name="PwdV_New" xml:space="preserve"><value>New password</value></data>
+  <data name="PwdV_MinLength" xml:space="preserve"><value>At least 8 characters</value></data>
+  <data name="PwdV_Repeat" xml:space="preserve"><value>Repeat it</value></data>
+  <data name="RespV_None" xml:space="preserve"><value>No response yet</value></data>
+  <data name="RespV_SendWith" xml:space="preserve"><value>Send the request with</value></data>
+  <data name="RespV_Sending" xml:space="preserve"><value>Sending…</value></data>
+  <data name="RespV_Raw" xml:space="preserve"><value>Show raw</value></data>
+  <data name="RespV_SaveToFile" xml:space="preserve"><value>Save to file</value></data>
+  <data name="RespV_StatusTip" xml:space="preserve"><value>Status code</value></data>
+  <data name="RespV_TimeTip" xml:space="preserve"><value>Total time</value></data>
+  <data name="RespV_SizeTip" xml:space="preserve"><value>Body size</value></data>
+  <data name="RespV_CopyValue" xml:space="preserve"><value>Copy value</value></data>
+  <data name="RespV_CopyKey" xml:space="preserve"><value>Copy key</value></data>
+  <data name="RespV_CopySelection" xml:space="preserve"><value>Copy selection</value></data>
+  <data name="RespV_CopyLine" xml:space="preserve"><value>Copy line</value></data>
+  <data name="RespV_CopyBody" xml:space="preserve"><value>Copy the whole body</value></data>
+  <data name="RespV_CopyName" xml:space="preserve"><value>Copy name</value></data>
+  <data name="RespV_CopyHeader" xml:space="preserve"><value>Copy header (name: value)</value></data>
+  <data name="RespV_CopyAllHeaders" xml:space="preserve"><value>Copy all headers</value></data>
+  <data name="RespV_Console" xml:space="preserve"><value>Console</value></data>
+  <data name="RespV_ConsoleTip" xml:space="preserve"><value>What happened in this run: request sent, connection, redirects, timings and errors</value></data>
+  <data name="RespV_ConsoleCopyTip" xml:space="preserve"><value>Copy all events to the clipboard, with their details</value></data>
+  <data name="RespV_ConsoleHint" xml:space="preserve"><value>Only the last run; it is lost when the tab closes. Secrets are shown as ***.</value></data>
+  <data name="RespV_StageTip" xml:space="preserve"><value>How long this stage took</value></data>
+  <data name="Prefs_Title" xml:space="preserve"><value>Preferences</value></data>
+  <data name="Prefs_Language" xml:space="preserve"><value>LANGUAGE</value></data>
+  <data name="Prefs_LanguageHint" xml:space="preserve"><value>Saved on this computer. On automatic, RAF uses Spanish if the system is in Spanish and English otherwise.</value></data>
+  <data name="Prefs_RestartNeeded" xml:space="preserve"><value>The new language applies the next time you open RAF.</value></data>
+</root>

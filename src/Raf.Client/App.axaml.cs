@@ -19,8 +19,13 @@ namespace Raf.Client;
 
 public partial class App : Application
 {
+    private SettingsStore? _settings;
+
     public override void Initialize()
     {
+        // El idioma va primero: los textos de la interfaz se leen al crearla y no cambian hasta reiniciar.
+        _settings = new SettingsStore(Path.Combine(AppPaths.DataDirectory, "settings.json"));
+        Languages.Apply(_settings.Current.Language);
         AvaloniaXamlLoader.Load(this);
         // Por defecto, oscuro (D7). Para revisar el diseño: RAF_THEME=light, o RAF_THEME=system para seguir al sistema.
         RequestedThemeVariant = Environment.GetEnvironmentVariable("RAF_THEME")?.ToLowerInvariant() switch
@@ -36,7 +41,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var provider = BuildServices();
+            var provider = BuildServices(_settings!);
             WatchUnhandledErrors(provider.GetRequiredService<EventLog>());
             var shell = provider.GetRequiredService<ShellViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = shell };
@@ -50,14 +55,14 @@ public partial class App : Application
     /// <summary>Los errores que nadie atrapó también van a la consola de eventos.</summary>
     private static void WatchUnhandledErrors(EventLog events)
     {
-        events.Info(EventCategory.App, $"RAF {AppIdentity.Version} iniciada.");
+        events.Info(EventCategory.App, string.Format(Texts.App_Started, AppIdentity.Version));
         Dispatcher.UIThread.UnhandledException += (_, e) =>
-            events.Error(EventCategory.App, $"Error no controlado en la interfaz: {e.Exception.Message}", e.Exception);
+            events.Error(EventCategory.App, string.Format(Texts.App_UnhandledUi, e.Exception.Message), e.Exception);
         TaskScheduler.UnobservedTaskException += (_, e) =>
-            events.Error(EventCategory.App, $"Error no controlado en segundo plano: {e.Exception.GetBaseException().Message}", e.Exception);
+            events.Error(EventCategory.App, string.Format(Texts.App_UnhandledBackground, e.Exception.GetBaseException().Message), e.Exception);
     }
 
-    private static ServiceProvider BuildServices()
+    private static ServiceProvider BuildServices(SettingsStore settings)
     {
         var data = AppPaths.DataDirectory;
         var services = new ServiceCollection();
@@ -67,7 +72,7 @@ public partial class App : Application
         services.AddSingleton(new HttpClient(version) { Timeout = TimeSpan.FromSeconds(60) });
         services.AddSingleton<UpdateService>();
         services.AddSingleton(SecureStores.CreateDefault());
-        services.AddSingleton(new SettingsStore(Path.Combine(data, "settings.json")));
+        services.AddSingleton(settings);
         services.AddSingleton(new RunHistoryStore(Path.Combine(data, "history")));
         services.AddSingleton(sp => new SessionManager(
             sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISecureStore>(),

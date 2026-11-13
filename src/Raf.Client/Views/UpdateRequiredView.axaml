@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.Views.UpdateRequiredView"
@@ -9,20 +10,20 @@
       <StackPanel Spacing="14">
         <views:BrandHeader />
         <StackPanel Spacing="4">
-          <TextBlock Classes="title" Text="Hay que actualizar RAF" />
+          <TextBlock Classes="title" Text="{x:Static l:Texts.UpdV_Title}" />
           <TextBlock TextWrapping="Wrap" Text="{Binding Message}" />
         </StackPanel>
 
         <StackPanel Spacing="12" IsVisible="{Binding CanUpdateInApp}">
           <TextBlock Classes="caption" TextWrapping="Wrap"
-                     Text="La app descarga la versión nueva y se reinicia. Tus datos locales se conservan." />
-          <Button Classes="accent" Content="Actualizar ahora" HorizontalAlignment="Right"
+                     Text="{x:Static l:Texts.UpdV_Auto}" />
+          <Button Classes="accent" Content="{x:Static l:Texts.UpdV_Now}" HorizontalAlignment="Right"
                   Command="{Binding UpdateNowCommand}" IsEnabled="{Binding !IsBusy}" />
         </StackPanel>
 
         <StackPanel Spacing="12" IsVisible="{Binding !CanUpdateInApp}">
           <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ManualHint}" />
-          <Button Classes="accent" Content="Abrir la página de descargas" HorizontalAlignment="Right"
+          <Button Classes="accent" Content="{x:Static l:Texts.UpdV_OpenDownloads}" HorizontalAlignment="Right"
                   IsVisible="{Binding CanOpenReleases}" Command="{Binding OpenReleasesCommand}" />
         </StackPanel>
 
@@ -30,8 +31,8 @@
         <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-          <Button Classes="link" Content="Reintentar" Command="{Binding RetryCommand}" />
-          <Button Classes="link" Content="Cambiar de servidor" Command="{Binding ChangeServerCommand}" />
+          <Button Classes="link" Content="{x:Static l:Texts.UpdV_Retry}" Command="{Binding RetryCommand}" />
+          <Button Classes="link" Content="{x:Static l:Texts.V_ChangeServer}" Command="{Binding ChangeServerCommand}" />
         </StackPanel>
       </StackPanel>
     </Border>

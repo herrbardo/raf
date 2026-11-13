@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.AuthEditorView"
@@ -8,23 +9,23 @@
     <ComboBox Width="190" ItemsSource="{Binding AvailableTypes}" SelectedItem="{Binding Type}" IsEnabled="{Binding CanEdit}" />
 
     <StackPanel Spacing="4" IsVisible="{Binding IsBearer}">
-      <TextBlock Classes="caption" Text="Token" />
+      <TextBlock Classes="caption" Text="{x:Static l:Texts.Auth_Token}" />
       <ctl:TextField BoundText="{Binding Token}" IsReadOnly="{Binding IsReadOnly}" />
     </StackPanel>
 
     <StackPanel Spacing="4" IsVisible="{Binding IsBasic}">
-      <TextBlock Classes="caption" Text="Usuario" />
+      <TextBlock Classes="caption" Text="{x:Static l:Texts.Auth_User}" />
       <ctl:TextField BoundText="{Binding Username}" IsReadOnly="{Binding IsReadOnly}" />
-      <TextBlock Classes="caption" Text="Contraseña" />
+      <TextBlock Classes="caption" Text="{x:Static l:Texts.V_Password}" />
       <TextBox Text="{Binding Password}" PasswordChar="•" IsReadOnly="{Binding IsReadOnly}" />
     </StackPanel>
 
     <StackPanel Spacing="4" IsVisible="{Binding IsApiKey}">
-      <TextBlock Classes="caption" Text="Nombre" />
+      <TextBlock Classes="caption" Text="{x:Static l:Texts.V_Name}" />
       <ctl:TextField BoundText="{Binding ApiKeyName}" IsReadOnly="{Binding IsReadOnly}" />
-      <TextBlock Classes="caption" Text="Valor" />
+      <TextBlock Classes="caption" Text="{x:Static l:Texts.V_Value}" />
       <ctl:TextField BoundText="{Binding ApiKeyValue}" IsReadOnly="{Binding IsReadOnly}" />
-      <TextBlock Classes="caption" Text="Enviar en" />
+      <TextBlock Classes="caption" Text="{x:Static l:Texts.Auth_SendIn}" />
       <ComboBox Width="190" ItemsSource="{Binding AvailableLocations}" SelectedItem="{Binding ApiKeyIn}" IsEnabled="{Binding CanEdit}" />
     </StackPanel>
   </StackPanel>

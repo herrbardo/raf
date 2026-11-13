@@ -48,14 +48,14 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
         _connection.Reconnecting += e =>
         {
             _events?.Warning(EventCategory.Connection,
-                $"Se cortó la conexión en tiempo real{Cause(e)}. Mientras tanto se consulta al servidor cada {Seconds(fallbackInterval)}.",
+                string.Format(CoreTexts.Realtime_Lost, Cause(e), Seconds(fallbackInterval)),
                 e?.ToString());
             SetPolling(true);
             return Task.CompletedTask;
         };
         _connection.Reconnected += async _ =>
         {
-            _events?.Info(EventCategory.Connection, "Se recuperó la conexión en tiempo real.");
+            _events?.Info(EventCategory.Connection, CoreTexts.Realtime_Recovered);
             SetPolling(false);
             await SendWatchAsync();
             Raise(); // lo que pasó durante el corte se trae con un pull
@@ -64,7 +64,7 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
         {
             // Si el servidor cierra la conexión (por ejemplo, el usuario fue deshabilitado), se reintenta de cero.
             if (!_stop.IsCancellationRequested)
-                _events?.Warning(EventCategory.Connection, $"El servidor cerró la conexión en tiempo real{Cause(e)}. Se vuelve a conectar.", e?.ToString());
+                _events?.Warning(EventCategory.Connection, string.Format(CoreTexts.Realtime_Closed, Cause(e)), e?.ToString());
             SetPolling(true);
             if (!_stop.IsCancellationRequested) StartLoop();
             return Task.CompletedTask;
@@ -97,7 +97,7 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
 
     private static string Cause(Exception? e) => e is null ? "" : $": {e.Message}";
 
-    private static string Seconds(TimeSpan t) => $"{(int)t.TotalSeconds} segundos";
+    private static string Seconds(TimeSpan t) => string.Format(CoreTexts.Realtime_Seconds, (int)t.TotalSeconds);
 
     private void StartLoop()
     {
@@ -117,7 +117,7 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
             {
                 await _connection.StartAsync(_stop.Token);
                 _events?.Info(EventCategory.Connection,
-                    attempt == 0 ? "Conexión en tiempo real establecida." : $"Conexión en tiempo real establecida después de {attempt + 1} intentos.");
+                    attempt == 0 ? CoreTexts.Realtime_Connected : string.Format(CoreTexts.Realtime_ConnectedAfter, attempt + 1));
                 SetPolling(false);
                 await SendWatchAsync();
                 Raise();
@@ -128,7 +128,7 @@ public sealed class RealtimeChangeSubscriber : IChangeSubscriber
                 // Sin servidor, sin red o sesión vencida: se sigue por polling y se reintenta. Solo se anota el primer fallo.
                 if (attempt == 0)
                     _events?.Warning(EventCategory.Connection,
-                        $"No se pudo abrir la conexión en tiempo real: {e.Message}. Se reintenta y mientras tanto se consulta al servidor cada {Seconds(_fallbackInterval)}.",
+                        string.Format(CoreTexts.Realtime_OpenFailed, e.Message, Seconds(_fallbackInterval)),
                         e.ToString());
                 var delay = RetryDelays[Math.Min(++attempt, RetryDelays.Length - 1)];
                 try

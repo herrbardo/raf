@@ -21,7 +21,7 @@ public partial class EnvironmentsWindow : Window
         if (_confirmedClose || DataContext is not EnvironmentsViewModel { HasChanges: true } vm) return;
 
         e.Cancel = true;
-        if (await vm.Dialogs.ConfirmAsync("Cambios sin guardar", "¿Cerrar y descartar los cambios en las variables?", "Descartar"))
+        if (await vm.Dialogs.ConfirmAsync(Texts.Main_UnsavedTitle, Texts.Env_CloseUnsaved, Texts.Main_Discard))
         {
             _confirmedClose = true;
             Close();

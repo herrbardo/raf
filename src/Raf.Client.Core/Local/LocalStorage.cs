@@ -118,7 +118,7 @@ public sealed partial class KeychainSecureStore(string service) : ISecureStore
             status = SecKeychainAddGenericPassword(0, (uint)s.Length, s, (uint)a.Length, a, (uint)v.Length, v, out var created);
             if (status == 0) CFRelease(created);
         }
-        if (status != 0) throw new IOException($"No se pudo escribir en el Keychain (código {status}).");
+        if (status != 0) throw new IOException(string.Format(CoreTexts.Keychain_WriteFailed, status));
     }
 
     public void Delete(string name)
@@ -177,6 +177,9 @@ public sealed class LocalSettings
     public List<string> RecentServers { get; set; } = new();
 
     public string? LastEmail { get; set; }
+
+    /// <summary>Idioma de la interfaz ("es", "en"); null sigue al sistema. Se aplica al reiniciar.</summary>
+    public string? Language { get; set; }
 
     /// <summary>Elige el servidor y lo pone primero en los recientes, sin repetirlo.</summary>
     public void RememberServer(string url)

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.RequestTabView"
@@ -8,7 +9,7 @@
   <Grid RowDefinitions="Auto,Auto,*,5,*">
     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,14,14,0">
       <ComboBox Width="124" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}"
-                IsEnabled="{Binding CanEdit}" ToolTip.Tip="Método">
+                IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.Req_Method}">
         <ComboBox.ItemTemplate>
           <DataTemplate x:DataType="x:String"><ctl:MethodBadge Classes="large" Method="{Binding}" /></DataTemplate>
         </ComboBox.ItemTemplate>
@@ -17,23 +18,23 @@
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
         <Panel>
           <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
-                  ToolTip.Tip="Enviar (Ctrl+Enter)">
+                  ToolTip.Tip="{x:Static l:Texts.V_SendTip}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <ctl:Icon Data="{StaticResource IconSend}" />
-              <TextBlock VerticalAlignment="Center" Text="Enviar" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
             </StackPanel>
           </Button>
           <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <ctl:Icon Data="{StaticResource IconClose}" />
-              <TextBlock VerticalAlignment="Center" Text="Cancelar" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Cancel}" />
             </StackPanel>
           </Button>
         </Panel>
-        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="Guardar (Ctrl+S)">
+        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.V_SaveTip}">
           <StackPanel Orientation="Horizontal" Spacing="7">
             <ctl:Icon Data="{StaticResource IconSave}" />
-            <TextBlock VerticalAlignment="Center" Text="Guardar" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Save}" />
           </StackPanel>
         </Button>
       </StackPanel>
@@ -46,14 +47,14 @@
       <TabItem Header="Headers"><ContentControl Content="{Binding Headers}" /></TabItem>
       <TabItem Header="Body"><ContentControl Content="{Binding Body}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
       <TabItem Header="Auth"><ContentControl Content="{Binding Auth}" /></TabItem>
-      <TabItem Header="Opciones">
+      <TabItem Header="{x:Static l:Texts.V_Options}">
         <StackPanel Spacing="12" Margin="0,4" MaxWidth="460" HorizontalAlignment="Left">
-          <TextBlock Classes="caption" Text="Estas opciones se guardan solo en este equipo." />
+          <TextBlock Classes="caption" Text="{x:Static l:Texts.Req_OptionsHint}" />
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock VerticalAlignment="Center" Text="Timeout (segundos)" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Timeout}" />
             <TextBox Width="190" Text="{Binding TimeoutText}" Watermark="{Binding TimeoutHint}" />
           </StackPanel>
-          <CheckBox IsChecked="{Binding AcceptInvalidCertificates}" Content="Aceptar certificados inválidos (APIs internas)" />
+          <CheckBox IsChecked="{Binding AcceptInvalidCertificates}" Content="{x:Static l:Texts.V_AcceptInvalidCerts}" />
         </StackPanel>
       </TabItem>
     </TabControl>

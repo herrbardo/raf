@@ -61,11 +61,11 @@ public sealed class SessionManager(
         if (stored is null || stored.Server != Server?.ToString()) return false;
         if (stored.Tokens.RefreshTokenExpiresAt <= clock.GetUtcNow())
         {
-            events?.Info(EventCategory.Session, "La sesión guardada venció: hay que volver a iniciarla.");
+            events?.Info(EventCategory.Session, CoreTexts.Session_StoredExpired);
             return false;
         }
         lock (_sync) _session = stored;
-        events?.Info(EventCategory.Session, $"Se recuperó la sesión guardada en {Server} como {stored.Tokens.User.Email}.");
+        events?.Info(EventCategory.Session, string.Format(CoreTexts.Session_Restored, Server, stored.Tokens.User.Email));
         return true;
     }
 
@@ -79,8 +79,8 @@ public sealed class SessionManager(
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            events?.Warning(EventCategory.Session, $"No se pudo conectar con {server} para iniciar sesión: {e.Message}", e.ToString());
-            throw new ApiException(null, "No se pudo conectar con el servidor.", e);
+            events?.Warning(EventCategory.Session, string.Format(CoreTexts.Session_LoginUnreachable, server, e.Message), e.ToString());
+            throw new ApiException(null, CoreTexts.Api_CannotConnect, e);
         }
 
         using (res)
@@ -88,12 +88,12 @@ public sealed class SessionManager(
             if (!res.IsSuccessStatusCode)
             {
                 var error = await ApiException.FromResponseAsync(res);
-                events?.Warning(EventCategory.Session, $"Inicio de sesión rechazado (HTTP {(int)res.StatusCode}): {error.Message}");
+                events?.Warning(EventCategory.Session, string.Format(CoreTexts.Session_LoginRejected, (int)res.StatusCode, error.Message));
                 throw error;
             }
             var tokens = (await res.Content.ReadFromJsonAsync<TokenResponse>(ClientJson.Options, ct))!;
             Adopt(tokens);
-            events?.Info(EventCategory.Session, $"Sesión iniciada en {server} como {tokens.User.Email}.");
+            events?.Info(EventCategory.Session, string.Format(CoreTexts.Session_Started, server, tokens.User.Email));
             return tokens.User;
         }
     }
@@ -120,7 +120,7 @@ public sealed class SessionManager(
 
     public void MarkExpired()
     {
-        events?.Warning(EventCategory.Session, "El servidor ya no acepta la sesión: hay que volver a iniciarla.");
+        events?.Warning(EventCategory.Session, CoreTexts.Session_NoLongerAccepted);
         Clear();
         SessionExpired?.Invoke();
     }
@@ -136,7 +136,7 @@ public sealed class SessionManager(
         var server = Server;
         Clear();
         if (refreshToken is null || server is null) return;
-        events?.Info(EventCategory.Session, "Sesión cerrada.");
+        events?.Info(EventCategory.Session, CoreTexts.Session_Closed);
 
         try
         {
@@ -187,8 +187,8 @@ public sealed class SessionManager(
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
             {
-                events?.Warning(EventCategory.Session, $"No se pudo renovar la sesión, sin conexión con el servidor: {e.Message}", e.ToString());
-                throw new ApiException(null, "No se pudo conectar con el servidor.", e);
+                events?.Warning(EventCategory.Session, string.Format(CoreTexts.Session_RefreshUnreachable, e.Message), e.ToString());
+                throw new ApiException(null, CoreTexts.Api_CannotConnect, e);
             }
 
             using (res)
@@ -201,7 +201,7 @@ public sealed class SessionManager(
                 if (!res.IsSuccessStatusCode)
                 {
                     var error = await ApiException.FromResponseAsync(res);
-                    events?.Warning(EventCategory.Session, $"No se pudo renovar la sesión (HTTP {(int)res.StatusCode}): {error.Message}");
+                    events?.Warning(EventCategory.Session, string.Format(CoreTexts.Session_RefreshFailed, (int)res.StatusCode, error.Message));
                     throw error;
                 }
 
@@ -209,7 +209,7 @@ public sealed class SessionManager(
                 var renewed = session with { Tokens = tokens };
                 lock (_sync) _session = renewed;
                 Persist(renewed);
-                events?.Info(EventCategory.Session, "Se renovó el token de acceso.");
+                events?.Info(EventCategory.Session, CoreTexts.Session_Refreshed);
                 return tokens;
             }
         }

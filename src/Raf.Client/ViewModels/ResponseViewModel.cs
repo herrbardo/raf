@@ -38,17 +38,17 @@ public sealed record RunEventRow(RunEvent Event)
 
     public static string StageText(RunEventKind kind) => kind switch
     {
-        RunEventKind.Variables => "Variables",
-        RunEventKind.Request => "Request",
-        RunEventKind.Dns => "DNS",
-        RunEventKind.Connect => "Conexión",
-        RunEventKind.Tls => "TLS",
-        RunEventKind.Reused => "Conexión",
-        RunEventKind.Response => "Respuesta",
-        RunEventKind.Redirect => "Redirección",
-        RunEventKind.Body => "Body",
-        RunEventKind.Error => "Error",
-        _ => "Total",
+        RunEventKind.Variables => Texts.Stage_Variables,
+        RunEventKind.Request => Texts.Stage_Request,
+        RunEventKind.Dns => Texts.Stage_Dns,
+        RunEventKind.Connect => Texts.Stage_Connect,
+        RunEventKind.Tls => Texts.Stage_Tls,
+        RunEventKind.Reused => Texts.Stage_Connect,
+        RunEventKind.Response => Texts.Stage_Response,
+        RunEventKind.Redirect => Texts.Stage_Redirect,
+        RunEventKind.Body => Texts.Stage_Body,
+        RunEventKind.Error => Texts.Stage_Error,
+        _ => Texts.Stage_Total,
     };
 }
 
@@ -126,10 +126,10 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         _raw = result.Body?.GetPreviewText() ?? "";
         _formatted = ResponseFormatter.Format(_raw, result.Body?.MediaType);
         IsStructured = _formatted.Format != ResponseFormat.Plain;
-        PathMenuText = _formatted.Format == ResponseFormat.Xml ? "Copiar ruta (XPath)" : "Copiar ruta (JSON path)";
+        PathMenuText = _formatted.Format == ResponseFormat.Xml ? Texts.Response_CopyPathXml : Texts.Response_CopyPathJson;
         MenuNode = null;
         TruncatedText = result.Body is { IsTruncated: true } body
-            ? $"Se muestran los primeros {FormatSize(body.Preview.Length)} de {FormatSize(body.Length)}. Guardá el archivo para ver el contenido completo."
+            ? string.Format(Texts.Response_Truncated, FormatSize(body.Preview.Length), FormatSize(body.Length))
             : null;
         OnPropertyChanged(nameof(HasBody));
         Render();
@@ -152,7 +152,7 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     private async Task SaveAsync()
     {
         if (_result?.Body is not { } body) return;
-        await using var stream = await dialogs.SaveFileAsync("respuesta" + Extension(body.MediaType));
+        await using var stream = await dialogs.SaveFileAsync(Texts.Response_FileName + Extension(body.MediaType));
         if (stream is null) return;
         try
         {
@@ -160,7 +160,7 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         }
         catch (IOException e)
         {
-            await dialogs.InfoAsync("No se pudo guardar", e.Message);
+            await dialogs.InfoAsync(Texts.Response_SaveFailed, e.Message);
         }
     }
 
@@ -168,7 +168,7 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
 
     /// <summary>El body es JSON o XML válido: el menú ofrece valor, clave y ruta.</summary>
     [ObservableProperty] private bool _isStructured;
-    [ObservableProperty] private string _pathMenuText = "Copiar ruta";
+    [ObservableProperty] private string _pathMenuText = Texts.Response_CopyPath;
 
     /// <summary>El nodo de la línea donde se abrió el menú; null si no hay ninguno.</summary>
     [ObservableProperty]
@@ -226,7 +226,7 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         if (CopyToClipboard is null || Events.Count == 0) return;
         var text = string.Join(Environment.NewLine, Events.Select(e => e.ToText()));
         await CopyToClipboard(text + Environment.NewLine);
-        ConsoleNotice = Events.Count == 1 ? "Se copió 1 evento." : $"Se copiaron {Events.Count} eventos.";
+        ConsoleNotice = Events.Count == 1 ? Texts.Events_CopiedOne : string.Format(Texts.Events_CopiedMany, Events.Count);
     }
 
     private static string Extension(string? mediaType) =>
@@ -238,10 +238,10 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
 
     public static string OutcomeText(RunOutcome outcome) => outcome switch
     {
-        RunOutcome.Cancelled => "Cancelado",
-        RunOutcome.TimedOut => "Timeout",
-        RunOutcome.Failed => "Error",
-        _ => "Completado",
+        RunOutcome.Cancelled => Texts.Outcome_Cancelled,
+        RunOutcome.TimedOut => Texts.Outcome_TimedOut,
+        RunOutcome.Failed => Texts.Outcome_Failed,
+        _ => Texts.Outcome_Completed,
     };
 
     public static string FormatTime(TimeSpan t) => RunFormat.Time(t);

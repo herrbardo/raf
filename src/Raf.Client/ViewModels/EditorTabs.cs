@@ -58,7 +58,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     public ResponseViewModel Response { get; }
     public bool CanEdit => Owner.CanEdit;
     public bool IsReadOnly => !CanEdit;
-    public string TimeoutHint => $"{Settings.Current.DefaultTimeoutSeconds} (predeterminado)";
+    public string TimeoutHint => string.Format(Texts.Tab_TimeoutDefault, Settings.Current.DefaultTimeoutSeconds);
 
     /// <summary>Lo que define si hay cambios sin guardar.</summary>
     protected abstract object Snapshot();
@@ -94,8 +94,8 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         var (request, sample) = RunTarget();
         var check = RequestRunner.Check(request, sample, Owner.Variables);
         var parts = new List<string>();
-        if (check.Missing.Count > 0) parts.Add($"Sin valor: {string.Join(", ", check.Missing)}");
-        if (check.UnreadableSecrets.Count > 0) parts.Add($"Secretos no disponibles para tu rol: {string.Join(", ", check.UnreadableSecrets)}");
+        if (check.Missing.Count > 0) parts.Add(string.Format(Texts.Tab_NoValue, string.Join(", ", check.Missing)));
+        if (check.UnreadableSecrets.Count > 0) parts.Add(string.Format(Texts.Tab_UnreadableSecrets, string.Join(", ", check.UnreadableSecrets)));
         Warning = parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
@@ -120,10 +120,9 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         var variables = Owner.Variables;
         var check = RequestRunner.Check(request, sample, variables);
         if (check.UnreadableSecrets.Count > 0 && !await Owner.Services.Dialogs.ConfirmAsync(
-                "Secretos no disponibles",
-                $"Este request usa variables secretas que tu rol no puede leer ({string.Join(", ", check.UnreadableSecrets)}). " +
-                "Se enviará con esas variables sin reemplazar.",
-                "Ejecutar igual"))
+                Texts.Tab_SecretsTitle,
+                string.Format(Texts.Tab_SecretsMessage, string.Join(", ", check.UnreadableSecrets)),
+                Texts.Tab_RunAnyway))
             return;
 
         var timeout = TimeSpan.FromSeconds(ParsedTimeout ?? Settings.Current.DefaultTimeoutSeconds);
@@ -163,7 +162,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         try
         {
             await SaveCoreAsync();
-            Owner.ReportStatus($"Guardado: {Node.Name}");
+            Owner.ReportStatus(string.Format(Texts.Tab_Saved, Node.Name));
         }
         catch (ApiException e)
         {
@@ -309,15 +308,15 @@ public sealed partial class SampleTabViewModel : EditorTabViewModel
     public string InheritedUrl => Parent.Url;
     public string InheritedBody => Parent.Body.Type switch
     {
-        BodyType.None => "Sin body",
+        BodyType.None => Texts.Tab_NoBody,
         BodyType.FormUrlEncoded => "FormUrlEncoded: " + string.Join("&", (Parent.Body.Form ?? []).Select(f => $"{f.Key}={f.Value}")),
         var t => $"{t}: {Parent.Body.Content}",
     };
 
     public string InheritedAuth => Parent.Auth.Type switch
     {
-        AuthType.None => "Sin autenticación",
-        AuthType.ApiKey => $"ApiKey ({Parent.Auth.ApiKeyName}, en {Parent.Auth.ApiKeyIn})",
+        AuthType.None => Texts.Tab_NoAuth,
+        AuthType.ApiKey => string.Format(Texts.Tab_ApiKeyIn, Parent.Auth.ApiKeyName, Parent.Auth.ApiKeyIn),
         var t => t.ToString(),
     };
 

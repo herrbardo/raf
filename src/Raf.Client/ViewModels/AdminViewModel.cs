@@ -15,9 +15,9 @@ public sealed record UserRow(UserDto User)
     /// <summary>Estado en texto, para no depender solo del color.</summary>
     public string Badges => string.Join(" · ", new[]
     {
-        User.IsAdmin ? "Admin" : null,
-        User.IsDisabled ? "Deshabilitado" : null,
-        User.MustChangePassword ? "Contraseña temporal" : null,
+        User.IsAdmin ? Texts.Admin_BadgeAdmin : null,
+        User.IsDisabled ? Texts.Admin_BadgeDisabled : null,
+        User.MustChangePassword ? Texts.Admin_BadgeTempPassword : null,
     }.Where(x => x is not null));
 
     public bool Matches(string? text) =>
@@ -29,8 +29,8 @@ public sealed record UserRow(UserDto User)
 public sealed record AdminWorkspaceRow(AdminWorkspaceDto Workspace)
 {
     public string Name => Workspace.Name;
-    public string OwnerText => Workspace.Owner is { } o ? $"Owner: {o.DisplayName} ({o.Email})" : "Sin Owner";
-    public string MembersText => Workspace.MemberCount == 1 ? "1 miembro" : $"{Workspace.MemberCount} miembros";
+    public string OwnerText => Workspace.Owner is { } o ? string.Format(Texts.Admin_Owner, o.DisplayName, o.Email) : Texts.Admin_NoOwner;
+    public string MembersText => Workspace.MemberCount == 1 ? Texts.Admin_MemberOne : string.Format(Texts.Admin_MemberMany, Workspace.MemberCount);
 }
 
 /// <summary>Gestión del servidor: usuarios y workspaces. Solo para Admin; el servidor lo valida igual.</summary>
@@ -59,11 +59,11 @@ public sealed partial class AdminViewModel(ManagementApi api, IDialogs dialogs, 
 
     public bool HasSelection => SelectedUser is not null;
     public bool IsEditing => IsNew || SelectedUser is not null;
-    public string EditorTitle => IsNew ? "Nuevo usuario" : SelectedUser?.Name ?? "";
-    public string SaveText => IsNew ? "Crear usuario" : "Guardar cambios";
+    public string EditorTitle => IsNew ? Texts.Admin_NewUser : SelectedUser?.Name ?? "";
+    public string SaveText => IsNew ? Texts.Admin_CreateUser : Texts.Admin_SaveChanges;
     public bool CanResetPassword => !IsNew && SelectedUser is not null;
     public bool CanToggleDisabled => !IsNew && SelectedUser is not null && SelectedUser.User.Id != myUserId;
-    public string ToggleDisabledText => SelectedUser?.User.IsDisabled == true ? "Habilitar" : "Deshabilitar";
+    public string ToggleDisabledText => SelectedUser?.User.IsDisabled == true ? Texts.Admin_Enable : Texts.Admin_Disable;
 
     // ---------- Workspaces ----------
 
@@ -140,7 +140,7 @@ public sealed partial class AdminViewModel(ManagementApi api, IDialogs dialogs, 
     {
         if (string.IsNullOrWhiteSpace(EditEmail) || string.IsNullOrWhiteSpace(EditName))
         {
-            Error = "Completá el email y el nombre.";
+            Error = Texts.Admin_MissingFields;
             return;
         }
 
@@ -149,9 +149,8 @@ public sealed partial class AdminViewModel(ManagementApi api, IDialogs dialogs, 
             var created = await api.CreateUserAsync(new CreateUserRequest(EditEmail.Trim(), EditName.Trim(), EditIsAdmin));
             await LoadUsersAsync(created.User.Id);
             await dialogs.ShowSecretAsync(
-                "Usuario creado",
-                $"Pasale a {created.User.DisplayName} esta contraseña temporal por un canal seguro. No se vuelve a mostrar: " +
-                "va a tener que cambiarla al entrar por primera vez.",
+                Texts.Admin_CreatedTitle,
+                string.Format(Texts.Admin_CreatedMessage, created.User.DisplayName),
                 created.TemporaryPassword);
             return;
         }
@@ -177,15 +176,15 @@ public sealed partial class AdminViewModel(ManagementApi api, IDialogs dialogs, 
     private Task ResetPasswordAsync() => GuardAsync(async () =>
     {
         var user = SelectedUser!.User;
-        if (!await dialogs.ConfirmAsync("Resetear contraseña",
-                $"Se genera una contraseña temporal nueva para {user.DisplayName} y se cierran todas sus sesiones.", "Resetear"))
+        if (!await dialogs.ConfirmAsync(Texts.Admin_ResetTitle,
+                string.Format(Texts.Admin_ResetMessage, user.DisplayName), Texts.Admin_Reset))
             return;
 
         var temporary = await api.ResetPasswordAsync(user.Id);
         await LoadUsersAsync(user.Id);
         await dialogs.ShowSecretAsync(
-            "Contraseña reseteada",
-            $"Pasale a {user.DisplayName} esta contraseña temporal por un canal seguro. No se vuelve a mostrar.",
+            Texts.Admin_ResetDoneTitle,
+            string.Format(Texts.Admin_ResetDoneMessage, user.DisplayName),
             temporary);
     });
 
@@ -199,8 +198,8 @@ public sealed partial class AdminViewModel(ManagementApi api, IDialogs dialogs, 
         }
         else
         {
-            if (!await dialogs.ConfirmAsync("Deshabilitar usuario",
-                    $"{user.DisplayName} pierde el acceso en el acto: se cierran sus sesiones abiertas.", "Deshabilitar"))
+            if (!await dialogs.ConfirmAsync(Texts.Admin_DisableTitle,
+                    string.Format(Texts.Admin_DisableMessage, user.DisplayName), Texts.Admin_Disable))
                 return;
             await api.DisableUserAsync(user.Id);
         }
@@ -217,8 +216,8 @@ public sealed partial class AdminViewModel(ManagementApi api, IDialogs dialogs, 
     {
         var ws = SelectedWorkspace!.Workspace;
         var owner = NewOwner!.User;
-        if (!await dialogs.ConfirmAsync("Reasignar Owner",
-                $"{owner.DisplayName} pasa a ser Owner de \"{ws.Name}\". El Owner actual queda como Editor.", "Reasignar"))
+        if (!await dialogs.ConfirmAsync(Texts.Admin_ReassignTitle,
+                string.Format(Texts.Admin_ReassignMessage, owner.DisplayName, ws.Name), Texts.Admin_Reassign))
             return;
 
         await api.SetOwnerAsync(ws.Id, owner.Id);

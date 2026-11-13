@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.BodyEditorView"
@@ -11,9 +12,9 @@
     <DockPanel DockPanel.Dock="Top" Margin="0,4,0,6">
       <ComboBox DockPanel.Dock="Left" Width="190" ItemsSource="{Binding AvailableTypes}"
                 SelectedItem="{Binding Type}" IsEnabled="{Binding CanEdit}" />
-      <Button DockPanel.Dock="Left" Classes="link" Margin="12,0,0,0" VerticalAlignment="Center" Content="Formatear"
+      <Button DockPanel.Dock="Left" Classes="link" Margin="12,0,0,0" VerticalAlignment="Center" Content="{x:Static l:Texts.BodyV_Format}"
               Command="{Binding FormatCommand}" IsVisible="{Binding CanFormat}"
-              ToolTip.Tip="Dar formato al JSON o XML del body (Ctrl+Shift+F)" />
+              ToolTip.Tip="{x:Static l:Texts.BodyV_FormatTip}" />
       <TextBlock Classes="caption" Classes.warning="{Binding FormatFailed}" Margin="12,0,0,0" VerticalAlignment="Center"
                  TextTrimming="CharacterEllipsis" Text="{Binding FormatNotice}" ToolTip.Tip="{Binding FormatNotice}"
                  IsVisible="{Binding FormatNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />

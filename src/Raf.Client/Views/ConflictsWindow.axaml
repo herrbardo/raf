@@ -1,22 +1,23 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
         xmlns:vm="using:Raf.Client.ViewModels"
         xmlns:ctl="using:Raf.Client.Controls"
         x:Class="Raf.Client.Views.ConflictsWindow"
         x:DataType="vm:ConflictsViewModel"
-        Title="Conflictos de sincronización"
+        Title="{x:Static l:Texts.ConfW_Title}"
         Width="980" Height="620" MinWidth="720" MinHeight="420"
         WindowStartupLocation="CenterOwner">
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <Button Content="Usar la mía" Command="{Binding UseLocalCommand}" IsVisible="{Binding CanUseLocal}" />
-          <Button Content="Usar la del servidor" Command="{Binding UseRemoteCommand}" IsVisible="{Binding CanUseRemote}" />
-          <Button Content="Recrear" Command="{Binding RecreateCommand}" IsVisible="{Binding CanRecreate}" />
-          <Button Classes="accent" Content="Guardar lo editado" Command="{Binding SaveEditCommand}" IsVisible="{Binding CanEdit}" />
-          <Button Content="Descartar mi cambio" Command="{Binding DiscardCommand}" IsVisible="{Binding CanDiscard}" />
-          <Button Content="Cerrar" Click="OnCloseClick" />
+          <Button Content="{x:Static l:Texts.ConfW_UseMine}" Command="{Binding UseLocalCommand}" IsVisible="{Binding CanUseLocal}" />
+          <Button Content="{x:Static l:Texts.ConfW_UseServer}" Command="{Binding UseRemoteCommand}" IsVisible="{Binding CanUseRemote}" />
+          <Button Content="{x:Static l:Texts.ConfW_Recreate}" Command="{Binding RecreateCommand}" IsVisible="{Binding CanRecreate}" />
+          <Button Classes="accent" Content="{x:Static l:Texts.ConfW_SaveEdited}" Command="{Binding SaveEditCommand}" IsVisible="{Binding CanEdit}" />
+          <Button Content="{x:Static l:Texts.ConfW_DiscardMine}" Command="{Binding DiscardCommand}" IsVisible="{Binding CanDiscard}" />
+          <Button Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
         </StackPanel>
         <TextBlock Classes="error" VerticalAlignment="Center" Margin="0,0,12,0" Text="{Binding Error}"
                    IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -26,7 +27,7 @@
     <Grid ColumnDefinitions="270,*">
       <Border Classes="sidebar" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0">
         <DockPanel Margin="10,14,8,10">
-          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="PENDIENTES DE DECISIÓN" />
+          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="{x:Static l:Texts.ConfW_Pending}" />
           <ListBox ItemsSource="{Binding Conflicts}" SelectedItem="{Binding Selected}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ConflictRow">
@@ -42,7 +43,7 @@
 
       <StackPanel Grid.Column="1" Classes="empty" IsVisible="{Binding !HasSelection}">
         <ctl:Icon Data="{StaticResource IconCheck}" />
-        <TextBlock Classes="empty-title" Text="No quedan conflictos" />
+        <TextBlock Classes="empty-title" Text="{x:Static l:Texts.ConfW_None}" />
       </StackPanel>
 
       <DockPanel Grid.Column="1" Margin="20,14,20,10" IsVisible="{Binding HasSelection}">
@@ -55,15 +56,15 @@
 
         <Grid RowDefinitions="*,*" ColumnDefinitions="*,12,*">
           <DockPanel Grid.Row="0" Grid.Column="0">
-            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="MI VERSIÓN" />
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="{x:Static l:Texts.ConfW_Mine}" />
             <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" Text="{Binding LocalText}" />
           </DockPanel>
           <DockPanel Grid.Row="0" Grid.Column="2" IsVisible="{Binding HasRemote}">
-            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="VERSIÓN DEL SERVIDOR" />
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="{x:Static l:Texts.ConfW_Server}" />
             <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" Text="{Binding RemoteText}" />
           </DockPanel>
           <DockPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,12,0,0" IsVisible="{Binding CanEdit}">
-            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="EDITAR Y ENVIAR" />
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="{x:Static l:Texts.ConfW_Edit}" />
             <TextBox Classes="mono" AcceptsReturn="True" Text="{Binding EditedText}" />
           </DockPanel>
         </Grid>

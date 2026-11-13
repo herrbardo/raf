@@ -42,7 +42,7 @@ public sealed partial class VariableRowViewModel : ObservableObject
     public bool CanEdit => _owner.CanEdit;
     public bool IsReadOnly => !CanEdit;
     public bool IsHiddenFromMe => Saved is { IsSecret: true, Value: null };
-    public string ValueHint => IsHiddenFromMe ? "Oculto para tu rol" : "";
+    public string ValueHint => IsHiddenFromMe ? Texts.Env_HiddenForRole : "";
     public char MaskChar => IsSecret && !Reveal ? '•' : '\0';
     public bool CanReveal => IsSecret && !IsHiddenFromMe;
 
@@ -110,7 +110,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
 
         Scopes.Clear();
         _removed.Clear();
-        var global = new VariableScopeViewModel(null, "Globales", null);
+        var global = new VariableScopeViewModel(null, Texts.Env_Globals, null);
         Scopes.Add(global);
         foreach (var e in environments) Scopes.Add(new VariableScopeViewModel(e.Id, e.Name, e));
 
@@ -159,7 +159,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     [RelayCommand]
     private Task AddEnvironmentAsync() => GuardAsync(async () =>
     {
-        var name = await Dialogs.PromptAsync("Nuevo environment", "Nombre");
+        var name = await Dialogs.PromptAsync(Texts.Env_NewTitle, Texts.Main_Name);
         if (name is null) return;
         var dto = await services.Store.CreateEnvironmentAsync(workspaceId, name);
         var scope = new VariableScopeViewModel(dto.Id, dto.Name, dto);
@@ -173,7 +173,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     private Task RenameEnvironmentAsync() => GuardAsync(async () =>
     {
         var scope = SelectedScope!;
-        var name = await Dialogs.PromptAsync("Renombrar environment", "Nombre", scope.Name);
+        var name = await Dialogs.PromptAsync(Texts.Env_RenameTitle, Texts.Main_Name, scope.Name);
         if (name is null) return;
         scope.Dto = await services.Store.UpdateEnvironmentAsync(
             workspaceId, scope.Id!.Value, new UpdateEnvironmentRequest(name, scope.Dto!.Version));
@@ -184,7 +184,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     private Task DeleteEnvironmentAsync() => GuardAsync(async () =>
     {
         var scope = SelectedScope!;
-        if (!await Dialogs.ConfirmAsync("Eliminar", $"¿Eliminar el environment \"{scope.Name}\" y sus variables?", "Eliminar"))
+        if (!await Dialogs.ConfirmAsync(Texts.Main_Delete, string.Format(Texts.Env_DeleteMessage, scope.Name), Texts.Main_Delete))
             return;
         await services.Store.DeleteEnvironmentAsync(workspaceId, scope.Id!.Value);
         _removed.RemoveAll(r => r.EnvironmentId == scope.Id);
@@ -200,7 +200,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
         var total = _removed.Count + changed.Count;
         if (total == 0)
         {
-            SavedMessage = "No hay cambios para guardar.";
+            SavedMessage = Texts.Env_NoChanges;
             return;
         }
 
@@ -220,6 +220,6 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
                     workspaceId, new CreateVariableRequest(key, row.Value ?? "", row.EnvironmentId, row.IsSecret)));
         }
 
-        SavedMessage = total == 1 ? "Guardado: 1 cambio." : $"Guardado: {total} cambios.";
+        SavedMessage = total == 1 ? Texts.Env_SavedOne : string.Format(Texts.Env_SavedMany, total);
     });
 }
