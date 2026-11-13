@@ -83,11 +83,13 @@ public sealed record UpdateVariableRequest(string Key, string Value, bool IsSecr
 
 // ---------- Apps, carpetas, requests, samples ----------
 
-public sealed record AppDto(Guid Id, string Name, int Order, long Version, long ChangeSeq);
+/// <summary><see cref="Auth"/> null solo en datos de una versión anterior: equivale a sin autenticación.</summary>
+public sealed record AppDto(Guid Id, string Name, int Order, long Version, long ChangeSeq, AuthSpec? Auth = null);
 
-public sealed record CreateAppRequest(string Name, int Order = 0, Guid? Id = null);
+public sealed record CreateAppRequest(string Name, int Order = 0, Guid? Id = null, AuthSpec? Auth = null);
 
-public sealed record UpdateAppRequest(string Name, int Order, long Version);
+/// <summary><see cref="Auth"/> null = no cambia la autenticación de la App.</summary>
+public sealed record UpdateAppRequest(string Name, int Order, long Version, AuthSpec? Auth = null);
 
 public sealed record FolderDto(
     Guid Id, Guid AppId, Guid? ParentFolderId, string Name, int Order, long Version, long ChangeSeq);

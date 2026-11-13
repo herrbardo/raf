@@ -17,6 +17,7 @@ public sealed partial class ResponseHeaderRow(string name, string value, Respons
     [RelayCommand] private Task CopyValue() => owner.CopyAsync(Value);
     [RelayCommand] private Task CopyLine() => owner.CopyAsync(ToText());
     [RelayCommand] private Task CopyAll() => owner.CopyAsync(string.Join(Environment.NewLine, owner.Headers.Select(h => h.ToText())));
+    [RelayCommand] private Task SaveToVariable() => owner.SaveToVariableAsync(Name, Value);
 }
 
 /// <summary>Una línea de la consola del request.</summary>
@@ -48,6 +49,8 @@ public sealed record RunEventRow(RunEvent Event)
         RunEventKind.Redirect => Texts.Stage_Redirect,
         RunEventKind.Body => Texts.Stage_Body,
         RunEventKind.Error => Texts.Stage_Error,
+        RunEventKind.Auth => Texts.Stage_Auth,
+        RunEventKind.Extraction => Texts.Stage_Extraction,
         _ => Texts.Stage_Total,
     };
 }
@@ -96,6 +99,9 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
 
     /// <summary>Lo implementa la vista, que copia al portapapeles.</summary>
     public Func<string, Task>? CopyToClipboard { get; set; }
+
+    /// <summary>Guarda una variable de sesión. Lanza <see cref="ArgumentException"/> si el nombre no sirve.</summary>
+    public Action<string, string>? SaveVariable { get; set; }
 
     public bool ShowPlaceholder => !IsRunning && !HasResult;
 
@@ -173,7 +179,7 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     /// <summary>El nodo de la línea donde se abrió el menú; null si no hay ninguno.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasMenuNode), nameof(HasMenuKey))]
-    [NotifyCanExecuteChangedFor(nameof(CopyNodeValueCommand), nameof(CopyNodeKeyCommand), nameof(CopyNodePathCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyNodeValueCommand), nameof(CopyNodeKeyCommand), nameof(CopyNodePathCommand), nameof(SaveNodeToVariableCommand))]
     private ResponseNode? _menuNode;
 
     [ObservableProperty]
@@ -208,8 +214,28 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     [RelayCommand(CanExecute = nameof(HasMenuNode))]
     private Task CopyNodePath() => CopyAsync(MenuNode?.Path);
 
+    [RelayCommand(CanExecute = nameof(HasMenuNode))]
+    private Task SaveNodeToVariable() => MenuNode is { } node ? SaveToVariableAsync(node.Key, node.Value) : Task.CompletedTask;
+
     [RelayCommand(CanExecute = nameof(HasMenuSelection))]
     private Task CopySelection() => CopyAsync(MenuSelection);
+
+    /// <summary>Pide el nombre (sugiere la clave) y guarda el valor en una variable de sesión.</summary>
+    public async Task SaveToVariableAsync(string? suggestedName, string value)
+    {
+        if (SaveVariable is null) return;
+        var suggestion = new string((suggestedName ?? "").Where(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-').ToArray());
+        var name = await dialogs.PromptAsync(Texts.Response_SaveVariableTitle, Texts.Response_SaveVariableLabel, suggestion);
+        if (name is null) return;
+        try
+        {
+            SaveVariable(name, value);
+        }
+        catch (ArgumentException)
+        {
+            await dialogs.InfoAsync(Texts.Response_SaveVariableTitle, string.Format(CoreTexts.Session_InvalidName, name));
+        }
+    }
 
     [RelayCommand]
     private Task CopyBodyLine() => CopyAsync(_menuLine);

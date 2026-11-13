@@ -90,6 +90,23 @@
   <data name="Format_XmlInvalidLine" xml:space="preserve"><value>El XML no es válido (línea {0}): no se cambió el body.</value></data>
   <data name="Completion_Global" xml:space="preserve"><value>Global</value></data>
   <data name="Completion_Environment" xml:space="preserve"><value>Environment activo</value></data>
+  <data name="Completion_Session" xml:space="preserve"><value>Sesión</value></data>
+  <data name="Store_AppCannotInherit" xml:space="preserve"><value>Una App no puede heredar la autenticación.</value></data>
+  <data name="Trace_AuthInherited" xml:space="preserve"><value>Autenticación heredada de la App: {0}</value></data>
+  <data name="Trace_AuthInheritedNone" xml:space="preserve"><value>El request hereda la autenticación de la App, pero la App no tiene: se envía sin autenticación</value></data>
+  <data name="Trace_Extracted" xml:space="preserve"><value>Variable de sesión '{0}' guardada</value></data>
+  <data name="Trace_ExtractFailed" xml:space="preserve"><value>No se pudo guardar la variable de sesión '{0}'</value></data>
+  <data name="Trace_ExtractSkipped" xml:space="preserve"><value>No se aplicaron las extracciones: la respuesta fue {0}, no 2xx</value></data>
+  <data name="Trace_ExtractTruncated" xml:space="preserve"><value>El body es más grande de lo que se carga: las extracciones solo buscaron en el inicio</value></data>
+  <data name="Trace_ExtractFromBody" xml:space="preserve"><value>Desde el body: {0}</value></data>
+  <data name="Trace_ExtractFromHeader" xml:space="preserve"><value>Desde el header: {0}</value></data>
+  <data name="Extract_NotFound" xml:space="preserve"><value>La respuesta no tiene un valor en esa ruta.</value></data>
+  <data name="Extract_UnknownPath" xml:space="preserve"><value>La ruta tiene que ser un JSON path (empieza con $) o un XPath (empieza con /).</value></data>
+  <data name="Extract_BodyNotJson" xml:space="preserve"><value>El body no es JSON válido.</value></data>
+  <data name="Extract_BodyNotXml" xml:space="preserve"><value>El body no es XML válido.</value></data>
+  <data name="Extract_InvalidJsonPath" xml:space="preserve"><value>El JSON path no es válido: {0}</value></data>
+  <data name="Extract_InvalidXPath" xml:space="preserve"><value>El XPath no es válido: {0}</value></data>
+  <data name="Session_InvalidName" xml:space="preserve"><value>'{0}' no sirve como nombre de variable: solo letras, números, punto, guion y guion bajo.</value></data>
   <data name="Completion_SecretUnreadable" xml:space="preserve"><value>secreta, tu rol no puede leerla</value></data>
   <data name="Completion_Secret" xml:space="preserve"><value>secreta</value></data>
   <data name="Completion_NoValue" xml:space="preserve"><value>sin valor</value></data>

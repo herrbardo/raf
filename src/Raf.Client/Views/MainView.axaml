@@ -138,6 +138,7 @@
                             <MenuItem Header="{x:Static l:Texts.MainV_NewFolder}" Command="{Binding NewFolderCommand}" IsVisible="{Binding CanAddContainer}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_NewRequest}" Command="{Binding NewRequestCommand}" IsVisible="{Binding CanAddContainer}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_NewSample}" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_AppAuth}" Command="{Binding EditAuthCommand}" IsVisible="{Binding IsApp}" />
                             <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_MoveUp}" Command="{Binding MoveUpCommand}" IsVisible="{Binding CanEdit}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_MoveDown}" Command="{Binding MoveDownCommand}" IsVisible="{Binding CanEdit}" />
@@ -182,6 +183,46 @@
                 </ListBox.ItemTemplate>
               </ListBox>
             </Grid>
+          </TabItem>
+          <TabItem Header="{x:Static l:Texts.MainV_Session}">
+            <DockPanel Margin="0,6,6,0">
+              <TextBlock DockPanel.Dock="Top" Classes="caption" TextWrapping="Wrap" Margin="2,0,0,6" Text="{Binding SessionScopeText}" />
+              <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,6" HorizontalAlignment="Left"
+                      Content="{x:Static l:Texts.Session_ClearAll}" Command="{Binding ClearSessionCommand}" IsVisible="{Binding !!SessionRows.Count}" />
+              <Grid>
+                <StackPanel Classes="empty" IsVisible="{Binding !SessionRows.Count}">
+                  <ctl:Icon Data="{StaticResource IconVariables}" />
+                  <TextBlock Classes="empty-title" Text="{x:Static l:Texts.Session_Empty}" />
+                  <TextBlock Classes="caption" TextWrapping="Wrap" TextAlignment="Center" Text="{x:Static l:Texts.Session_EmptyHint}" />
+                </StackPanel>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding SessionRows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SessionVariableRow">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" Margin="2,2,0,2">
+                          <StackPanel Spacing="1" VerticalAlignment="Center">
+                            <TextBlock Classes="mono" Text="{Binding Key}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Key}" />
+                            <TextBlock Classes="caption mono" Text="{Binding DisplayValue}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <ToggleButton Grid.Column="1" Classes="icon small" IsChecked="{Binding Reveal}"
+                                        ToolTip.Tip="{x:Static l:Texts.EnvW_Show}" AutomationProperties.Name="{x:Static l:Texts.EnvW_Show}">
+                            <ctl:Icon Data="{StaticResource IconEye}" />
+                          </ToggleButton>
+                          <Button Grid.Column="2" Classes="icon small" Command="{Binding CopyCommand}"
+                                  ToolTip.Tip="{x:Static l:Texts.Common_Copy}" AutomationProperties.Name="{x:Static l:Texts.Common_Copy}">
+                            <ctl:Icon Data="{StaticResource IconCopy}" />
+                          </Button>
+                          <Button Grid.Column="3" Classes="icon small danger" Command="{Binding RemoveCommand}"
+                                  ToolTip.Tip="{x:Static l:Texts.V_Remove}" AutomationProperties.Name="{x:Static l:Texts.V_Remove}">
+                            <ctl:Icon Data="{StaticResource IconClose}" />
+                          </Button>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Grid>
+            </DockPanel>
           </TabItem>
         </TabControl>
       </Border>

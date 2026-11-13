@@ -152,6 +152,33 @@ public class SyncEngineTests(RafApp app)
     }
 
     [Fact]
+    public async Task La_auth_de_la_App_llega_al_otro_cliente_y_renombrar_no_la_borra()
+    {
+        var (a, b, ws) = await TwoDevicesAsync();
+        var bearer = new Raf.Domain.Requests.AuthSpec(Raf.Domain.Requests.AuthType.Bearer, Token: "{{token}}");
+        await a.Store.CreateAppAsync(ws, new CreateAppRequest("Pagos", Auth: bearer));
+        await a.SyncAsync();
+        await b.SyncAsync();
+        Assert.Equal(bearer, (await OneAppAsync(b, ws)).Auth);
+
+        var seen = await OneAppAsync(b, ws);
+        var basic = new Raf.Domain.Requests.AuthSpec(Raf.Domain.Requests.AuthType.Basic, Username: "u", Password: "{{clave}}");
+        await b.Store.UpdateAppAsync(ws, seen.Id, new UpdateAppRequest("Pagos", 0, seen.Version, basic));
+        await b.SyncAsync();
+        await a.SyncAsync();
+        Assert.Equal(basic, (await OneAppAsync(a, ws)).Auth);
+
+        var renamed = await OneAppAsync(a, ws);
+        await a.Store.UpdateAppAsync(ws, renamed.Id, new UpdateAppRequest("Cobros", 0, renamed.Version));
+        await a.SyncAsync();
+        await b.SyncAsync();
+        Assert.Equal(("Cobros", basic), ((await OneAppAsync(b, ws)).Name, (await OneAppAsync(b, ws)).Auth));
+
+        await Assert.ThrowsAsync<ApiException>(() => a.Store.UpdateAppAsync(
+            ws, renamed.Id, new UpdateAppRequest("Cobros", 0, renamed.Version, Raf.Domain.Requests.AuthSpec.Inherit)));
+    }
+
+    [Fact]
     public async Task Sin_conexion_se_trabaja_y_al_volver_se_envia_padre_antes_que_hijo()
     {
         var (a, b, ws) = await TwoDevicesAsync();

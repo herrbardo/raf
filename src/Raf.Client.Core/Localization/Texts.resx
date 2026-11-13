@@ -162,6 +162,30 @@
   <data name="Stage_Body" xml:space="preserve"><value>Body</value></data>
   <data name="Stage_Error" xml:space="preserve"><value>Error</value></data>
   <data name="Stage_Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Stage_Auth" xml:space="preserve"><value>Auth</value></data>
+  <data name="Stage_Extraction" xml:space="preserve"><value>Extraer</value></data>
+  <data name="Auth_InheritHint" xml:space="preserve"><value>Usa la autenticación de la App. Se configura con clic derecho en la App, en "Autenticación de la App…".</value></data>
+  <data name="Tab_AuthFromApp" xml:space="preserve"><value>Heredada de la App: {0}</value></data>
+  <data name="Req_Extract" xml:space="preserve"><value>Extraer</value></data>
+  <data name="Extract_Hint" xml:space="preserve"><value>Después de una respuesta 2xx, guarda valores en variables de sesión (solo en este equipo, no se sincronizan). En el body, la ruta es un JSON path como $.data.token o un XPath como /respuesta/token; en un header, su nombre.</value></data>
+  <data name="Extract_Variable" xml:space="preserve"><value>Variable de sesión</value></data>
+  <data name="Extract_Source" xml:space="preserve"><value>Origen</value></data>
+  <data name="Extract_Path" xml:space="preserve"><value>Ruta o header</value></data>
+  <data name="MainV_AppAuth" xml:space="preserve"><value>Autenticación de la App…</value></data>
+  <data name="AppAuth_Title" xml:space="preserve"><value>Autenticación de {0}</value></data>
+  <data name="AppAuth_Hint" xml:space="preserve"><value>La usan los requests de esta App que tienen la auth en Inherit. Acepta variables: por ejemplo, Bearer con el token en una variable de sesión.</value></data>
+  <data name="AppAuth_Saved" xml:space="preserve"><value>Autenticación de {0} guardada.</value></data>
+  <data name="MainV_Session" xml:space="preserve"><value>Sesión</value></data>
+  <data name="Session_Scope" xml:space="preserve"><value>Environment: {0}. Estas variables solo están en este equipo y no se sincronizan.</value></data>
+  <data name="Session_NoEnvironment" xml:space="preserve"><value>ninguno</value></data>
+  <data name="Session_Empty" xml:space="preserve"><value>Sin variables de sesión</value></data>
+  <data name="Session_EmptyHint" xml:space="preserve"><value>Se guardan desde la pestaña Extraer de un request o con clic derecho en la respuesta.</value></data>
+  <data name="Session_ClearAll" xml:space="preserve"><value>Borrar todas</value></data>
+  <data name="Session_Saved" xml:space="preserve"><value>Variable de sesión '{0}' guardada.</value></data>
+  <data name="Session_Updated" xml:space="preserve"><value>Variables de sesión actualizadas: {0}</value></data>
+  <data name="Response_SaveToVariable" xml:space="preserve"><value>Guardar en variable de sesión…</value></data>
+  <data name="Response_SaveVariableTitle" xml:space="preserve"><value>Guardar en variable de sesión</value></data>
+  <data name="Response_SaveVariableLabel" xml:space="preserve"><value>Nombre de la variable. Queda solo en este equipo y para el environment activo.</value></data>
   <data name="Response_CopyPathXml" xml:space="preserve"><value>Copiar ruta (XPath)</value></data>
   <data name="Response_CopyPathJson" xml:space="preserve"><value>Copiar ruta (JSON path)</value></data>
   <data name="Response_CopyPath" xml:space="preserve"><value>Copiar ruta</value></data>

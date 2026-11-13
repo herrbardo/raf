@@ -51,6 +51,9 @@ public sealed class App : SyncEntity
 {
     public required string Name { get; set; }
     public int Order { get; set; }
+
+    /// <summary>La que usan los requests con <see cref="AuthType.Inherit"/>.</summary>
+    public AuthSpec Auth { get; set; } = AuthSpec.None;
 }
 
 public sealed class Folder : SyncEntity

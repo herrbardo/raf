@@ -5,8 +5,12 @@ namespace Raf.Client.Core.Execution;
 
 public sealed record RunOptions(TimeSpan Timeout, bool AcceptInvalidCertificates = false);
 
-/// <summary>Un request guardado y, opcionalmente, el sample que se ejecuta sobre él.</summary>
-public sealed record RunInput(RequestSpec Request, SampleOverrides? Sample, VariableContext Variables, RunOptions Options);
+/// <summary>
+/// Un request guardado y, opcionalmente, el sample que se ejecuta sobre él. <see cref="AppAuth"/> es la
+/// autenticación de su App, que se usa si el request la hereda.
+/// </summary>
+public sealed record RunInput(
+    RequestSpec Request, SampleOverrides? Sample, VariableContext Variables, RunOptions Options, AuthSpec? AppAuth = null);
 
 /// <summary>Variables que el request usa y no se pueden resolver.</summary>
 public sealed record RunPreflight(IReadOnlyList<string> Missing, IReadOnlyList<string> UnreadableSecrets);
@@ -66,6 +70,9 @@ public sealed class RunResult : IDisposable
 
     /// <summary>Pasos de la ejecución para la consola de la pestaña, con los secretos enmascarados.</summary>
     public IReadOnlyList<RunEvent> Events { get; init; } = [];
+
+    /// <summary>Valores que las extracciones del request sacaron de la respuesta, por nombre de variable de sesión.</summary>
+    public IReadOnlyDictionary<string, string> Extracted { get; init; } = new Dictionary<string, string>();
 
     public void Dispose() => Body?.Dispose();
 }

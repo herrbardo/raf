@@ -33,7 +33,8 @@ public static class VariableCompletion
             .OrderBy(v => v.Key, StringComparer.OrdinalIgnoreCase)
             .Select(v =>
             {
-                var scope = v.EnvironmentId is null ? CoreTexts.Completion_Global : CoreTexts.Completion_Environment;
+                var scope = variables.IsSession(v.Key) ? CoreTexts.Completion_Session
+                    : v.EnvironmentId is null ? CoreTexts.Completion_Global : CoreTexts.Completion_Environment;
                 var value = v switch
                 {
                     { IsSecret: true, Value: null } => CoreTexts.Completion_SecretUnreadable,

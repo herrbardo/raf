@@ -24,6 +24,7 @@
     <DataTemplate DataType="vm:SampleKeyValueListViewModel"><views:SampleKeyValueListView /></DataTemplate>
     <DataTemplate DataType="vm:BodyEditorViewModel"><views:BodyEditorView /></DataTemplate>
     <DataTemplate DataType="vm:AuthEditorViewModel"><views:AuthEditorView /></DataTemplate>
+    <DataTemplate DataType="vm:ExtractionListViewModel"><views:ExtractionListView /></DataTemplate>
     <DataTemplate DataType="vm:ResponseViewModel"><views:ResponseView /></DataTemplate>
   </Application.DataTemplates>
   <Application.Styles>

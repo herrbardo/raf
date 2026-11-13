@@ -8,4 +8,4 @@ Falta el diseño: iterar antes de implementar. Diseñarlo junto con el Ticket-01
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-INCOMPLETO
+CREADO

@@ -11,7 +11,7 @@ namespace Raf.Client.Core.Execution;
 
 public enum RunEventLevel { Info, Warning, Error }
 
-public enum RunEventKind { Variables, Request, Dns, Connect, Tls, Reused, Response, Redirect, Body, Error, Summary }
+public enum RunEventKind { Variables, Request, Dns, Connect, Tls, Reused, Response, Redirect, Body, Error, Summary, Auth, Extraction }
 
 /// <summary>
 /// Un paso de una ejecución, para la consola de la pestaña. <see cref="At"/> es el momento desde el inicio y
@@ -161,6 +161,9 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
             string.Format(CoreTexts.Trace_Redirect, (int)status, $"{to.Method} {to.RequestUri!.AbsoluteUri}"),
             notes.Count == 0 ? null : string.Join(Environment.NewLine, notes));
     }
+
+    public void Info(RunEventKind kind, string title, string? detail = null) =>
+        Add(Stopwatch.GetTimestamp(), null, kind, RunEventLevel.Info, title, detail);
 
     public void Warn(RunEventKind kind, string title, string? detail = null) =>
         Add(Stopwatch.GetTimestamp(), null, kind, RunEventLevel.Warning, title, detail);

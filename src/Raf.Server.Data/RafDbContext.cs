@@ -75,7 +75,11 @@ public sealed class RafDbContext(
                 .HasFilter("\"IsDeleted\" = false");
         });
 
-        Sync<App>(b).Property(x => x.Name).HasMaxLength(200);
+        Sync<App>(b, e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            Json(e.Property(x => x.Auth));
+        });
 
         Sync<Folder>(b, e =>
         {
