@@ -13,6 +13,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 06 | [Empaquetado y distribución](06-distribucion.md) | ✅ Implementado | — |
 | 07 | [Embellecer la aplicación](07-embellecer-ui.md) | ✅ Implementado | — |
 | 08 | [Autenticación por App](08-auth-por-app.md) | ✅ Implementado (etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025) | Probar el login automático en la app |
+| 09 | [Cliente web](09-cliente-web.md) | 🧪 Implementado, falta la prueba humana | Desplegar el sitio en Railway y recorrerlo contra el servidor |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 

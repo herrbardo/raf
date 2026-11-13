@@ -1,0 +1,35 @@
+# Sirve el cliente web. Railway termina el TLS y pasa el tráfico al puerto de PORT.
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /srv
+
+	handle /health {
+		respond "Healthy" 200
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# El servidor RAF lo elige cada usuario, así que connect-src no puede fijar un dominio: cualquiera por https,
+		# o uno en la propia máquina (localhost), que el navegador acepta aunque el sitio sea https. WebAssembly
+		# necesita 'wasm-unsafe-eval'; Avalonia pone estilos en línea.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: wss: http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+		-Server
+	}
+
+	# Los archivos con huella en el nombre (dotnet.native.h7fm5fh8xq.wasm) no cambian nunca. El resto (index.html,
+	# main.js, dotnet.js) se revalida, para que una versión nueva se vea al recargar.
+	@fingerprinted path_regexp \.[a-z0-9]{10}\.(wasm|js|dat|json|pdb)$
+	@mutable not path_regexp \.[a-z0-9]{10}\.(wasm|js|dat|json|pdb)$
+	header @fingerprinted Cache-Control "public, max-age=31536000, immutable"
+	header @mutable Cache-Control "no-cache"
+
+	file_server {
+		precompressed br gzip
+	}
+}

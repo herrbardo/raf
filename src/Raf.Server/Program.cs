@@ -12,6 +12,7 @@ using Raf.Server.Confidential;
 using Raf.Server.Data;
 using Raf.Server.Infrastructure;
 using Raf.Server.Realtime;
+using Raf.Server.Relay;
 using Raf.Server.Workspaces;
 using Scalar.AspNetCore;
 
@@ -86,6 +87,8 @@ services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
     o.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
+services.AddWebOrigins(builder.Configuration);
+services.AddRelay();
 services.AddProblemDetails();
 services.AddExceptionHandler<DbExceptionHandler>();
 services.AddHealthChecks();
@@ -111,11 +114,13 @@ var app = builder.Build();
 if (app.Configuration["PathBase"] is { Length: > 0 } pathBase) app.UsePathBase(pathBase);
 app.UseRouting();
 
+app.UseWebOrigins(); // primero: todas las respuestas, también los errores, llevan las cabeceras de CORS
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseClientCompatibility(); // antes de la autenticación: un cliente viejo recibe 426 aunque su token haya vencido
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
@@ -127,6 +132,7 @@ app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
 app.MapWorkspaceEndpoints().MapContentEndpoints();
+app.MapRelayEndpoints();
 app.MapHub<ChangesHub>(ChangesHub.Path, o => o.Transports = HttpTransportType.WebSockets);
 
 // Paso de despliegue: `dotnet Raf.Server.dll --migrate` migra, cifra los secretos heredados y crea el admin, y termina.

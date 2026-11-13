@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <!--
+    Cliente web: la misma interfaz que desktop (Raf.Client.UI) corriendo en el navegador con WebAssembly.
+    Necesita el workload: dotnet workload install wasm-tools. No está en Raf.slnx para no exigirlo en cada build.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Raf.Client.Browser</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- SQLite (la caché) se enlaza en el runtime de WebAssembly. -->
+    <WasmBuildNative>true</WasmBuildNative>
+    <!-- Core serializa con JsonSerializerOptions, sin contexto generado. -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- Los recursos en inglés se cargan con loadAllSatelliteResources (main.js). -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- El recorte rompe EF Core y la serialización por reflexión: estos ensamblados se publican enteros. -->
+    <TrimmerRootAssembly Include="Microsoft.EntityFrameworkCore" />
+    <TrimmerRootAssembly Include="Microsoft.EntityFrameworkCore.Relational" />
+    <TrimmerRootAssembly Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <TrimmerRootAssembly Include="Raf.Client.Core" />
+    <TrimmerRootAssembly Include="Raf.Client.UI" />
+    <TrimmerRootAssembly Include="Raf.Contracts" />
+    <TrimmerRootAssembly Include="Raf.Domain" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Raf.Client.Core.Localization" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raf.Client.UI\Raf.Client.UI.csproj" />
+  </ItemGroup>
+</Project>

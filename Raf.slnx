@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Raf.Client/Raf.Client.csproj" />
     <Project Path="src/Raf.Client.Core/Raf.Client.Core.csproj" />
+    <Project Path="src/Raf.Client.UI/Raf.Client.UI.csproj" />
     <Project Path="src/Raf.Contracts/Raf.Contracts.csproj" />
     <Project Path="src/Raf.Domain/Raf.Domain.csproj" />
     <Project Path="src/Raf.Server.Data/Raf.Server.Data.csproj" />

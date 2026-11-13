@@ -1,4 +1,5 @@
 using Avalonia;
+using Raf.Client.Services;
 using Velopack;
 
 namespace Raf.Client;
@@ -11,6 +12,7 @@ internal static class Program
         // Primero que nada: el instalador y las actualizaciones lanzan la app con argumentos propios y esperan
         // que termine enseguida. También aplica una actualización descargada que quedó sin instalar.
         VelopackApp.Build().Run();
+        ClientHost.Current = new DesktopHost();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

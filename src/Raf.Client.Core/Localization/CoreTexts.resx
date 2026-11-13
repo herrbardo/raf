@@ -78,6 +78,7 @@
   <data name="Run_RedirectDowngrade" xml:space="preserve"><value>No se sigue la redirección de HTTPS a HTTP: {0}</value></data>
   <data name="Run_MissingMethod" xml:space="preserve"><value>Falta el método HTTP.</value></data>
   <data name="Run_InvalidMethod" xml:space="preserve"><value>El método HTTP no es válido.</value></data>
+  <data name="Run_RelayFailed" xml:space="preserve"><value>El servidor RAF no pudo enviar el request: {0}</value></data>
   <data name="Run_MissingUrl" xml:space="preserve"><value>Falta la URL.</value></data>
   <data name="Run_InvalidUrl" xml:space="preserve"><value>La URL no es válida. Revisá que sea http(s) y que sus variables tengan valor.</value></data>
   <data name="Run_UnsupportedBody" xml:space="preserve"><value>Tipo de body no soportado.</value></data>

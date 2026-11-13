@@ -83,6 +83,12 @@ Parameters:
     Description: >-
       Versión mínima del cliente que acepta el servidor. Los clientes anteriores reciben 426 y piden actualizarse.
       Subirla recién cuando la versión nueva esté publicada.
+  WebOrigins:
+    Type: String
+    Default: ""
+    Description: >-
+      Sitios del cliente web que pueden usar la API desde el navegador (CORS), separados por comas, como
+      https://raf-web.example.com. Vacío: sin cliente web.
   DesiredCount:
     Type: Number
     Default: 0
@@ -318,6 +324,7 @@ Resources:
             # Las migraciones corren antes, en MigrationTaskDefinition: varias tareas no compiten por migrar.
             - { Name: Database__MigrateOnStartup, Value: "false" }
             - { Name: Clients__MinVersion, Value: !Ref MinClientVersion }
+            - { Name: Cors__AllowedOrigins, Value: !Ref WebOrigins }
           Secrets:
             - { Name: Db__User, ValueFrom: !Sub "${DbSecret}:username::" }
             - { Name: Db__Password, ValueFrom: !Sub "${DbSecret}:password::" }

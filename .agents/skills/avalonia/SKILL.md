@@ -14,13 +14,16 @@ Antes de agregar algo, copiar el patrón de una vista parecida. Si esta guía y 
 | Qué | Dónde |
 |---|---|
 | Lógica sin UI (API, sesión, ejecución, sync) | `src/Raf.Client.Core`, con tests en `tests/Raf.Client.Core.Tests` |
-| Viewmodels | `src/Raf.Client/ViewModels` |
-| Vistas | `src/Raf.Client/Views` |
-| Controles propios | `src/Raf.Client/Controls` |
-| Dependencias y diálogos | `ClientServices` e `IDialogs`, en `Services/Services.cs` |
+| Viewmodels | `src/Raf.Client.UI/ViewModels` |
+| Vistas | `src/Raf.Client.UI/Views` |
+| Controles propios | `src/Raf.Client.UI/Controls` |
+| Dependencias y diálogos | `ClientServices`, `IDialogs` e `IWindowService`, en `src/Raf.Client.UI/Services` |
 | Vista de cada viewmodel | `Application.DataTemplates`, en `App.axaml` |
+| Lo propio de cada plataforma | `ClientHost`: `DesktopHost` en `src/Raf.Client`, `BrowserHost` en `src/Raf.Client.Browser` |
 
-Una vista nueva se muestra con un `DataTemplate` en `App.axaml` y un `ContentControl` enlazado al viewmodel. No hay contenedor de DI: las dependencias llegan por constructor.
+La interfaz es una sola para desktop y web (`Raf.Client.UI`). Una vista nueva se muestra con un `DataTemplate` en `App.axaml` y un `ContentControl` enlazado al viewmodel. No hay contenedor de DI en los viewmodels: las dependencias llegan por constructor.
+
+**Ventanas secundarias:** no se crean `Window`, que no existen en el navegador. Se escribe un `DialogView` (`XxxDialog.axaml`, raíz `svc:DialogView` con `Title`, `DialogWidth`, `DialogHeight`...) y se abre con `IWindowService.ShowDialogAsync`: en desktop va en una ventana y en web, superpuesto. Para cerrar, `Close(resultado)`; para confirmar antes de cerrar, `CanCloseAsync`. Los atajos globales van en `ShellView`, que los pasa a la raíz.
 
 ## Viewmodels
 
@@ -43,7 +46,8 @@ public sealed partial class EjemploViewModel(IDialogs dialogs) : ObservableObjec
 - Clases `partial`, y campos `_camelCase` con `[ObservableProperty]`.
 - Las propiedades calculadas se avisan con `[NotifyPropertyChangedFor]`.
 - Lo que llega desde otro hilo o evento de fondo pasa por `Dispatcher.UIThread.Post(...)`.
-- Un viewmodel no abre ventanas: usa `IDialogs`. Los archivos se piden con `StorageProvider`, dentro de `WindowDialogs`. No usar `OpenFileDialog` ni `SaveFileDialog`, que están obsoletos.
+- Un viewmodel no abre ventanas: usa `IDialogs`. Los archivos se piden con `StorageProvider`, dentro de `Dialogs`. No usar `OpenFileDialog` ni `SaveFileDialog`, que están obsoletos.
+- Nada de `Task.Wait()`, `.Result` ni APIs del sistema operativo (archivos fuera de `AppPaths`, procesos) en la UI compartida: en WebAssembly hay un solo hilo y no hay sistema operativo.
 - Los viewmodels exponen estado, no colores: un `IsSuccess` o un estado, y la vista decide el aspecto con clases.
 
 ## Vistas y bindings
@@ -111,3 +115,4 @@ Para URLs, headers y bodies usar `ctl:TextField`, no `TextBox`: resalta `{{varia
 1. `dotnet build`: detecta los errores de bindings compilados.
 2. `dotnet test`, si cambió lógica. Lo testeable va en `Raf.Client.Core`.
 3. Abrir la aplicación con `dotnet run --project src/Raf.Client` y probar la pantalla tocada, en ambos temas: la app arranca en oscuro y `RAF_THEME=light` fuerza el claro (`RAF_THEME=system` sigue al sistema). El build no valida el aspecto; si no se pudo mirar, decirlo.
+4. Si la pantalla también se usa en web: `dotnet run --project src/Raf.Client.Browser` y abrir `http://localhost:5090` (los diálogos se ven superpuestos).

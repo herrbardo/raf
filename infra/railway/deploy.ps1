@@ -1,14 +1,19 @@
-﻿# Despliega el servidor en Railway: aplica la infraestructura de .railway/railway.ts, genera los secretos que falten
-# y sube el código. Railway construye la imagen y corre las migraciones (preDeploy) antes de pasar el tráfico a la
-# versión nueva. No guarda credenciales: usa la sesión de la CLI (`railway login`) y el proyecto vinculado.
+﻿# Despliega RAF en Railway: aplica la infraestructura de .railway/railway.ts, genera los secretos que falten y sube
+# el código del servidor y del cliente web. Railway construye cada imagen y corre las migraciones (preDeploy) antes
+# de pasar el tráfico a la versión nueva. No guarda credenciales: usa la sesión de la CLI (`railway login`) y el
+# proyecto vinculado.
 #
 # Uso (desde la raíz del repo; ver infra/railway/README.md):
 #   railway link                                              # una vez: elegir proyecto y entorno
 #   .\infra\railway\deploy.ps1 -AdminEmail <tu-email>          # primer despliegue
 #   .\infra\railway\deploy.ps1                                 # versiones siguientes
+#   .\infra\railway\deploy.ps1 -Only web                       # solo el cliente web (o -Only server)
 param(
     [string]$AdminEmail,
     [string]$Service = 'server',
+    [string]$WebService = 'web',
+    [ValidateSet('all', 'server', 'web')]
+    [string]$Only = 'all',
     [switch]$Yes # aplica la infraestructura sin pedir confirmación
 )
 
@@ -90,18 +95,25 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo cargar Bootstrap__AdminEmail.' }
     }
 
-    # 3. Código: Railway construye con el Dockerfile, corre preDeploy y, si el health check pasa, cambia de versión.
+    # 3. Dominios públicos generados por Railway (*.up.railway.app), una sola vez. Antes de subir el servidor: su
+    #    CORS toma el dominio del servicio web por referencia.
+    foreach ($name in @($Service, $WebService)) {
+        $domains = railway domain list --service $name 2>$null | Out-String
+        if ($domains -notmatch 'railway\.app') {
+            railway domain --service $name --port 8080
+            if ($LASTEXITCODE -ne 0) { throw "No se pudo generar el dominio de $name." }
+        }
+    }
+
+    # 4. Código: Railway construye con el Dockerfile, corre preDeploy y, si el health check pasa, cambia de versión.
+    #    Primero el servidor (CORS y relay), después el sitio que los usa.
     $commit = (git rev-parse --short HEAD).Trim()
     if (git status --porcelain) { Write-Warning "Hay cambios sin commitear: lo que se sube no es exactamente $commit." }
-    Write-Output "Subiendo $commit..."
-    railway up --service $Service --ci
-    if ($LASTEXITCODE -ne 0) { throw 'Falló el build o el despliegue. Ver: railway logs --service ' + $Service }
-
-    # 4. Dominio público generado por Railway (*.up.railway.app), una sola vez.
-    $domains = railway domain list --service $Service 2>$null | Out-String
-    if ($domains -notmatch 'railway\.app') {
-        railway domain --service $Service --port 8080
-        if ($LASTEXITCODE -ne 0) { throw 'No se pudo generar el dominio.' }
+    $targets = switch ($Only) { 'server' { @($Service) } 'web' { @($WebService) } default { @($Service, $WebService) } }
+    foreach ($name in $targets) {
+        Write-Output "Subiendo $commit a $name..."
+        railway up --service $name --ci
+        if ($LASTEXITCODE -ne 0) { throw "Falló el build o el despliegue. Ver: railway logs --service $name" }
     }
 
     if ($created) {

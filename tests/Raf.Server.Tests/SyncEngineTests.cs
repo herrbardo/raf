@@ -55,7 +55,8 @@ internal sealed class Device : IAsyncDisposable
 
     public List<WorkspaceLost> Lost { get; } = [];
 
-    public static async Task<Device> NewAsync(RafApp app)
+    /// <param name="encryptSecrets">false: como el cliente web, con la caché en memoria y sin cifrar.</param>
+    public static async Task<Device> NewAsync(RafApp app, bool encryptSecrets = true)
     {
         var (user, raw) = await app.CreateActiveUserAsync();
         var dir = Path.Combine(Path.GetTempPath(), "raf-sync-" + Guid.NewGuid().ToString("N"));
@@ -68,7 +69,8 @@ internal sealed class Device : IAsyncDisposable
         await session.LoginAsync(user.Email, "NuevaClave123");
 
         var sync = await SyncSession.OpenAsync(
-            dir, server, user.Id, new RafApiClient(http, session), new MemorySecureStore(), new NoSubscriber(), events);
+            dir, server, user.Id, new RafApiClient(http, session), new MemorySecureStore(), new NoSubscriber(), events,
+            encryptSecrets);
         var device = new Device(dir, user, raw, fault, sync, events);
         sync.Engine.WorkspaceLost += device.Lost.Add;
         return device;
@@ -660,6 +662,22 @@ public class SyncEngineTests(RafApp app)
         var needle = Encoding.UTF8.GetBytes(value);
         Assert.Equal(-1, a.CacheBytes().AsSpan().IndexOf(needle));
         Assert.Equal(value, Assert.Single(await a.Store.GetVariablesAsync(ws)).Value);
+    }
+
+    [Fact]
+    public async Task La_cache_sin_cifrar_del_cliente_web_sincroniza_secretos_con_el_resto()
+    {
+        var (desktop, _, ws) = await TwoDevicesAsync();
+        await using var web = await Device.NewAsync(app, encryptSecrets: false);
+        await ShareAsync(desktop, web, ws, WorkspaceRole.Editor);
+        await web.SyncAsync();
+
+        await web.Store.CreateVariableAsync(ws, new CreateVariableRequest("token", "desde-la-web", IsSecret: true));
+        await web.SyncAsync();
+        await desktop.SyncAsync();
+
+        Assert.Equal("desde-la-web", Assert.Single(await web.Store.GetVariablesAsync(ws)).Value);
+        Assert.Equal("desde-la-web", Assert.Single(await desktop.Store.GetVariablesAsync(ws)).Value);
     }
 
     [Fact]

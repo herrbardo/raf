@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:views="using:Raf.Client.Views"
+        x:Class="Raf.Client.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="RAF — Requests and Friends"
+        Icon="avares://Raf.Client.UI/Assets/raf.png"
+        Width="1280" Height="800" MinWidth="900" MinHeight="560">
+  <views:ShellView />
+</Window>

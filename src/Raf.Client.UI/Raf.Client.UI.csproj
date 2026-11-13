@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- La interfaz de RAF, compartida por la app de escritorio (Raf.Client) y la web (Raf.Client.Browser). -->
+  <PropertyGroup>
+    <RootNamespace>Raf.Client</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Textos de la interfaz: viven en Raf.Client.Core/Localization. -->
+    <Using Include="Raf.Client.Core.Localization" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raf.Client.Core\Raf.Client.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -45,4 +45,24 @@ public class LocalSettingsTests
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public void Survives_a_round_trip_to_a_text_store()
+    {
+        var storage = new MemorySecureStore(); // como el localStorage del cliente web
+
+        new SettingsStore(storage, "settings").Update(s => s.Language = "en");
+
+        Assert.Equal("en", new SettingsStore(storage, "settings").Current.Language);
+        Assert.Null(new SettingsStore(storage, "otra").Current.Language);
+    }
+
+    [Fact]
+    public void A_broken_text_store_value_starts_with_defaults()
+    {
+        var storage = new MemorySecureStore();
+        storage.Write("settings", "{ no es json");
+
+        Assert.Equal(30, new SettingsStore(storage, "settings").Current.DefaultTimeoutSeconds);
+    }
 }

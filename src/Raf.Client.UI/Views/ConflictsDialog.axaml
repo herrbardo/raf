@@ -1,0 +1,73 @@
+<svc:DialogView xmlns:svc="using:Raf.Client.Services" xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
+        x:Class="Raf.Client.Views.ConflictsDialog"
+        x:DataType="vm:ConflictsViewModel"
+        Title="{x:Static l:Texts.ConfW_Title}"
+        DialogWidth="980" DialogHeight="620" DialogMinWidth="720" DialogMinHeight="420">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Content="{x:Static l:Texts.ConfW_UseMine}" Command="{Binding UseLocalCommand}" IsVisible="{Binding CanUseLocal}" />
+          <Button Content="{x:Static l:Texts.ConfW_UseServer}" Command="{Binding UseRemoteCommand}" IsVisible="{Binding CanUseRemote}" />
+          <Button Content="{x:Static l:Texts.ConfW_Recreate}" Command="{Binding RecreateCommand}" IsVisible="{Binding CanRecreate}" />
+          <Button Classes="accent" Content="{x:Static l:Texts.ConfW_SaveEdited}" Command="{Binding SaveEditCommand}" IsVisible="{Binding CanEdit}" />
+          <Button Content="{x:Static l:Texts.ConfW_DiscardMine}" Command="{Binding DiscardCommand}" IsVisible="{Binding CanDiscard}" />
+          <Button Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
+        </StackPanel>
+        <TextBlock Classes="error" VerticalAlignment="Center" Margin="0,0,12,0" Text="{Binding Error}"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </DockPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="270,*">
+      <Border Classes="sidebar" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="10,14,8,10">
+          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="{x:Static l:Texts.ConfW_Pending}" />
+          <ListBox ItemsSource="{Binding Conflicts}" SelectedItem="{Binding Selected}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ConflictRow">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <StackPanel Grid.Column="1" Classes="empty" IsVisible="{Binding !HasSelection}">
+        <ctl:Icon Data="{StaticResource IconCheck}" />
+        <TextBlock Classes="empty-title" Text="{x:Static l:Texts.ConfW_None}" />
+      </StackPanel>
+
+      <DockPanel Grid.Column="1" Margin="20,14,20,10" IsVisible="{Binding HasSelection}">
+        <Border DockPanel.Dock="Top" Classes="callout" Margin="0,0,0,12">
+          <DockPanel>
+            <ctl:Icon DockPanel.Dock="Left" Margin="0,1,10,0" VerticalAlignment="Top" Data="{StaticResource IconWarning}" />
+            <TextBlock TextWrapping="Wrap" Text="{Binding Message}" />
+          </DockPanel>
+        </Border>
+
+        <Grid RowDefinitions="*,*" ColumnDefinitions="*,12,*">
+          <DockPanel Grid.Row="0" Grid.Column="0">
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="{x:Static l:Texts.ConfW_Mine}" />
+            <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" Text="{Binding LocalText}" />
+          </DockPanel>
+          <DockPanel Grid.Row="0" Grid.Column="2" IsVisible="{Binding HasRemote}">
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="{x:Static l:Texts.ConfW_Server}" />
+            <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" Text="{Binding RemoteText}" />
+          </DockPanel>
+          <DockPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,12,0,0" IsVisible="{Binding CanEdit}">
+            <TextBlock DockPanel.Dock="Top" Classes="label" Margin="0,0,0,6" Text="{x:Static l:Texts.ConfW_Edit}" />
+            <TextBox Classes="mono" AcceptsReturn="True" Text="{Binding EditedText}" />
+          </DockPanel>
+        </Grid>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</svc:DialogView>

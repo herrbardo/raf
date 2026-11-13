@@ -1,0 +1,28 @@
+<svc:DialogView xmlns:svc="using:Raf.Client.Services" xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
+        x:Class="Raf.Client.Views.PreferencesDialog"
+        x:DataType="vm:PreferencesViewModel"
+        Title="{x:Static l:Texts.Prefs_Title}"
+        DialogWidth="460" DialogCanResize="False">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <Button HorizontalAlignment="Right" Classes="accent" IsDefault="True" IsCancel="True"
+              Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
+    </Border>
+
+    <StackPanel Margin="20,18" Spacing="8">
+      <TextBlock Classes="label" Text="{x:Static l:Texts.Prefs_Language}" />
+      <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding Language}" />
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.Prefs_LanguageHint}" />
+      <Border Classes="callout" Margin="0,6,0,0" IsVisible="{Binding NeedsRestart}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ctl:Icon Data="{StaticResource IconWarning}" />
+          <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" Text="{x:Static l:Texts.Prefs_RestartNeeded}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </DockPanel>
+</svc:DialogView>
