@@ -143,4 +143,27 @@
   <data name="Store_NoLocalParent" xml:space="preserve"><value>No quedan datos locales del elemento padre para recrearlo.</value></data>
   <data name="Keychain_WriteFailed" xml:space="preserve"><value>No se pudo escribir en el Keychain (código {0}).</value></data>
   <data name="Log_HiddenToken" xml:space="preserve"><value>[token oculto]</value></data>
+  <data name="Login_NoToken" xml:space="preserve"><value>No hay token: se ejecuta el login de la App</value></data>
+  <data name="Login_Expired" xml:space="preserve"><value>El token venció: se ejecuta el login de la App</value></data>
+  <data name="Login_Renew401" xml:space="preserve"><value>La respuesta fue 401: se renueva el token y se reintenta una vez</value></data>
+  <data name="Login_Prefix" xml:space="preserve"><value>Login · {0}</value></data>
+  <data name="Login_TokenSaved" xml:space="preserve"><value>Token guardado en la variable de sesión '{0}'</value></data>
+  <data name="Login_ExpiresAt" xml:space="preserve"><value>Vence: {0}</value></data>
+  <data name="Login_NoExpiry" xml:space="preserve"><value>Sin vencimiento: se renueva solo ante un 401</value></data>
+  <data name="Login_NotJwt" xml:space="preserve"><value>El token no es un JWT con exp: se renueva solo ante un 401</value></data>
+  <data name="Login_ExpiryUnreadable" xml:space="preserve"><value>No se pudo leer el vencimiento en {0}: se renueva solo ante un 401</value></data>
+  <data name="Login_Failed" xml:space="preserve"><value>No se pudo obtener el token de la App: {0}</value></data>
+  <data name="Login_Status" xml:space="preserve"><value>el login respondió {0}</value></data>
+  <data name="Login_TokenNotFound" xml:space="preserve"><value>la respuesta del login no tiene el token en {0}</value></data>
+  <data name="Login_UnreadableSecrets" xml:space="preserve"><value>el login usa variables secretas que tu rol no puede leer: {0}</value></data>
+  <data name="Login_ResponseBody" xml:space="preserve"><value>Respuesta del login:
+{0}</value></data>
+  <data name="LoginProblem_Incomplete" xml:space="preserve"><value>El login de la App está incompleto.</value></data>
+  <data name="LoginProblem_InheritAuth" xml:space="preserve"><value>El login de la App no puede heredar la autenticación.</value></data>
+  <data name="LoginProblem_InvalidMethod" xml:space="preserve"><value>El login de la App tiene un método inválido.</value></data>
+  <data name="LoginProblem_MissingUrl" xml:space="preserve"><value>Falta la URL del login.</value></data>
+  <data name="LoginProblem_MissingTokenPath" xml:space="preserve"><value>Falta indicar dónde está el token en la respuesta.</value></data>
+  <data name="LoginProblem_InvalidVariable" xml:space="preserve"><value>El nombre de la variable del token no sirve: solo letras, números, punto, guion y guion bajo.</value></data>
+  <data name="LoginProblem_MissingExpiryPath" xml:space="preserve"><value>Falta indicar el campo del vencimiento.</value></data>
+  <data name="LoginProblem_InvalidExpiryMinutes" xml:space="preserve"><value>Los minutos de vencimiento tienen que ser un número mayor que cero.</value></data>
 </root>

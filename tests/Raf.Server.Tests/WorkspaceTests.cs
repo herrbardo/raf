@@ -130,6 +130,52 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
+    public async Task App_login_is_saved_kept_when_omitted_and_validated()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var b = $"/workspaces/{ws.Id}/apps";
+        var login = AppLogin.Default with
+        {
+            Enabled = true,
+            Request = AppLogin.Default.Request with
+            {
+                Url = "{{base}}/auth/token",
+                Headers = [new KeyValueItem("X-Tenant", "{{tenant}}")],
+                Body = new BodySpec(BodyType.Json, "{\"pass\":\"{{clave}}\"}"),
+            },
+            Expiry = TokenExpiry.ResponseField,
+            ExpiryPath = "$.expires_in",
+        };
+
+        var created = await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Api", Login: login));
+        Assert.Equivalent(login, created.Login, strict: true);
+        Assert.Null((await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Sin login"))).Login);
+
+        // Renombrar o cambiar solo la auth no borra el login.
+        var url = $"{b}/{created.Id}";
+        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, created.Version, AuthSpec.None))).EnsureStatusAsync(HttpStatusCode.OK);
+        var renamed = await owner.GetOkAsync<AppDto>(url);
+        Assert.Equivalent(login, renamed.Login, strict: true);
+
+        // Apagarlo conserva la configuración.
+        var off = login with { Enabled = false };
+        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, renamed.Version, Login: off))).EnsureStatusAsync(HttpStatusCode.OK);
+        var current = await owner.GetOkAsync<AppDto>(url);
+        Assert.Equivalent(off, current.Login, strict: true);
+
+        foreach (var bad in new[]
+                 {
+                     login with { Request = login.Request with { Auth = AuthSpec.Inherit } },
+                     login with { Variable = "mi token" },
+                     login with { Expiry = TokenExpiry.Fixed, ExpiryMinutes = null },
+                 })
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, current.Version, Login: bad))).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync(b, new CreateAppRequest("Mal", Login: bad))).StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task Request_keeps_inherited_auth_and_extractions()
     {
         var (owner, ws) = await NewWorkspaceAsync();

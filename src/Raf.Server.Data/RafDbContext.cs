@@ -79,6 +79,7 @@ public sealed class RafDbContext(
         {
             e.Property(x => x.Name).HasMaxLength(200);
             Json(e.Property(x => x.Auth));
+            Json(e.Property(x => x.Login));
         });
 
         Sync<Folder>(b, e =>
@@ -113,7 +114,7 @@ public sealed class RafDbContext(
         return e;
     }
 
-    private static void Json<T>(PropertyBuilder<T> p) where T : class =>
+    private static void Json<T>(PropertyBuilder<T> p) where T : class? =>
         p.HasColumnType("jsonb").HasConversion(
             v => JsonSerializer.Serialize(v, JsonOptions),
             s => JsonSerializer.Deserialize<T>(s, JsonOptions)!,

@@ -2,23 +2,86 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:l="using:Raf.Client.Core.Localization"
         xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
         x:Class="Raf.Client.Views.AppAuthWindow"
         x:DataType="vm:AppAuthViewModel"
         Title="{Binding Title}"
-        Width="520" SizeToContent="Height" CanResize="False" ShowInTaskbar="False"
-        WindowStartupLocation="CenterOwner">
+        Width="760" Height="640" MinWidth="560" MinHeight="460" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        ctl:VariableHighlight.Lookup="{Binding Lookup}">
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
-      <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
-        <Button Content="{x:Static l:Texts.V_Cancel}" IsCancel="True" Click="OnCancelClick" IsVisible="{Binding CanEdit}" />
-        <Button Classes="accent" Content="{x:Static l:Texts.V_Save}" IsDefault="True" Click="OnSaveClick" IsVisible="{Binding CanEdit}" />
-        <Button Classes="accent" Content="{x:Static l:Texts.V_Close}" IsCancel="True" Click="OnCancelClick" IsVisible="{Binding !CanEdit}" />
-      </StackPanel>
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock Classes="warning" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding Error}"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button Content="{x:Static l:Texts.V_Cancel}" IsCancel="True" Click="OnCancelClick" IsVisible="{Binding CanEdit}" />
+          <Button Classes="accent" Content="{x:Static l:Texts.V_Save}" Click="OnSaveClick" IsVisible="{Binding CanEdit}" />
+          <Button Classes="accent" Content="{x:Static l:Texts.V_Close}" IsCancel="True" Click="OnCancelClick" IsVisible="{Binding !CanEdit}" />
+        </StackPanel>
+      </Grid>
     </Border>
 
-    <StackPanel Margin="20,18" Spacing="12">
-      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.AppAuth_Hint}" />
-      <ContentControl Content="{Binding Auth}" />
-    </StackPanel>
+    <TabControl Classes="section" Margin="16,10,16,0" Padding="0,8,0,8">
+      <TabItem Header="Auth">
+        <StackPanel Spacing="12" Margin="0,4">
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.AppAuth_Hint}" />
+          <ContentControl Content="{Binding Auth}" />
+        </StackPanel>
+      </TabItem>
+
+      <TabItem Header="{x:Static l:Texts.AppLogin_Tab}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,4,0,10">
+            <CheckBox IsChecked="{Binding LoginEnabled}" IsEnabled="{Binding CanEdit}" Content="{x:Static l:Texts.AppLogin_Enabled}" />
+            <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.AppLogin_Hint}" />
+          </StackPanel>
+
+          <!-- Token y vencimiento -->
+          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,110,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8"
+                Margin="0,10,0,0" IsEnabled="{Binding LoginEnabled}">
+            <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.AppLogin_Token}" />
+            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Sources}" SelectedItem="{Binding TokenSource}"
+                      IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.Extract_Source}" />
+            <TextBox Grid.Column="2" Classes="mono" Text="{Binding TokenPath}" IsReadOnly="{Binding IsReadOnly}" Watermark="$.access_token"
+                     ToolTip.Tip="{x:Static l:Texts.AppLogin_TokenPathTip}" />
+
+            <TextBlock Grid.Row="1" Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.Extract_Variable}" />
+            <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Classes="mono" HorizontalAlignment="Left" Width="220"
+                     Text="{Binding Variable}" IsReadOnly="{Binding IsReadOnly}" Watermark="token"
+                     ToolTip.Tip="{x:Static l:Texts.AppLogin_VariableTip}" />
+
+            <TextBlock Grid.Row="2" Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.AppLogin_Expiry}" />
+            <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
+              <ComboBox Width="240" ItemsSource="{x:Static vm:AppAuthViewModel.ExpiryOptions}" SelectedItem="{Binding Expiry}" IsEnabled="{Binding CanEdit}" />
+              <TextBox Width="220" Classes="mono" Text="{Binding ExpiryPath}" IsReadOnly="{Binding IsReadOnly}" Watermark="$.expires_in"
+                       IsVisible="{Binding IsExpiryField}" ToolTip.Tip="{x:Static l:Texts.AppLogin_ExpiryFieldTip}" />
+              <TextBox Width="90" Text="{Binding ExpiryMinutes}" IsReadOnly="{Binding IsReadOnly}" Watermark="60"
+                       IsVisible="{Binding IsExpiryFixed}" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.AppLogin_Minutes}" IsVisible="{Binding IsExpiryFixed}" />
+            </StackPanel>
+          </Grid>
+
+          <!-- El request de login -->
+          <Grid RowDefinitions="Auto,*" IsEnabled="{Binding LoginEnabled}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+              <ComboBox Width="124" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}"
+                        IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.Req_Method}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="x:String"><ctl:MethodBadge Classes="large" Method="{Binding}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <ctl:TextField Grid.Column="1" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
+            </Grid>
+            <TabControl Grid.Row="1" Classes="section" Margin="0,6,0,0" Padding="0,6,0,0">
+              <TabItem Header="Query"><ContentControl Content="{Binding Query}" /></TabItem>
+              <TabItem Header="Headers"><ContentControl Content="{Binding Headers}" /></TabItem>
+              <TabItem Header="Body"><ContentControl Content="{Binding Body}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" /></TabItem>
+              <TabItem Header="Auth"><ContentControl Content="{Binding LoginAuth}" /></TabItem>
+            </TabControl>
+          </Grid>
+        </DockPanel>
+      </TabItem>
+    </TabControl>
   </DockPanel>
 </Window>

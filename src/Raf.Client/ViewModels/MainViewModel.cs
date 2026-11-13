@@ -101,7 +101,7 @@ public sealed partial class TreeNodeViewModel : ObservableObject
 public sealed record EnvironmentChoice(Guid? Id, string Name);
 
 /// <summary>Una variable de sesión en la barra lateral. El valor se muestra solo si se pide.</summary>
-public sealed partial class SessionVariableRow(string key, string value, MainViewModel owner) : ObservableObject
+public sealed partial class SessionVariableRow(string key, string value, DateTimeOffset? expiresAt, MainViewModel owner) : ObservableObject
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DisplayValue))]
@@ -109,6 +109,11 @@ public sealed partial class SessionVariableRow(string key, string value, MainVie
 
     public string Key { get; } = key;
     public string DisplayValue => Reveal ? value.ReplaceLineEndings(" ") : "••••••••";
+
+    /// <summary>Cuándo vence el token que guardó el login de una App; null si no tiene vencimiento.</summary>
+    public string? ExpiresText { get; } = expiresAt is { } at
+        ? string.Format(at <= DateTimeOffset.UtcNow ? Texts.Session_Expired : Texts.Session_ExpiresAt, at.ToLocalTime().ToString("g"))
+        : null;
 
     [RelayCommand] private Task Copy() => owner.CopyToClipboard?.Invoke(value) ?? Task.CompletedTask;
     [RelayCommand] private void Remove() => owner.RemoveSessionVariable(Key);
@@ -201,11 +206,27 @@ public sealed partial class MainViewModel : ObservableObject
     private IReadOnlyDictionary<string, string>? CurrentSession() =>
         SelectedWorkspace is null ? null : _sessionVariables.Get(WorkspaceId, SelectedEnvironment?.Id);
 
-    private void RefreshSessionRows(IReadOnlyDictionary<string, string>? session)
+    /// <summary>Guarda el token que obtuvo el login de una App, con su vencimiento.</summary>
+    public void SaveAppToken(ObtainedToken token)
+    {
+        if (SelectedWorkspace is null) return;
+        _sessionVariables.Set(WorkspaceId, SelectedEnvironment?.Id, token.Variable, token.Value, token.ExpiresAt);
+    }
+
+    /// <summary>El login automático de la App con el vencimiento del token guardado; null si no tiene o está apagado.</summary>
+    public AppLoginState? AppLoginOf(Guid appId)
+    {
+        if (Roots.FirstOrDefault(n => n.Id == appId)?.Dto is not AppDto { Login: { Enabled: true } login } || SelectedWorkspace is null)
+            return null;
+        return new AppLoginState(login, _sessionVariables.ExpiresAt(WorkspaceId, SelectedEnvironment?.Id, login.Variable));
+    }
+
+    private void RefreshSessionRows()
     {
         SessionRows.Clear();
-        foreach (var (key, value) in (session ?? new Dictionary<string, string>()).OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
-            SessionRows.Add(new SessionVariableRow(key, value, this));
+        var list = SelectedWorkspace is null ? [] : _sessionVariables.List(WorkspaceId, SelectedEnvironment?.Id);
+        foreach (var v in list.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase))
+            SessionRows.Add(new SessionVariableRow(v.Name, v.Value, v.ExpiresAt, this));
         SessionScopeText = string.Format(Texts.Session_Scope, SelectedEnvironment?.Id is null ? Texts.Session_NoEnvironment : SelectedEnvironment.Name);
     }
 
@@ -219,11 +240,11 @@ public sealed partial class MainViewModel : ObservableObject
     public Task EditAppAuthAsync(TreeNodeViewModel node) => GuardAsync(async () =>
     {
         if (ShowAppAuth is null || node.Dto is not AppDto app) return;
-        var vm = new AppAuthViewModel(app, CanEdit);
+        var vm = new AppAuthViewModel(app, CanEdit, VariableLookup);
         await ShowAppAuth(vm);
         if (vm.Result is not { } auth || node.Dto is not AppDto current) return;
         node.Dto = await Services.Store.UpdateAppAsync(
-            WorkspaceId, current.Id, new UpdateAppRequest(current.Name, current.Order, current.Version, auth));
+            WorkspaceId, current.Id, new UpdateAppRequest(current.Name, current.Order, current.Version, auth, vm.LoginResult));
         foreach (var tab in Tabs) tab.OnAppChanged();
         ReportStatus(string.Format(Texts.AppAuth_Saved, current.Name));
     });
@@ -590,7 +611,7 @@ public sealed partial class MainViewModel : ObservableObject
         var session = CurrentSession();
         Variables = VariableContext.From(_variables, SelectedEnvironment?.Id, session);
         VariableLookup.Update(Variables);
-        RefreshSessionRows(session);
+        RefreshSessionRows();
         foreach (var tab in Tabs) tab.RefreshWarning();
     }
 

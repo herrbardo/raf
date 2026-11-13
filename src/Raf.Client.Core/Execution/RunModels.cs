@@ -7,10 +7,17 @@ public sealed record RunOptions(TimeSpan Timeout, bool AcceptInvalidCertificates
 
 /// <summary>
 /// Un request guardado y, opcionalmente, el sample que se ejecuta sobre él. <see cref="AppAuth"/> es la
-/// autenticación de su App, que se usa si el request la hereda.
+/// autenticación de su App, que se usa si el request la hereda; <see cref="Login"/>, su login automático.
 /// </summary>
 public sealed record RunInput(
-    RequestSpec Request, SampleOverrides? Sample, VariableContext Variables, RunOptions Options, AuthSpec? AppAuth = null);
+    RequestSpec Request, SampleOverrides? Sample, VariableContext Variables, RunOptions Options, AuthSpec? AppAuth = null,
+    AppLoginState? Login = null);
+
+/// <summary>El login automático de la App y cuándo vence el token guardado (null si no se sabe).</summary>
+public sealed record AppLoginState(AppLogin Config, DateTimeOffset? ExpiresAt);
+
+/// <summary>Token que obtuvo el login de la App durante una ejecución, para guardarlo en la variable de sesión.</summary>
+public sealed record ObtainedToken(string Variable, string Value, DateTimeOffset? ExpiresAt);
 
 /// <summary>Variables que el request usa y no se pueden resolver.</summary>
 public sealed record RunPreflight(IReadOnlyList<string> Missing, IReadOnlyList<string> UnreadableSecrets);
@@ -73,6 +80,16 @@ public sealed class RunResult : IDisposable
 
     /// <summary>Valores que las extracciones del request sacaron de la respuesta, por nombre de variable de sesión.</summary>
     public IReadOnlyDictionary<string, string> Extracted { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>El token que obtuvo el login de la App, si se ejecutó y funcionó.</summary>
+    public ObtainedToken? Token { get; init; }
+
+    /// <summary>El mismo resultado con otros eventos y token; el body pasa al nuevo.</summary>
+    internal RunResult With(IReadOnlyList<RunEvent> events, ObtainedToken? token) => new()
+    {
+        Outcome = Outcome, Elapsed = Elapsed, Error = Error, StatusCode = StatusCode, ReasonPhrase = ReasonPhrase,
+        Headers = Headers, Body = Body, Events = events, Extracted = Extracted, Token = token,
+    };
 
     public void Dispose() => Body?.Dispose();
 }

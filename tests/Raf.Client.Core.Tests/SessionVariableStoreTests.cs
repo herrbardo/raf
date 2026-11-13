@@ -67,6 +67,32 @@ public class SessionVariableStoreTests
     }
 
     [Fact]
+    public void Guarda_el_vencimiento_y_un_valor_nuevo_sin_vencimiento_lo_quita()
+    {
+        var expires = new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        Store().Set(_ws, _dev, "token", "t-1", expires);
+
+        var reopened = Store();
+        Assert.Equal("t-1", reopened.Get(_ws, _dev)["token"]);
+        Assert.Equal(expires, reopened.ExpiresAt(_ws, _dev, "token"));
+        Assert.Equal([new SessionVariable("token", "t-1", expires)], reopened.List(_ws, _dev));
+        Assert.Null(reopened.ExpiresAt(_ws, null, "token"));
+
+        reopened.Set(_ws, _dev, "token", "a-mano");
+        Assert.Null(Store().ExpiresAt(_ws, _dev, "token"));
+    }
+
+    [Fact]
+    public void Lee_los_registros_anteriores_al_vencimiento()
+    {
+        _secure.Write($"session-vars-u1-{_ws:N}", $"{{\"{_dev:N}\":{{\"token\":\"viejo\"}}}}");
+
+        var store = Store();
+        Assert.Equal("viejo", store.Get(_ws, _dev)["token"]);
+        Assert.Null(store.ExpiresAt(_ws, _dev, "token"));
+    }
+
+    [Fact]
     public void El_autocompletar_marca_las_de_sesion()
     {
         var vars = VariableContext.From([], null, new Dictionary<string, string> { ["token"] = "x" });

@@ -143,4 +143,27 @@
   <data name="Store_NoLocalParent" xml:space="preserve"><value>There is no local data left of the parent item to recreate it.</value></data>
   <data name="Keychain_WriteFailed" xml:space="preserve"><value>Could not write to the Keychain (code {0}).</value></data>
   <data name="Log_HiddenToken" xml:space="preserve"><value>[hidden token]</value></data>
+  <data name="Login_NoToken" xml:space="preserve"><value>No token yet: running the App login</value></data>
+  <data name="Login_Expired" xml:space="preserve"><value>The token expired: running the App login</value></data>
+  <data name="Login_Renew401" xml:space="preserve"><value>The response was 401: renewing the token and retrying once</value></data>
+  <data name="Login_Prefix" xml:space="preserve"><value>Login · {0}</value></data>
+  <data name="Login_TokenSaved" xml:space="preserve"><value>Token saved in session variable '{0}'</value></data>
+  <data name="Login_ExpiresAt" xml:space="preserve"><value>Expires: {0}</value></data>
+  <data name="Login_NoExpiry" xml:space="preserve"><value>No expiration: renewed only on a 401</value></data>
+  <data name="Login_NotJwt" xml:space="preserve"><value>The token is not a JWT with exp: renewed only on a 401</value></data>
+  <data name="Login_ExpiryUnreadable" xml:space="preserve"><value>Could not read the expiration at {0}: renewed only on a 401</value></data>
+  <data name="Login_Failed" xml:space="preserve"><value>Could not get the App token: {0}</value></data>
+  <data name="Login_Status" xml:space="preserve"><value>the login responded {0}</value></data>
+  <data name="Login_TokenNotFound" xml:space="preserve"><value>the login response has no token at {0}</value></data>
+  <data name="Login_UnreadableSecrets" xml:space="preserve"><value>the login uses secret variables your role cannot read: {0}</value></data>
+  <data name="Login_ResponseBody" xml:space="preserve"><value>Login response:
+{0}</value></data>
+  <data name="LoginProblem_Incomplete" xml:space="preserve"><value>The App login is incomplete.</value></data>
+  <data name="LoginProblem_InheritAuth" xml:space="preserve"><value>The App login cannot inherit authentication.</value></data>
+  <data name="LoginProblem_InvalidMethod" xml:space="preserve"><value>The App login has an invalid method.</value></data>
+  <data name="LoginProblem_MissingUrl" xml:space="preserve"><value>The login URL is missing.</value></data>
+  <data name="LoginProblem_MissingTokenPath" xml:space="preserve"><value>Indicate where the token is in the response.</value></data>
+  <data name="LoginProblem_InvalidVariable" xml:space="preserve"><value>The token variable name is not valid: only letters, digits, dot, hyphen and underscore.</value></data>
+  <data name="LoginProblem_MissingExpiryPath" xml:space="preserve"><value>Indicate the expiration field.</value></data>
+  <data name="LoginProblem_InvalidExpiryMinutes" xml:space="preserve"><value>The expiration minutes must be a number greater than zero.</value></data>
 </root>

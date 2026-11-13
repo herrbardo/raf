@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Execution;
 using Raf.Client.Core.Local;
 using Raf.Client.Core.Workspaces;
 using Raf.Contracts;
@@ -361,17 +362,25 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     public Task<AppDto> CreateAppAsync(Guid ws, CreateAppRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        if (req.Auth is { Type: Raf.Domain.Requests.AuthType.Inherit }) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_AppCannotInherit);
+        ValidateAppAuth(req.Auth, req.Login);
         return CreateAsync(ws, ChangeKind.App, new AppDto(
-            req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Order, 0, 0, req.Auth ?? Raf.Domain.Requests.AuthSpec.None), ct);
+            req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Order, 0, 0, req.Auth ?? Raf.Domain.Requests.AuthSpec.None, req.Login), ct);
     }
 
     public Task<AppDto> UpdateAppAsync(Guid ws, Guid id, UpdateAppRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        if (req.Auth is { Type: Raf.Domain.Requests.AuthType.Inherit }) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_AppCannotInherit);
-        return UpdateAsync<AppDto>(
-            ws, ChangeKind.App, id, req.Version, x => x with { Name = req.Name.Trim(), Order = req.Order, Auth = req.Auth ?? x.Auth }, ct);
+        ValidateAppAuth(req.Auth, req.Login);
+        return UpdateAsync<AppDto>(ws, ChangeKind.App, id, req.Version,
+            x => x with { Name = req.Name.Trim(), Order = req.Order, Auth = req.Auth ?? x.Auth, Login = req.Login ?? x.Login }, ct);
+    }
+
+    /// <summary>Las mismas reglas que aplica el servidor, para no encolar un cambio que va a rechazar.</summary>
+    private static void ValidateAppAuth(Raf.Domain.Requests.AuthSpec? auth, Raf.Domain.Requests.AppLogin? login)
+    {
+        if (auth is { Type: Raf.Domain.Requests.AuthType.Inherit }) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_AppCannotInherit);
+        if (login?.Problem() is { } problem && problem != Raf.Domain.Requests.AppLoginProblem.None)
+            throw new ApiException(HttpStatusCode.BadRequest, AppLoginTexts.Describe(problem));
     }
 
     public Task DeleteAppAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.App, id, ct);

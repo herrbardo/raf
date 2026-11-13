@@ -175,6 +175,21 @@
   <data name="AppAuth_Title" xml:space="preserve"><value>Autenticación de {0}</value></data>
   <data name="AppAuth_Hint" xml:space="preserve"><value>La usan los requests de esta App que tienen la auth en Inherit. Acepta variables: por ejemplo, Bearer con el token en una variable de sesión.</value></data>
   <data name="AppAuth_Saved" xml:space="preserve"><value>Autenticación de {0} guardada.</value></data>
+  <data name="AppLogin_Tab" xml:space="preserve"><value>Login automático</value></data>
+  <data name="AppLogin_Enabled" xml:space="preserve"><value>Obtener el token automáticamente con este login</value></data>
+  <data name="AppLogin_Hint" xml:space="preserve"><value>Antes de un request con auth Inherit, si no hay token o venció, RAF ejecuta este login y guarda el token en la variable de sesión; ante un 401 lo renueva una vez y reintenta. La auth de la App lo usa como {{token}}. Este login se sincroniza con el equipo: poné las credenciales en variables secretas.</value></data>
+  <data name="AppLogin_Token" xml:space="preserve"><value>Token</value></data>
+  <data name="AppLogin_TokenPathTip" xml:space="preserve"><value>Dónde está el token en la respuesta: un JSON path como $.access_token, un XPath o, si el origen es Header, su nombre.</value></data>
+  <data name="AppLogin_VariableTip" xml:space="preserve"><value>Variable de sesión donde se guarda el token. Usala en la auth de la App, por ejemplo Bearer {{token}}.</value></data>
+  <data name="AppLogin_Expiry" xml:space="preserve"><value>Vencimiento</value></data>
+  <data name="AppLogin_ExpiryFieldTip" xml:space="preserve"><value>Campo del body con el vencimiento: segundos (como expires_in), una fecha o un instante Unix.</value></data>
+  <data name="AppLogin_Minutes" xml:space="preserve"><value>minutos</value></data>
+  <data name="AppLogin_ExpiryJwt" xml:space="preserve"><value>exp del JWT</value></data>
+  <data name="AppLogin_ExpiryField" xml:space="preserve"><value>Campo de la respuesta</value></data>
+  <data name="AppLogin_ExpiryFixed" xml:space="preserve"><value>Tiempo fijo</value></data>
+  <data name="AppLogin_ExpiryNone" xml:space="preserve"><value>Sin vencimiento (solo ante un 401)</value></data>
+  <data name="Session_ExpiresAt" xml:space="preserve"><value>Vence: {0}</value></data>
+  <data name="Session_Expired" xml:space="preserve"><value>Vencido: {0}</value></data>
   <data name="MainV_Session" xml:space="preserve"><value>Sesión</value></data>
   <data name="Session_Scope" xml:space="preserve"><value>Environment: {0}. Estas variables solo están en este equipo y no se sincronizan.</value></data>
   <data name="Session_NoEnvironment" xml:space="preserve"><value>ninguno</value></data>

@@ -97,10 +97,22 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     /// <summary>Cambió la autenticación de alguna App.</summary>
     public virtual void OnAppChanged() => RefreshWarning();
 
+    /// <summary>
+    /// Las variables sin valor. La del token no cuenta si el request hereda la auth y la App tiene login
+    /// automático: la completa el login al enviar.
+    /// </summary>
+    private RunPreflight Preflight(RequestSpec request, SampleOverrides? sample, VariableContext variables, AuthSpec? appAuth)
+    {
+        var check = RequestRunner.Check(request, sample, variables, appAuth);
+        if (!RequestRunner.InheritsAuth(request, sample) || Owner.AppLoginOf(AppId) is not { } login) return check;
+        var token = login.Config.Variable;
+        return new RunPreflight(check.Missing.Where(k => k != token).ToList(), check.UnreadableSecrets);
+    }
+
     public void RefreshWarning()
     {
         var (request, sample) = RunTarget();
-        var check = RequestRunner.Check(request, sample, Owner.Variables, AppAuth);
+        var check = Preflight(request, sample, Owner.Variables, AppAuth);
         var parts = new List<string>();
         if (check.Missing.Count > 0) parts.Add(string.Format(Texts.Tab_NoValue, string.Join(", ", check.Missing)));
         if (check.UnreadableSecrets.Count > 0) parts.Add(string.Format(Texts.Tab_UnreadableSecrets, string.Join(", ", check.UnreadableSecrets)));
@@ -127,7 +139,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         var (request, sample) = RunTarget();
         var variables = Owner.Variables;
         var appAuth = AppAuth;
-        var check = RequestRunner.Check(request, sample, variables, appAuth);
+        var check = Preflight(request, sample, variables, appAuth);
         if (check.UnreadableSecrets.Count > 0 && !await Owner.Services.Dialogs.ConfirmAsync(
                 Texts.Tab_SecretsTitle,
                 string.Format(Texts.Tab_SecretsMessage, string.Join(", ", check.UnreadableSecrets)),
@@ -135,7 +147,8 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
             return;
 
         var timeout = TimeSpan.FromSeconds(ParsedTimeout ?? Settings.Current.DefaultTimeoutSeconds);
-        var input = new RunInput(request, sample, variables, new RunOptions(timeout, AcceptInvalidCertificates), appAuth);
+        var input = new RunInput(
+            request, sample, variables, new RunOptions(timeout, AcceptInvalidCertificates), appAuth, Owner.AppLoginOf(AppId));
 
         using var cts = new CancellationTokenSource();
         _run = cts;
@@ -145,6 +158,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         {
             var result = await Owner.Services.Runner.RunAsync(input, cts.Token);
             Response.Show(result);
+            if (result.Token is { } token) Owner.SaveAppToken(token);
             if (result.Extracted.Count > 0) Owner.SaveSessionVariables(result.Extracted);
             await Owner.AddHistoryAsync(new RunHistoryEntry(
                 DateTimeOffset.Now, RequestId, this is SampleTabViewModel ? Node.Id : null, Node.Name,

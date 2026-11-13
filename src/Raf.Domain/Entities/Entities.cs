@@ -54,6 +54,9 @@ public sealed class App : SyncEntity
 
     /// <summary>La que usan los requests con <see cref="AuthType.Inherit"/>.</summary>
     public AuthSpec Auth { get; set; } = AuthSpec.None;
+
+    /// <summary>Login automático para obtener el token; null si nunca se configuró.</summary>
+    public AppLogin? Login { get; set; }
 }
 
 public sealed class Folder : SyncEntity

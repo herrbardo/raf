@@ -203,6 +203,8 @@
                           <StackPanel Spacing="1" VerticalAlignment="Center">
                             <TextBlock Classes="mono" Text="{Binding Key}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Key}" />
                             <TextBlock Classes="caption mono" Text="{Binding DisplayValue}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="caption" Text="{Binding ExpiresText}" TextTrimming="CharacterEllipsis"
+                                       IsVisible="{Binding ExpiresText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                           </StackPanel>
                           <ToggleButton Grid.Column="1" Classes="icon small" IsChecked="{Binding Reveal}"
                                         ToolTip.Tip="{x:Static l:Texts.EnvW_Show}" AutomationProperties.Name="{x:Static l:Texts.EnvW_Show}">

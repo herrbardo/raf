@@ -83,13 +83,19 @@ public sealed record UpdateVariableRequest(string Key, string Value, bool IsSecr
 
 // ---------- Apps, carpetas, requests, samples ----------
 
-/// <summary><see cref="Auth"/> null solo en datos de una versión anterior: equivale a sin autenticación.</summary>
-public sealed record AppDto(Guid Id, string Name, int Order, long Version, long ChangeSeq, AuthSpec? Auth = null);
+/// <summary>
+/// <see cref="Auth"/> null solo en datos de una versión anterior: equivale a sin autenticación.
+/// <see cref="Login"/> null: la App nunca tuvo login automático.
+/// </summary>
+public sealed record AppDto(Guid Id, string Name, int Order, long Version, long ChangeSeq, AuthSpec? Auth = null, AppLogin? Login = null);
 
-public sealed record CreateAppRequest(string Name, int Order = 0, Guid? Id = null, AuthSpec? Auth = null);
+public sealed record CreateAppRequest(string Name, int Order = 0, Guid? Id = null, AuthSpec? Auth = null, AppLogin? Login = null);
 
-/// <summary><see cref="Auth"/> null = no cambia la autenticación de la App.</summary>
-public sealed record UpdateAppRequest(string Name, int Order, long Version, AuthSpec? Auth = null);
+/// <summary>
+/// <see cref="Auth"/> o <see cref="Login"/> en null = no cambian. El login se apaga con
+/// <see cref="AppLogin.Enabled"/> en false, sin perder la configuración.
+/// </summary>
+public sealed record UpdateAppRequest(string Name, int Order, long Version, AuthSpec? Auth = null, AppLogin? Login = null);
 
 public sealed record FolderDto(
     Guid Id, Guid AppId, Guid? ParentFolderId, string Name, int Order, long Version, long ChangeSeq);
