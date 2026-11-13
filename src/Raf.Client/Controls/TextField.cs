@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using AvaloniaEdit;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
@@ -197,8 +198,32 @@ public sealed partial class TextField : TextEditor
             e.Handled = OpenCompletion(onlyRightAfterBraces: false);
             return;
         }
-        // Con la lista abierta, Enter elige la variable: lo maneja la lista.
-        if (!Multiline && e.Key == Key.Enter && _completion is null) e.Handled = true;
+        // Con la lista abierta, Enter y Tab eligen la variable: los maneja la lista.
+        if (_completion is not null) return;
+        if (!Multiline && e.Key == Key.Enter) e.Handled = true;
+
+        // AvaloniaEdit usa Tab para indentar. Solo tiene sentido en un editor multilínea editable (el body);
+        // en los demás, Tab y Shift+Tab pasan al control siguiente o al anterior, como en un TextBox.
+        if (e.Key == Key.Tab && (!Multiline || IsReadOnly) && e.KeyModifiers is KeyModifiers.None or KeyModifiers.Shift)
+            e.Handled = MoveFocus(e.KeyModifiers == KeyModifiers.Shift ? NavigationDirection.Previous : NavigationDirection.Next);
+    }
+
+    /// <summary>
+    /// Pasa el foco al control siguiente o anterior fuera de este campo. El editor y su área de texto son dos
+    /// paradas de foco (el editor se lo pasa al área), así que se saltean las dos.
+    /// </summary>
+    private bool MoveFocus(NavigationDirection direction)
+    {
+        IInputElement? candidate = this;
+        for (var guard = 0; guard < 64; guard++)
+        {
+            candidate = KeyboardNavigationHandler.GetNext(candidate!, direction);
+            if (candidate is null) return false;
+            if (candidate is Visual v && (v == this || this.IsVisualAncestorOf(v))) continue;
+            return candidate.Focus(NavigationMethod.Tab,
+                direction == NavigationDirection.Previous ? KeyModifiers.Shift : KeyModifiers.None);
+        }
+        return false;
     }
 
     private CompletionWindow? _completion;
