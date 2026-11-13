@@ -90,6 +90,23 @@
   <data name="Format_XmlInvalidLine" xml:space="preserve"><value>The XML is not valid (line {0}): the body was not changed.</value></data>
   <data name="Completion_Global" xml:space="preserve"><value>Global</value></data>
   <data name="Completion_Environment" xml:space="preserve"><value>Active environment</value></data>
+  <data name="Completion_Session" xml:space="preserve"><value>Session</value></data>
+  <data name="Store_AppCannotInherit" xml:space="preserve"><value>An App cannot inherit authentication.</value></data>
+  <data name="Trace_AuthInherited" xml:space="preserve"><value>Authentication inherited from the App: {0}</value></data>
+  <data name="Trace_AuthInheritedNone" xml:space="preserve"><value>The request inherits the App's authentication, but the App has none: sent without authentication</value></data>
+  <data name="Trace_Extracted" xml:space="preserve"><value>Session variable '{0}' saved</value></data>
+  <data name="Trace_ExtractFailed" xml:space="preserve"><value>Could not save session variable '{0}'</value></data>
+  <data name="Trace_ExtractSkipped" xml:space="preserve"><value>Extractions were not applied: the response was {0}, not 2xx</value></data>
+  <data name="Trace_ExtractTruncated" xml:space="preserve"><value>The body is larger than what is loaded: extractions only searched its beginning</value></data>
+  <data name="Trace_ExtractFromBody" xml:space="preserve"><value>From the body: {0}</value></data>
+  <data name="Trace_ExtractFromHeader" xml:space="preserve"><value>From the header: {0}</value></data>
+  <data name="Extract_NotFound" xml:space="preserve"><value>The response has no value at that path.</value></data>
+  <data name="Extract_UnknownPath" xml:space="preserve"><value>The path must be a JSON path (starting with $) or an XPath (starting with /).</value></data>
+  <data name="Extract_BodyNotJson" xml:space="preserve"><value>The body is not valid JSON.</value></data>
+  <data name="Extract_BodyNotXml" xml:space="preserve"><value>The body is not valid XML.</value></data>
+  <data name="Extract_InvalidJsonPath" xml:space="preserve"><value>Invalid JSON path: {0}</value></data>
+  <data name="Extract_InvalidXPath" xml:space="preserve"><value>Invalid XPath: {0}</value></data>
+  <data name="Session_InvalidName" xml:space="preserve"><value>'{0}' cannot be used as a variable name: only letters, digits, dot, hyphen and underscore.</value></data>
   <data name="Completion_SecretUnreadable" xml:space="preserve"><value>secret, your role can't read it</value></data>
   <data name="Completion_Secret" xml:space="preserve"><value>secret</value></data>
   <data name="Completion_NoValue" xml:space="preserve"><value>no value</value></data>

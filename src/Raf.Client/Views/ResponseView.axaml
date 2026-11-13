@@ -55,6 +55,7 @@
                 <MenuItem Header="{x:Static l:Texts.RespV_CopyValue}" Command="{Binding CopyNodeValueCommand}" IsVisible="{Binding IsStructured}" />
                 <MenuItem Header="{x:Static l:Texts.RespV_CopyKey}" Command="{Binding CopyNodeKeyCommand}" IsVisible="{Binding IsStructured}" />
                 <MenuItem Header="{Binding PathMenuText}" Command="{Binding CopyNodePathCommand}" IsVisible="{Binding IsStructured}" />
+                <MenuItem Header="{x:Static l:Texts.Response_SaveToVariable}" Command="{Binding SaveNodeToVariableCommand}" IsVisible="{Binding IsStructured}" />
                 <Separator IsVisible="{Binding IsStructured}" />
                 <MenuItem Header="{x:Static l:Texts.RespV_CopySelection}" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
                 <MenuItem Header="{x:Static l:Texts.RespV_CopyLine}" Command="{Binding CopyBodyLineCommand}" />
@@ -74,6 +75,7 @@
                         <MenuItem Header="{x:Static l:Texts.RespV_CopyName}" Command="{Binding CopyNameCommand}" />
                         <MenuItem Header="{x:Static l:Texts.RespV_CopyValue}" Command="{Binding CopyValueCommand}" />
                         <MenuItem Header="{x:Static l:Texts.RespV_CopyHeader}" Command="{Binding CopyLineCommand}" />
+                        <MenuItem Header="{x:Static l:Texts.Response_SaveToVariable}" Command="{Binding SaveToVariableCommand}" />
                         <Separator />
                         <MenuItem Header="{x:Static l:Texts.RespV_CopyAllHeaders}" Command="{Binding CopyAllCommand}" />
                       </ContextMenu>

@@ -162,6 +162,30 @@
   <data name="Stage_Body" xml:space="preserve"><value>Body</value></data>
   <data name="Stage_Error" xml:space="preserve"><value>Error</value></data>
   <data name="Stage_Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Stage_Auth" xml:space="preserve"><value>Auth</value></data>
+  <data name="Stage_Extraction" xml:space="preserve"><value>Extract</value></data>
+  <data name="Auth_InheritHint" xml:space="preserve"><value>Uses the App's authentication. Set it up by right-clicking the App, in "App authentication…".</value></data>
+  <data name="Tab_AuthFromApp" xml:space="preserve"><value>Inherited from the App: {0}</value></data>
+  <data name="Req_Extract" xml:space="preserve"><value>Extract</value></data>
+  <data name="Extract_Hint" xml:space="preserve"><value>After a 2xx response, saves values into session variables (only on this computer, not synced). In the body, the path is a JSON path like $.data.token or an XPath like /response/token; in a header, its name.</value></data>
+  <data name="Extract_Variable" xml:space="preserve"><value>Session variable</value></data>
+  <data name="Extract_Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Extract_Path" xml:space="preserve"><value>Path or header</value></data>
+  <data name="MainV_AppAuth" xml:space="preserve"><value>App authentication…</value></data>
+  <data name="AppAuth_Title" xml:space="preserve"><value>Authentication of {0}</value></data>
+  <data name="AppAuth_Hint" xml:space="preserve"><value>Used by this App's requests whose auth is Inherit. Accepts variables: for example, Bearer with the token in a session variable.</value></data>
+  <data name="AppAuth_Saved" xml:space="preserve"><value>Authentication of {0} saved.</value></data>
+  <data name="MainV_Session" xml:space="preserve"><value>Session</value></data>
+  <data name="Session_Scope" xml:space="preserve"><value>Environment: {0}. These variables stay on this computer and are not synced.</value></data>
+  <data name="Session_NoEnvironment" xml:space="preserve"><value>none</value></data>
+  <data name="Session_Empty" xml:space="preserve"><value>No session variables</value></data>
+  <data name="Session_EmptyHint" xml:space="preserve"><value>Save them from a request's Extract tab or by right-clicking the response.</value></data>
+  <data name="Session_ClearAll" xml:space="preserve"><value>Clear all</value></data>
+  <data name="Session_Saved" xml:space="preserve"><value>Session variable '{0}' saved.</value></data>
+  <data name="Session_Updated" xml:space="preserve"><value>Session variables updated: {0}</value></data>
+  <data name="Response_SaveToVariable" xml:space="preserve"><value>Save to session variable…</value></data>
+  <data name="Response_SaveVariableTitle" xml:space="preserve"><value>Save to session variable</value></data>
+  <data name="Response_SaveVariableLabel" xml:space="preserve"><value>Variable name. It stays only on this computer, for the active environment.</value></data>
   <data name="Response_CopyPathXml" xml:space="preserve"><value>Copy path (XPath)</value></data>
   <data name="Response_CopyPathJson" xml:space="preserve"><value>Copy path (JSON path)</value></data>
   <data name="Response_CopyPath" xml:space="preserve"><value>Copy path</value></data>

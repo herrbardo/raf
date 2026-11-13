@@ -7,11 +7,13 @@ using Raf.Client.Core.Api;
 using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Execution;
 using Raf.Client.Core.History;
+using Raf.Client.Core.Local;
 using Raf.Client.Core.Sync;
 using Raf.Client.Core.Workspaces;
 using Raf.Client.Services;
 using Raf.Contracts;
 using Raf.Domain.Entities;
+using Raf.Domain.Requests;
 
 namespace Raf.Client.ViewModels;
 
@@ -90,12 +92,27 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     [RelayCommand] private Task NewRequest() => _owner.NewRequestAsync(this);
     [RelayCommand] private Task NewSample() => _owner.NewSampleAsync(this);
     [RelayCommand] private Task Rename() => _owner.RenameAsync(this);
+    [RelayCommand] private Task EditAuth() => _owner.EditAppAuthAsync(this);
     [RelayCommand] private Task Delete() => _owner.DeleteAsync(this);
     [RelayCommand] private Task MoveUp() => _owner.MoveAsync(this, -1);
     [RelayCommand] private Task MoveDown() => _owner.MoveAsync(this, 1);
 }
 
 public sealed record EnvironmentChoice(Guid? Id, string Name);
+
+/// <summary>Una variable de sesión en la barra lateral. El valor se muestra solo si se pide.</summary>
+public sealed partial class SessionVariableRow(string key, string value, MainViewModel owner) : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayValue))]
+    private bool _reveal;
+
+    public string Key { get; } = key;
+    public string DisplayValue => Reveal ? value.ReplaceLineEndings(" ") : "••••••••";
+
+    [RelayCommand] private Task Copy() => owner.CopyToClipboard?.Invoke(value) ?? Task.CompletedTask;
+    [RelayCommand] private void Remove() => owner.RemoveSessionVariable(Key);
+}
 
 public sealed record HistoryRow(RunHistoryEntry Entry)
 {
@@ -141,7 +158,75 @@ public sealed partial class MainViewModel : ObservableObject
         sync.Engine.StatusChanged += s => Dispatcher.UIThread.Post(() => SyncStatus = s);
         sync.Engine.DataChanged += () => Dispatcher.UIThread.Post(() => _ = ReloadFromSyncAsync());
         sync.Engine.WorkspaceLost += lost => Dispatcher.UIThread.Post(() => _ = OnWorkspaceLostAsync(lost));
+        _sessionVariables = SessionVariableStore.For(services.Secure, services.Session.Server!, services.Session.User!.Id);
+        _sessionVariables.Changed += () => Dispatcher.UIThread.Post(ApplyVariables);
     }
+
+    private readonly SessionVariableStore _sessionVariables;
+
+    // ---------- Variables de sesión ----------
+
+    public ObservableCollection<SessionVariableRow> SessionRows { get; } = [];
+
+    [ObservableProperty] private string? _sessionScopeText;
+
+    public void SaveSessionVariables(IReadOnlyDictionary<string, string> values)
+    {
+        if (SelectedWorkspace is null) return;
+        foreach (var (key, value) in values) _sessionVariables.Set(WorkspaceId, SelectedEnvironment?.Id, key, value);
+        ReportStatus(string.Format(Texts.Session_Updated, string.Join(", ", values.Keys)));
+    }
+
+    /// <summary>Lanza <see cref="ArgumentException"/> si el nombre no sirve como variable.</summary>
+    public void SetSessionVariable(string key, string value)
+    {
+        if (SelectedWorkspace is null) return;
+        _sessionVariables.Set(WorkspaceId, SelectedEnvironment?.Id, key, value);
+        ReportStatus(string.Format(Texts.Session_Saved, key));
+    }
+
+    public void RemoveSessionVariable(string key)
+    {
+        if (SelectedWorkspace is not null) _sessionVariables.Remove(WorkspaceId, SelectedEnvironment?.Id, key);
+    }
+
+    [RelayCommand]
+    private async Task ClearSessionAsync()
+    {
+        if (SelectedWorkspace is null || SessionRows.Count == 0) return;
+        if (!await Services.Dialogs.ConfirmAsync(Texts.Session_ClearAll, SessionScopeText ?? "", Texts.Session_ClearAll)) return;
+        _sessionVariables.Clear(WorkspaceId, SelectedEnvironment?.Id);
+    }
+
+    private IReadOnlyDictionary<string, string>? CurrentSession() =>
+        SelectedWorkspace is null ? null : _sessionVariables.Get(WorkspaceId, SelectedEnvironment?.Id);
+
+    private void RefreshSessionRows(IReadOnlyDictionary<string, string>? session)
+    {
+        SessionRows.Clear();
+        foreach (var (key, value) in (session ?? new Dictionary<string, string>()).OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
+            SessionRows.Add(new SessionVariableRow(key, value, this));
+        SessionScopeText = string.Format(Texts.Session_Scope, SelectedEnvironment?.Id is null ? Texts.Session_NoEnvironment : SelectedEnvironment.Name);
+    }
+
+    // ---------- Autenticación de la App ----------
+
+    /// <summary>Lo implementa la vista, que abre la ventana de autenticación de la App.</summary>
+    public Func<AppAuthViewModel, Task>? ShowAppAuth { get; set; }
+
+    public AuthSpec? AppAuthOf(Guid appId) => Roots.FirstOrDefault(n => n.Id == appId)?.Dto is AppDto a ? a.Auth : null;
+
+    public Task EditAppAuthAsync(TreeNodeViewModel node) => GuardAsync(async () =>
+    {
+        if (ShowAppAuth is null || node.Dto is not AppDto app) return;
+        var vm = new AppAuthViewModel(app, CanEdit);
+        await ShowAppAuth(vm);
+        if (vm.Result is not { } auth || node.Dto is not AppDto current) return;
+        node.Dto = await Services.Store.UpdateAppAsync(
+            WorkspaceId, current.Id, new UpdateAppRequest(current.Name, current.Order, current.Version, auth));
+        foreach (var tab in Tabs) tab.OnAppChanged();
+        ReportStatus(string.Format(Texts.AppAuth_Saved, current.Name));
+    });
 
     public string SyncText => SyncStatus.State switch
     {
@@ -502,8 +587,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void ApplyVariables()
     {
-        Variables = VariableContext.From(_variables, SelectedEnvironment?.Id);
+        var session = CurrentSession();
+        Variables = VariableContext.From(_variables, SelectedEnvironment?.Id, session);
         VariableLookup.Update(Variables);
+        RefreshSessionRows(session);
         foreach (var tab in Tabs) tab.RefreshWarning();
     }
 
@@ -615,8 +702,9 @@ public sealed partial class MainViewModel : ObservableObject
         var name = await Services.Dialogs.PromptAsync(Texts.Main_NewRequest, Texts.Main_Name);
         if (name is null) return;
         var (appId, folderId) = Container(parent);
+        // Un request nuevo usa la autenticación de su App.
         var dto = await Services.Store.CreateRequestAsync(WorkspaceId, new CreateRequestRequest(
-            appId, name, null, folderId, NextOrder(parent.Children, NodeKind.Request)));
+            appId, name, RequestSpec.Empty with { Auth = AuthSpec.Inherit }, folderId, NextOrder(parent.Children, NodeKind.Request)));
         var node = new TreeNodeViewModel(this, NodeKind.Request, dto, parent);
         InsertSorted(parent, node);
         Open(node);

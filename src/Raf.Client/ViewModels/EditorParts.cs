@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Raf.Client.Core.Execution;
+using Raf.Client.Core.Local;
 using Raf.Domain.Requests;
 
 namespace Raf.Client.ViewModels;
@@ -169,13 +170,14 @@ public sealed partial class BodyEditorViewModel : EditorPart
     }
 }
 
-public sealed partial class AuthEditorViewModel(bool canEdit) : EditorPart
+/// <summary>Editor de autenticación. En una App no se ofrece <see cref="AuthType.Inherit"/>.</summary>
+public sealed partial class AuthEditorViewModel(bool canEdit, bool allowInherit = true) : EditorPart
 {
     public static AuthType[] Types { get; } = Enum.GetValues<AuthType>();
     public static ApiKeyLocation[] Locations { get; } = Enum.GetValues<ApiKeyLocation>();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsBearer), nameof(IsBasic), nameof(IsApiKey))]
+    [NotifyPropertyChangedFor(nameof(IsBearer), nameof(IsBasic), nameof(IsApiKey), nameof(IsInherit))]
     private AuthType _type;
 
     [ObservableProperty] private string? _token;
@@ -185,13 +187,14 @@ public sealed partial class AuthEditorViewModel(bool canEdit) : EditorPart
     [ObservableProperty] private string? _apiKeyValue;
     [ObservableProperty] private ApiKeyLocation _apiKeyIn;
 
-    public AuthType[] AvailableTypes => Types;
+    public AuthType[] AvailableTypes { get; } = allowInherit ? Types : Types.Where(t => t != AuthType.Inherit).ToArray();
     public ApiKeyLocation[] AvailableLocations => Locations;
     public bool CanEdit { get; } = canEdit;
     public bool IsReadOnly => !CanEdit;
     public bool IsBearer => Type == AuthType.Bearer;
     public bool IsBasic => Type == AuthType.Basic;
     public bool IsApiKey => Type == AuthType.ApiKey;
+    public bool IsInherit => Type == AuthType.Inherit;
 
     public void Load(AuthSpec auth)
     {
@@ -207,6 +210,7 @@ public sealed partial class AuthEditorViewModel(bool canEdit) : EditorPart
     public AuthSpec ToSpec() => Type switch
     {
         AuthType.None => AuthSpec.None,
+        AuthType.Inherit => AuthSpec.Inherit,
         AuthType.Bearer => new AuthSpec(AuthType.Bearer, Token: Token ?? ""),
         AuthType.Basic => new AuthSpec(AuthType.Basic, Username: Username ?? "", Password: Password ?? ""),
         _ => new AuthSpec(AuthType.ApiKey, ApiKeyName: ApiKeyName ?? "", ApiKeyValue: ApiKeyValue ?? "", ApiKeyIn: ApiKeyIn),
@@ -225,6 +229,84 @@ public sealed partial class AuthEditorViewModel(bool canEdit) : EditorPart
     partial void OnApiKeyValueChanged(string? value) => RaiseChanged();
 
     partial void OnApiKeyInChanged(ApiKeyLocation value) => RaiseChanged();
+}
+
+public sealed partial class ExtractionRowViewModel : ObservableObject
+{
+    private readonly ExtractionListViewModel _list;
+
+    [ObservableProperty] private bool _enabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NameProblem))]
+    private string? _variable;
+
+    [ObservableProperty] private ExtractionSource _source;
+    [ObservableProperty] private string? _path;
+
+    public ExtractionRowViewModel(ExtractionListViewModel list, ResponseExtraction item)
+    {
+        _list = list;
+        _enabled = item.Enabled;
+        _variable = item.Variable;
+        _source = item.Source;
+        _path = item.Path;
+    }
+
+    public ExtractionSource[] Sources => ExtractionListViewModel.Sources;
+    public bool CanEdit => _list.CanEdit;
+    public bool IsReadOnly => !_list.CanEdit;
+
+    /// <summary>Aviso si el nombre no sirve como <c>{{variable}}</c>; null si está bien o vacío.</summary>
+    public string? NameProblem =>
+        string.IsNullOrWhiteSpace(Variable) || SessionVariableStore.IsValidName(Variable.Trim())
+            ? null
+            : string.Format(CoreTexts.Session_InvalidName, Variable.Trim());
+
+    public ResponseExtraction ToItem() => new((Variable ?? "").Trim(), Source, (Path ?? "").Trim(), Enabled);
+
+    partial void OnEnabledChanged(bool value) => _list.NotifyChanged();
+    partial void OnVariableChanged(string? value) => _list.NotifyChanged();
+    partial void OnSourceChanged(ExtractionSource value) => _list.NotifyChanged();
+    partial void OnPathChanged(string? value) => _list.NotifyChanged();
+
+    [RelayCommand]
+    private void Remove() => _list.Remove(this);
+}
+
+/// <summary>Las extracciones de un request: qué valores de la respuesta se guardan en variables de sesión.</summary>
+public sealed partial class ExtractionListViewModel(bool canEdit) : EditorPart
+{
+    public static ExtractionSource[] Sources { get; } = Enum.GetValues<ExtractionSource>();
+
+    public bool CanEdit { get; } = canEdit;
+
+    public ObservableCollection<ExtractionRowViewModel> Rows { get; } = [];
+
+    public void Load(IEnumerable<ResponseExtraction>? items)
+    {
+        Rows.Clear();
+        foreach (var item in items ?? []) Rows.Add(new ExtractionRowViewModel(this, item));
+        RaiseChanged();
+    }
+
+    /// <summary>null si no hay ninguna, para no cambiar los requests que nunca las usaron.</summary>
+    public List<ResponseExtraction>? ToItems() => Rows.Count == 0 ? null : Rows.Select(r => r.ToItem()).ToList();
+
+    [RelayCommand]
+    private void Add()
+    {
+        Rows.Add(new ExtractionRowViewModel(this, new ResponseExtraction("", ExtractionSource.Body, "$.")));
+        RaiseChanged();
+    }
+
+    internal void Remove(ExtractionRowViewModel row)
+    {
+        Rows.Remove(row);
+        RaiseChanged();
+    }
+
+    internal void NotifyChanged() => RaiseChanged();
 }
 
 public enum SampleRowState { Inherited, Overridden, Removed, Added }

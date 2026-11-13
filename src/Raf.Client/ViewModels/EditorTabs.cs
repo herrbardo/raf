@@ -35,7 +35,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         Owner = owner;
         Node = node;
         RequestId = requestId;
-        Response = new ResponseViewModel(owner.Services.Dialogs);
+        Response = new ResponseViewModel(owner.Services.Dialogs) { SaveVariable = owner.SetSessionVariable };
 
         var options = Settings.Current.RequestOptions.GetValueOrDefault(requestId);
         _timeoutText = options?.TimeoutSeconds?.ToString();
@@ -89,10 +89,18 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
 
     private string Serialize() => JsonSerializer.Serialize(Snapshot(), ClientJson.Options);
 
+    /// <summary>La App del request: su auth es la que usa un request con <see cref="AuthType.Inherit"/>.</summary>
+    protected Guid AppId => Node.Dto is SampleDto ? Node.Parent!.Request.AppId : Node.Request.AppId;
+
+    protected AuthSpec? AppAuth => Owner.AppAuthOf(AppId);
+
+    /// <summary>Cambió la autenticación de alguna App.</summary>
+    public virtual void OnAppChanged() => RefreshWarning();
+
     public void RefreshWarning()
     {
         var (request, sample) = RunTarget();
-        var check = RequestRunner.Check(request, sample, Owner.Variables);
+        var check = RequestRunner.Check(request, sample, Owner.Variables, AppAuth);
         var parts = new List<string>();
         if (check.Missing.Count > 0) parts.Add(string.Format(Texts.Tab_NoValue, string.Join(", ", check.Missing)));
         if (check.UnreadableSecrets.Count > 0) parts.Add(string.Format(Texts.Tab_UnreadableSecrets, string.Join(", ", check.UnreadableSecrets)));
@@ -118,7 +126,8 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     {
         var (request, sample) = RunTarget();
         var variables = Owner.Variables;
-        var check = RequestRunner.Check(request, sample, variables);
+        var appAuth = AppAuth;
+        var check = RequestRunner.Check(request, sample, variables, appAuth);
         if (check.UnreadableSecrets.Count > 0 && !await Owner.Services.Dialogs.ConfirmAsync(
                 Texts.Tab_SecretsTitle,
                 string.Format(Texts.Tab_SecretsMessage, string.Join(", ", check.UnreadableSecrets)),
@@ -126,7 +135,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
             return;
 
         var timeout = TimeSpan.FromSeconds(ParsedTimeout ?? Settings.Current.DefaultTimeoutSeconds);
-        var input = new RunInput(request, sample, variables, new RunOptions(timeout, AcceptInvalidCertificates));
+        var input = new RunInput(request, sample, variables, new RunOptions(timeout, AcceptInvalidCertificates), appAuth);
 
         using var cts = new CancellationTokenSource();
         _run = cts;
@@ -136,10 +145,11 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         {
             var result = await Owner.Services.Runner.RunAsync(input, cts.Token);
             Response.Show(result);
+            if (result.Extracted.Count > 0) Owner.SaveSessionVariables(result.Extracted);
             await Owner.AddHistoryAsync(new RunHistoryEntry(
                 DateTimeOffset.Now, RequestId, this is SampleTabViewModel ? Node.Id : null, Node.Name,
                 RequestRunner.Effective(request, sample).Method,
-                RequestRunner.DescribeUrl(request, sample, variables),
+                RequestRunner.DescribeUrl(request, sample, variables, appAuth),
                 result.Outcome, result.StatusCode, (long)result.Elapsed.TotalMilliseconds, result.Body?.Length, result.Error));
         }
         finally
@@ -208,7 +218,8 @@ public sealed partial class RequestTabViewModel : EditorTabViewModel
         Query = new KeyValueListViewModel(CanEdit);
         Body = new BodyEditorViewModel(CanEdit);
         Auth = new AuthEditorViewModel(CanEdit);
-        foreach (var part in new EditorPart[] { Headers, Query, Body, Auth }) part.Changed += OnContentChanged;
+        Extractions = new ExtractionListViewModel(CanEdit);
+        foreach (var part in new EditorPart[] { Headers, Query, Body, Auth, Extractions }) part.Changed += OnContentChanged;
         LoadFrom(node.Request.Spec);
     }
 
@@ -216,6 +227,7 @@ public sealed partial class RequestTabViewModel : EditorTabViewModel
     public KeyValueListViewModel Query { get; }
     public BodyEditorViewModel Body { get; }
     public AuthEditorViewModel Auth { get; }
+    public ExtractionListViewModel Extractions { get; }
 
     private void LoadFrom(RequestSpec spec)
     {
@@ -226,13 +238,14 @@ public sealed partial class RequestTabViewModel : EditorTabViewModel
         Query.Load(spec.QueryParams);
         Body.Load(spec.Body);
         Auth.Load(spec.Auth);
+        Extractions.Load(spec.Extractions);
         EndLoad();
     }
 
     public string[] AvailableMethods => Methods.Contains(Method) ? Methods : [.. Methods, Method];
 
     private RequestSpec ToSpec() =>
-        new(Method, Url ?? "", Headers.ToItems(), Query.ToItems(), Body.ToSpec(), Auth.ToSpec());
+        new(Method, Url ?? "", Headers.ToItems(), Query.ToItems(), Body.ToSpec(), Auth.ToSpec(), Extractions.ToItems());
 
     protected override object Snapshot() => ToSpec();
 
@@ -313,12 +326,22 @@ public sealed partial class SampleTabViewModel : EditorTabViewModel
         var t => $"{t}: {Parent.Body.Content}",
     };
 
-    public string InheritedAuth => Parent.Auth.Type switch
+    public string InheritedAuth => Parent.Auth.Type == AuthType.Inherit
+        ? string.Format(Texts.Tab_AuthFromApp, DescribeAuth(AppAuth ?? AuthSpec.None))
+        : DescribeAuth(Parent.Auth);
+
+    private static string DescribeAuth(AuthSpec auth) => auth.Type switch
     {
         AuthType.None => Texts.Tab_NoAuth,
-        AuthType.ApiKey => string.Format(Texts.Tab_ApiKeyIn, Parent.Auth.ApiKeyName, Parent.Auth.ApiKeyIn),
+        AuthType.ApiKey => string.Format(Texts.Tab_ApiKeyIn, auth.ApiKeyName, auth.ApiKeyIn),
         var t => t.ToString(),
     };
+
+    public override void OnAppChanged()
+    {
+        base.OnAppChanged();
+        OnPropertyChanged(nameof(InheritedAuth));
+    }
 
     public string[] AvailableMethods => Methods.Contains(Method) ? Methods : [.. Methods, Method];
 

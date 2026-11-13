@@ -12,6 +12,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 05 | [Despliegue AWS y tiempo real](05-despliegue-aws.md) | ✅ Implementado, validado en Railway | Desplegar en AWS y validar (Ticket-004, no bloquea el release) |
 | 06 | [Empaquetado y distribución](06-distribucion.md) | ✅ Implementado | — |
 | 07 | [Embellecer la aplicación](07-embellecer-ui.md) | ✅ Implementado | — |
+| 08 | [Autenticación por App](08-auth-por-app.md) | 🚧 Etapas 1 y 2 implementadas (Ticket-017) | Etapa 3 en el Ticket-025 |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 

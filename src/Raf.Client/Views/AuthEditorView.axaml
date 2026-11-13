@@ -8,6 +8,8 @@
   <StackPanel Spacing="8" Margin="0,4" MaxWidth="560" HorizontalAlignment="Stretch">
     <ComboBox Width="190" ItemsSource="{Binding AvailableTypes}" SelectedItem="{Binding Type}" IsEnabled="{Binding CanEdit}" />
 
+    <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding IsInherit}" Text="{x:Static l:Texts.Auth_InheritHint}" />
+
     <StackPanel Spacing="4" IsVisible="{Binding IsBearer}">
       <TextBlock Classes="caption" Text="{x:Static l:Texts.Auth_Token}" />
       <ctl:TextField BoundText="{Binding Token}" IsReadOnly="{Binding IsReadOnly}" />

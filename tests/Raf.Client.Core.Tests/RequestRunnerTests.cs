@@ -56,6 +56,11 @@ public sealed class EchoServer : IAsyncLifetime
             return "tarde";
         });
         app.MapGet("/big", () => Results.Text(new string('x', RequestRunner.PreviewLimit + 1000)));
+        app.MapPost("/login/{code:int}", (int code, HttpContext http) =>
+        {
+            http.Response.Headers["X-Session"] = "abc-123";
+            return Results.Json(new { access_token = "tok-1", user = new { id = 7 } }, statusCode: code);
+        });
         app.Map("/redirect/{code:int}", (int code, HttpContext http) =>
         {
             http.Response.StatusCode = code;
@@ -470,4 +475,86 @@ public sealed class RequestRunnerTests(EchoServer server) : IClassFixture<EchoSe
     [InlineData("hola", "text/plain", ResponseFormat.Plain)]
     public void Formatea_segun_el_tipo(string text, string mediaType, ResponseFormat expected) =>
         Assert.Equal(expected, ResponseFormatter.Format(text, mediaType).Format);
+
+    // ---- Auth heredada de la App ----
+
+    [Fact]
+    public async Task Request_que_hereda_usa_la_auth_de_la_App_y_lo_dice_en_la_consola()
+    {
+        var vars = VariableContext.From([Var("token", "t-1")], null);
+        var appAuth = new AuthSpec(AuthType.Bearer, Token: "{{token}}");
+        using var result = await _runner.RunAsync(new RunInput(
+            Spec(Echo, "GET") with { Auth = AuthSpec.Inherit }, null, vars, Defaults, appAuth));
+
+        Assert.Contains("authorization=Bearer t-1", result.Body!.GetPreviewText());
+        var auth = Assert.Single(result.Events, e => e.Kind == RunEventKind.Auth);
+        Assert.Contains("Bearer", auth.Title);
+    }
+
+    [Fact]
+    public async Task Hereda_sin_auth_en_la_App_y_un_sample_puede_heredar_sobre_un_request_propio()
+    {
+        var echo = await EchoAsync(Spec(Echo) with { Auth = AuthSpec.Inherit });
+        Assert.Equal("", echo["authorization"]);
+
+        var appAuth = new AuthSpec(AuthType.Bearer, Token: "app");
+        var own = Spec(Echo) with { Auth = new AuthSpec(AuthType.Bearer, Token: "propio") };
+        Assert.Equal("Bearer propio", RequestRunner.Effective(own, null, appAuth).Auth is { } a ? $"Bearer {a.Token}" : "");
+        var sample = new SampleOverrides(Auth: AuthSpec.Inherit);
+        Assert.Equal("app", RequestRunner.Effective(own, sample, appAuth).Auth.Token);
+        Assert.True(RequestRunner.InheritsAuth(own, sample));
+        Assert.False(RequestRunner.InheritsAuth(own, null));
+    }
+
+    // ---- Extracciones ----
+
+    private static RequestSpec Login(string url) => Spec(url) with
+    {
+        Extractions =
+        [
+            new ResponseExtraction("token", ExtractionSource.Body, "$.access_token"),
+            new ResponseExtraction("user.id", ExtractionSource.Body, "$.user.id"),
+            new ResponseExtraction("sesion", ExtractionSource.Header, "x-session"),
+            new ResponseExtraction("falta", ExtractionSource.Body, "$.nada"),
+            new ResponseExtraction("apagada", ExtractionSource.Body, "$.access_token", Enabled: false),
+        ],
+    };
+
+    [Fact]
+    public async Task Con_2xx_aplica_las_extracciones_sin_mostrar_los_valores()
+    {
+        using var result = await _runner.RunAsync(new RunInput(Login(server.Url + "/login/200"), null, VariableContext.Empty, Defaults));
+
+        Assert.Equal(new Dictionary<string, string> { ["token"] = "tok-1", ["user.id"] = "7", ["sesion"] = "abc-123" }, result.Extracted);
+        var events = result.Events.Where(e => e.Kind == RunEventKind.Extraction).ToList();
+        Assert.Equal(4, events.Count);
+        Assert.Single(events, e => e.Level == RunEventLevel.Warning && e.Title.Contains("'falta'"));
+        Assert.DoesNotContain(events, e => (e.Title + e.Detail).Contains("tok-1"));
+    }
+
+    [Fact]
+    public async Task Sin_2xx_no_aplica_las_extracciones()
+    {
+        using var result = await _runner.RunAsync(new RunInput(Login(server.Url + "/login/401"), null, VariableContext.Empty, Defaults));
+
+        Assert.Empty(result.Extracted);
+        var skipped = Assert.Single(result.Events, e => e.Kind == RunEventKind.Extraction);
+        Assert.Contains("401", skipped.Title);
+    }
+
+    [Fact]
+    public async Task Las_variables_de_sesion_ganan_y_se_enmascaran_en_la_consola()
+    {
+        var env = Guid.NewGuid();
+        var vars = VariableContext.From(
+            [Var("token", "global"), Var("token", "del-env", env)], env, new Dictionary<string, string> { ["token"] = "de-sesion" });
+        Assert.True(vars.IsSession("token"));
+
+        using var result = await _runner.RunAsync(new RunInput(
+            Spec(Echo, "GET") with { Headers = [new KeyValueItem("X-Test", "{{token}}")] }, null, vars, Defaults));
+
+        Assert.Contains("x-test=de-sesion", result.Body!.GetPreviewText());
+        Assert.DoesNotContain("de-sesion", AllText(result));
+        Assert.Equal(Echo, RequestRunner.DescribeUrl(Spec(Echo, "GET"), null, vars));
+    }
 }

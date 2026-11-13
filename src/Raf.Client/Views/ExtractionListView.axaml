@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.ExtractionListView"
+             x:DataType="vm:ExtractionListViewModel">
+  <DockPanel>
+    <TextBlock DockPanel.Dock="Top" Classes="caption" TextWrapping="Wrap" Margin="0,2,10,8" Text="{x:Static l:Texts.Extract_Hint}" />
+    <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Command="{Binding AddCommand}" IsVisible="{Binding CanEdit}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
+        <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Add}" />
+      </StackPanel>
+    </Button>
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,110,2*,30" ColumnSpacing="6" Margin="0,0,10,4"
+          IsVisible="{Binding !!Rows.Count}">
+      <CheckBox MinWidth="0" Opacity="0" IsHitTestVisible="False" />
+      <TextBlock Grid.Column="1" Classes="label" Text="{x:Static l:Texts.Extract_Variable}" />
+      <TextBlock Grid.Column="2" Classes="label" Text="{x:Static l:Texts.Extract_Source}" />
+      <TextBlock Grid.Column="3" Classes="label" Text="{x:Static l:Texts.Extract_Path}" />
+    </Grid>
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ExtractionRowViewModel">
+            <StackPanel Margin="0,2,10,2" Spacing="2">
+              <Grid ColumnDefinitions="Auto,*,110,2*,30" ColumnSpacing="6">
+                <CheckBox MinWidth="0" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.Kv_Include}" />
+                <TextBox Grid.Column="1" Classes="mono" Text="{Binding Variable}" IsReadOnly="{Binding IsReadOnly}" Watermark="token" />
+                <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" IsEnabled="{Binding CanEdit}" />
+                <TextBox Grid.Column="3" Classes="mono" Text="{Binding Path}" IsReadOnly="{Binding IsReadOnly}" Watermark="$.access_token" />
+                <Button Grid.Column="4" Classes="icon small danger" ToolTip.Tip="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanEdit}">
+                  <ctl:Icon Data="{StaticResource IconClose}" />
+                </Button>
+              </Grid>
+              <TextBlock Classes="warning" TextWrapping="Wrap" Text="{Binding NameProblem}"
+                         IsVisible="{Binding NameProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

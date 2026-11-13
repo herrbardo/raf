@@ -130,7 +130,7 @@ User ──< WorkspaceMember >── Workspace ──< Environment ──< Varia
 
 **Variables:**
 - Sintaxis `{{nombre}}` en URL, headers, query, body y auth.
-- Precedencia: **Environment activo > globales del Workspace**.
+- Precedencia: **variables de sesión > Environment activo > globales del Workspace**. Las de sesión son locales de cada usuario y no se sincronizan ([Plan 08](08-auth-por-app.md)).
 - El environment activo es una **elección local de cada usuario**; no se sincroniza.
 - Variables `IsSecret`: se sincronizan con el equipo, se cifran en Postgres con KMS detrás de `IConfidentialManager`, se muestran enmascaradas en la UI y solo las ven los miembros con rol `Editor` o superior.
 

@@ -101,6 +101,54 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
+    public async Task App_auth_is_saved_kept_when_omitted_and_cannot_inherit()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var b = $"/workspaces/{ws.Id}/apps";
+        var bearer = new AuthSpec(AuthType.Bearer, Token: "{{token}}");
+
+        var created = await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Api", Auth: bearer));
+        Assert.Equal(bearer, created.Auth);
+        var plain = await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Sin auth"));
+        Assert.Equal(AuthType.None, plain.Auth?.Type);
+
+        // Renombrar sin mandar la auth (como un cliente anterior) no la borra.
+        var url = $"{b}/{created.Id}";
+        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, created.Version))).EnsureStatusAsync(HttpStatusCode.OK);
+        var renamed = await owner.GetOkAsync<AppDto>(url);
+        Assert.Equal(bearer, renamed.Auth);
+
+        var basic = new AuthSpec(AuthType.Basic, Username: "u", Password: "{{clave}}");
+        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, renamed.Version, basic))).EnsureStatusAsync(HttpStatusCode.OK);
+        Assert.Equal(basic, (await owner.GetOkAsync<AppDto>(url)).Auth);
+
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await owner.PostJsonAsync(b, new CreateAppRequest("Mal", Auth: AuthSpec.Inherit))).StatusCode);
+        var current = await owner.GetOkAsync<AppDto>(url);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, current.Version, AuthSpec.Inherit))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Request_keeps_inherited_auth_and_extractions()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var b = $"/workspaces/{ws.Id}";
+        var appDto = await owner.PostOkAsync<AppDto>($"{b}/apps", new CreateAppRequest("Api"));
+        var spec = RequestSpec.Empty with
+        {
+            Auth = AuthSpec.Inherit,
+            Extractions = [new ResponseExtraction("token", ExtractionSource.Body, "$.access_token")],
+        };
+
+        var created = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Login", spec));
+        var read = await owner.GetOkAsync<RequestDto>($"{b}/requests/{created.Id}");
+
+        Assert.Equal(AuthType.Inherit, read.Spec.Auth.Type);
+        Assert.Equal(spec.Extractions, read.Spec.Extractions);
+    }
+
+    [Fact]
     public async Task Change_seq_is_unique_and_increasing_even_with_concurrent_writes()
     {
         var (owner, ws) = await NewWorkspaceAsync();

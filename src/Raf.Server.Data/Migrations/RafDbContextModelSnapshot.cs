@@ -210,6 +210,10 @@ namespace Raf.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
                     b.Property<long>("ChangeSeq")
                         .HasColumnType("bigint");
 

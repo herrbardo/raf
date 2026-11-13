@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        x:Class="Raf.Client.Views.AppAuthWindow"
+        x:DataType="vm:AppAuthViewModel"
+        Title="{Binding Title}"
+        Width="520" SizeToContent="Height" CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
+        <Button Content="{x:Static l:Texts.V_Cancel}" IsCancel="True" Click="OnCancelClick" IsVisible="{Binding CanEdit}" />
+        <Button Classes="accent" Content="{x:Static l:Texts.V_Save}" IsDefault="True" Click="OnSaveClick" IsVisible="{Binding CanEdit}" />
+        <Button Classes="accent" Content="{x:Static l:Texts.V_Close}" IsCancel="True" Click="OnCancelClick" IsVisible="{Binding !CanEdit}" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Margin="20,18" Spacing="12">
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.AppAuth_Hint}" />
+      <ContentControl Content="{Binding Auth}" />
+    </StackPanel>
+  </DockPanel>
+</Window>

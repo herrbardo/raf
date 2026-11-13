@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using Raf.Client.Core.Local;
 using Raf.Domain.Requests;
 
 namespace Raf.Client.Core.Execution;
@@ -37,14 +38,27 @@ public sealed class RequestRunner : IDisposable
         return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
     }
 
-    public static RequestSpec Effective(RequestSpec request, SampleOverrides? sample) =>
-        ActiveParts(sample is null ? request : SampleMerger.Merge(request, sample));
+    /// <summary>
+    /// Lo que se envía: el request con los overrides del sample y, si la auth queda en
+    /// <see cref="AuthType.Inherit"/>, la de la App (o ninguna, si no se conoce).
+    /// </summary>
+    public static RequestSpec Effective(RequestSpec request, SampleOverrides? sample, AuthSpec? appAuth = null)
+    {
+        var merged = sample is null ? request : SampleMerger.Merge(request, sample);
+        if (merged.Auth.Type == AuthType.Inherit)
+            merged = merged with { Auth = appAuth is { Type: not AuthType.Inherit } app ? app : AuthSpec.None };
+        return ActiveParts(merged);
+    }
+
+    /// <summary>La auth efectiva sale de la App.</summary>
+    public static bool InheritsAuth(RequestSpec request, SampleOverrides? sample) =>
+        (sample?.Auth ?? request.Auth).Type == AuthType.Inherit;
 
     /// <summary>Informa las variables sin resolver, solo de las partes del request que se van a enviar.</summary>
-    public static RunPreflight Check(RequestSpec request, SampleOverrides? sample, VariableContext variables)
+    public static RunPreflight Check(RequestSpec request, SampleOverrides? sample, VariableContext variables, AuthSpec? appAuth = null)
     {
         var resolver = variables.CreateResolver();
-        resolver.Resolve(Effective(request, sample));
+        resolver.Resolve(Effective(request, sample, appAuth));
         var unresolved = resolver.Missing.OrderBy(x => x, StringComparer.Ordinal).ToList();
         return new RunPreflight(
             unresolved.Where(k => !variables.IsUnreadable(k)).ToList(),
@@ -52,9 +66,9 @@ public sealed class RequestRunner : IDisposable
     }
 
     /// <summary>URL para el historial, sin valores de variables secretas ni de la autenticación.</summary>
-    public static string DescribeUrl(RequestSpec request, SampleOverrides? sample, VariableContext variables)
+    public static string DescribeUrl(RequestSpec request, SampleOverrides? sample, VariableContext variables, AuthSpec? appAuth = null)
     {
-        var spec = variables.CreatePublicResolver().Resolve(Effective(request, sample));
+        var spec = variables.CreatePublicResolver().Resolve(Effective(request, sample, appAuth));
         return AppendQuery(spec.Url.Trim(), spec.QueryParams);
     }
 
@@ -70,8 +84,12 @@ public sealed class RequestRunner : IDisposable
         try
         {
             var resolver = input.Variables.CreateResolver();
-            var spec = resolver.Resolve(Effective(input.Request, input.Sample));
+            var spec = resolver.Resolve(Effective(input.Request, input.Sample, input.AppAuth));
             if (resolver.Missing.Count > 0) trace.MissingVariables(resolver.Missing);
+            if (InheritsAuth(input.Request, input.Sample))
+                trace.Info(RunEventKind.Auth, spec.Auth.Type == AuthType.None
+                    ? CoreTexts.Trace_AuthInheritedNone
+                    : string.Format(CoreTexts.Trace_AuthInherited, spec.Auth.Type));
 
             var message = BuildMessage(spec);
             messages.Add(message);
@@ -106,16 +124,20 @@ public sealed class RequestRunner : IDisposable
             trace.BodyRead(responseBody);
             stopwatch.Stop();
 
+            var headers = response!.Headers.Concat(response.Content.Headers)
+                .SelectMany(h => h.Value.Select(v => KeyValuePair.Create(h.Key, v))).ToList();
+            var extracted = Extract(spec.Extractions, (int)response.StatusCode, headers, responseBody, trace);
+
             return new RunResult
             {
                 Outcome = RunOutcome.Completed,
                 Elapsed = stopwatch.Elapsed,
-                StatusCode = (int)response!.StatusCode,
+                StatusCode = (int)response.StatusCode,
                 ReasonPhrase = response.ReasonPhrase,
-                Headers = response.Headers.Concat(response.Content.Headers)
-                    .SelectMany(h => h.Value.Select(v => KeyValuePair.Create(h.Key, v))).ToList(),
+                Headers = headers,
                 Body = responseBody,
                 Events = trace.Finish(),
+                Extracted = extracted,
             };
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -204,6 +226,52 @@ public sealed class RequestRunner : IDisposable
     private static string Describe(Exception e) =>
         e is HttpRequestException { InnerException: { } inner } ? $"{e.Message} ({inner.Message})" : e.Message;
 
+    /// <summary>
+    /// Aplica las extracciones activas si la respuesta es 2xx. La consola dice qué se guardó, sin mostrar el valor:
+    /// las variables de sesión se tratan como secretas.
+    /// </summary>
+    private static Dictionary<string, string> Extract(
+        IReadOnlyList<ResponseExtraction>? extractions, int status, IReadOnlyList<KeyValuePair<string, string>> headers,
+        ResponseBody body, RunTrace trace)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        var active = (extractions ?? []).Where(e => e.Enabled && !string.IsNullOrWhiteSpace(e.Variable)).ToList();
+        if (active.Count == 0) return values;
+        if (status is < 200 or >= 300)
+        {
+            trace.Warn(RunEventKind.Extraction, string.Format(CoreTexts.Trace_ExtractSkipped, status));
+            return values;
+        }
+
+        var text = active.Any(e => e.Source == ExtractionSource.Body) ? body.GetPreviewText() : null;
+        foreach (var extraction in active)
+        {
+            var name = extraction.Variable.Trim();
+            var where = extraction.Source == ExtractionSource.Header
+                ? string.Format(CoreTexts.Trace_ExtractFromHeader, extraction.Path.Trim())
+                : string.Format(CoreTexts.Trace_ExtractFromBody, extraction.Path.Trim());
+            if (!SessionVariableStore.IsValidName(name))
+            {
+                trace.Warn(RunEventKind.Extraction, string.Format(CoreTexts.Session_InvalidName, name), where);
+                continue;
+            }
+
+            var outcome = ResponseExtractor.Evaluate(extraction, text, headers);
+            if (outcome.Value is { } value)
+            {
+                values[name] = value;
+                trace.Info(RunEventKind.Extraction, string.Format(CoreTexts.Trace_Extracted, name), where);
+            }
+            else
+            {
+                trace.Warn(RunEventKind.Extraction, string.Format(CoreTexts.Trace_ExtractFailed, name), where + Environment.NewLine + outcome.Problem);
+            }
+        }
+        if (body.IsTruncated && text is not null)
+            trace.Warn(RunEventKind.Extraction, CoreTexts.Trace_ExtractTruncated);
+        return values;
+    }
+
     /// <summary>Descarta lo que no se envía: filas desactivadas y datos de otros tipos de body o auth.</summary>
     private static RequestSpec ActiveParts(RequestSpec spec) => spec with
     {
@@ -217,7 +285,7 @@ public sealed class RequestRunner : IDisposable
         },
         Auth = spec.Auth.Type switch
         {
-            AuthType.None => AuthSpec.None,
+            AuthType.None or AuthType.Inherit => AuthSpec.None,
             AuthType.Bearer => new AuthSpec(AuthType.Bearer, Token: spec.Auth.Token),
             AuthType.Basic => new AuthSpec(AuthType.Basic, Username: spec.Auth.Username, Password: spec.Auth.Password),
             _ => new AuthSpec(AuthType.ApiKey, ApiKeyName: spec.Auth.ApiKeyName, ApiKeyValue: spec.Auth.ApiKeyValue, ApiKeyIn: spec.Auth.ApiKeyIn),

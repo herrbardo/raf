@@ -361,13 +361,17 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     public Task<AppDto> CreateAppAsync(Guid ws, CreateAppRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        return CreateAsync(ws, ChangeKind.App, new AppDto(req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Order, 0, 0), ct);
+        if (req.Auth is { Type: Raf.Domain.Requests.AuthType.Inherit }) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_AppCannotInherit);
+        return CreateAsync(ws, ChangeKind.App, new AppDto(
+            req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Order, 0, 0, req.Auth ?? Raf.Domain.Requests.AuthSpec.None), ct);
     }
 
     public Task<AppDto> UpdateAppAsync(Guid ws, Guid id, UpdateAppRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        return UpdateAsync<AppDto>(ws, ChangeKind.App, id, req.Version, x => x with { Name = req.Name.Trim(), Order = req.Order }, ct);
+        if (req.Auth is { Type: Raf.Domain.Requests.AuthType.Inherit }) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_AppCannotInherit);
+        return UpdateAsync<AppDto>(
+            ws, ChangeKind.App, id, req.Version, x => x with { Name = req.Name.Trim(), Order = req.Order, Auth = req.Auth ?? x.Auth }, ct);
     }
 
     public Task DeleteAppAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.App, id, ct);

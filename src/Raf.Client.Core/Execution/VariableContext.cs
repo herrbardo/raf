@@ -6,29 +6,44 @@ namespace Raf.Client.Core.Execution;
 /// <summary>Variables efectivas para el environment activo, distinguiendo las secretas.</summary>
 public sealed class VariableContext
 {
-    public static VariableContext Empty { get; } = new([], []);
+    public static VariableContext Empty { get; } = new([], [], []);
 
     private readonly Dictionary<string, VariableDto> _winners;
     private readonly IReadOnlyList<VariableDto> _ordered;
+    private readonly HashSet<string> _session;
 
-    private VariableContext(Dictionary<string, VariableDto> winners, IReadOnlyList<VariableDto> ordered)
+    private VariableContext(Dictionary<string, VariableDto> winners, IReadOnlyList<VariableDto> ordered, HashSet<string> session)
     {
         _winners = winners;
         _ordered = ordered;
+        _session = session;
     }
 
-    /// <summary>Aplica la precedencia: environment activo por encima de las globales del workspace.</summary>
-    public static VariableContext From(IEnumerable<VariableDto> all, Guid? activeEnvironment)
+    /// <summary>
+    /// Aplica la precedencia: variables de sesión, después el environment activo y por último las globales del
+    /// workspace. Las de sesión se tratan como secretas: se enmascaran en la consola y no van al historial.
+    /// </summary>
+    public static VariableContext From(
+        IEnumerable<VariableDto> all, Guid? activeEnvironment, IReadOnlyDictionary<string, string>? session = null)
     {
         var list = all.ToList();
         var winners = new Dictionary<string, VariableDto>(StringComparer.Ordinal);
         foreach (var v in list.Where(v => v.EnvironmentId is null)) winners[v.Key] = v;
         if (activeEnvironment is not null)
             foreach (var v in list.Where(v => v.EnvironmentId == activeEnvironment)) winners[v.Key] = v;
-        return new VariableContext(winners, winners.Values.ToList());
+        var sessionKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (key, value) in session ?? new Dictionary<string, string>())
+        {
+            winners[key] = new VariableDto(Guid.Empty, activeEnvironment, key, value, IsSecret: true, 0, 0);
+            sessionKeys.Add(key);
+        }
+        return new VariableContext(winners, winners.Values.ToList(), sessionKeys);
     }
 
     public bool IsDefined(string key) => _winners.ContainsKey(key);
+
+    /// <summary>El valor vigente sale de una variable de sesión.</summary>
+    public bool IsSession(string key) => _session.Contains(key);
 
     /// <summary>Las variables vigentes, una por nombre, ya con la precedencia aplicada.</summary>
     public IReadOnlyList<VariableDto> Effective => _ordered;

@@ -277,7 +277,10 @@ public static class ContentEndpoints
 
     // ---------- Apps ----------
 
-    private static AppDto ToDto(this App a) => new(a.Id, a.Name, a.Order, a.Version, a.ChangeSeq);
+    private static AppDto ToDto(this App a) => new(a.Id, a.Name, a.Order, a.Version, a.ChangeSeq, a.Auth);
+
+    private static IResult? ValidateAppAuth(AuthSpec? auth) =>
+        auth is { Type: AuthType.Inherit } ? Problems.BadRequest("Una app no puede heredar la autenticación.") : null;
 
     private static void MapApps(RouteGroupBuilder g)
     {
@@ -290,9 +293,14 @@ public static class ContentEndpoints
         g.MapPost("/", async (Guid ws, CreateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
+            if (ValidateAppAuth(req.Auth) is { } badAuth) return badAuth;
             if (await RetriedCreateAsync(db.Apps, ws, req.Id, "apps", x => x.ToDto(), ct) is { } retried) return retried;
 
-            var a = new App { Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Order = req.Order };
+            var a = new App
+            {
+                Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Order = req.Order,
+                Auth = req.Auth ?? AuthSpec.None,
+            };
             db.Apps.Add(a);
             await db.SaveChangesAsync(ct);
             return Results.Created($"/workspaces/{ws}/apps/{a.Id}", a.ToDto());
@@ -301,12 +309,14 @@ public static class ContentEndpoints
         g.MapPut("/{id:guid}", async (Guid ws, Guid id, UpdateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
+            if (ValidateAppAuth(req.Auth) is { } badAuth) return badAuth;
             var a = await db.Apps.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
             if (a is null) return Problems.NotFound("App");
             if (a.Version != req.Version) return Problems.VersionConflict(a);
 
             a.Name = req.Name.Trim();
             a.Order = req.Order;
+            if (req.Auth is not null) a.Auth = req.Auth;
             await db.SaveChangesAsync(ct);
             return Results.Ok(a.ToDto());
         }).RequireWorkspaceRole(WorkspaceRole.Editor);
