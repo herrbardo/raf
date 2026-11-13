@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raf.Client.Core.Execution;
+using Raf.Client.Core.Localization;
 using Raf.Contracts;
 using Raf.Domain.Requests;
 
@@ -44,11 +45,43 @@ public sealed class EchoServer : IAsyncLifetime
     private static string Address(WebApplication app) =>
         app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
 
-    private static WebApplication Build(Action<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions> listen)
+    /// <summary>Contraseña que acepta /auth/token. Se genera en cada corrida.</summary>
+    public string Password { get; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>Cuántos tokens emitió /auth/token. Solo el último es válido en /protected.</summary>
+    public int TokensIssued => _issued;
+
+    private int _issued;
+    private string? _validToken;
+
+    /// <summary>Un JWT sin firma válida: alcanza para leer el exp.</summary>
+    public static string Jwt(DateTimeOffset expires, int n)
+    {
+        static string Part(string json) => Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        return $"{Part("{\"alg\":\"none\"}")}.{Part($"{{\"exp\":{expires.ToUnixTimeSeconds()},\"n\":{n}}}")}.firma";
+    }
+
+    private WebApplication Build(Action<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions> listen)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.WebHost.UseKestrel(listen);
         var app = builder.Build();
+
+        app.MapPost("/auth/token", async (HttpContext http) =>
+        {
+            using var reader = new StreamReader(http.Request.Body, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+            if (!body.Contains($"\"{Password}\"", StringComparison.Ordinal))
+                return Results.Json(new { error = "credenciales_rechazadas" }, statusCode: 400);
+            var n = Interlocked.Increment(ref _issued);
+            var token = Jwt(DateTimeOffset.UtcNow.AddHours(1), n);
+            _validToken = token;
+            return Results.Json(new { access_token = token, expires_in = 3600 });
+        });
+        app.MapGet("/protected", (HttpContext http) =>
+            _validToken is not null && http.Request.Headers.Authorization == $"Bearer {_validToken}"
+                ? Results.Text("ok")
+                : Results.StatusCode(401));
 
         app.MapGet("/slow", async (CancellationToken ct) =>
         {
@@ -556,5 +589,186 @@ public sealed class RequestRunnerTests(EchoServer server) : IClassFixture<EchoSe
         Assert.Contains("x-test=de-sesion", result.Body!.GetPreviewText());
         Assert.DoesNotContain("de-sesion", AllText(result));
         Assert.Equal(Echo, RequestRunner.DescribeUrl(Spec(Echo, "GET"), null, vars));
+    }
+
+    // ---- Login automático de la App ----
+
+    private static readonly AuthSpec BearerToken = new(AuthType.Bearer, Token: "{{token}}");
+
+    private AppLogin AppLoginConfig(TokenExpiry expiry = TokenExpiry.JwtExp, int? minutes = null) => new(
+        true,
+        Spec(server.Url + "/auth/token") with { Body = new BodySpec(BodyType.Json, "{\"user\":\"ana\",\"pass\":\"{{clave}}\"}") },
+        ExtractionSource.Body, "$.access_token", "token", expiry, ExpiryMinutes: minutes);
+
+    private VariableContext LoginVars(IReadOnlyDictionary<string, string>? session = null, string? password = null) =>
+        VariableContext.From([Var("clave", password ?? server.Password, secret: true)], null, session);
+
+    private Task<RunResult> RunProtectedAsync(
+        VariableContext vars, AppLogin config, DateTimeOffset? expiresAt = null, RequestRunner? runner = null, AuthSpec? auth = null) =>
+        (runner ?? _runner).RunAsync(new RunInput(
+            Spec(server.Url + "/protected", "GET") with { Auth = auth ?? AuthSpec.Inherit }, null, vars, Defaults, BearerToken,
+            new AppLoginState(config, expiresAt)));
+
+    [Fact]
+    public async Task Sin_token_ejecuta_el_login_guarda_el_token_y_sigue()
+    {
+        using var result = await RunProtectedAsync(LoginVars(), AppLoginConfig());
+
+        Assert.Equal(200, result.StatusCode);
+        var token = Assert.IsType<ObtainedToken>(result.Token);
+        Assert.Equal("token", token.Variable);
+        Assert.Equal(RequestRunner.JwtExpiry(token.Value), token.ExpiresAt);
+        Assert.True(token.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(50));
+
+        var auth = result.Events.Where(e => e.Kind == RunEventKind.Auth).Select(e => e.Title).ToList();
+        Assert.Equal(CoreTexts.Login_NoToken, auth[0]);
+        Assert.Contains(string.Format(CoreTexts.Login_TokenSaved, "token"), auth);
+        Assert.Contains(result.Events, e => e.Title.StartsWith(string.Format(CoreTexts.Login_Prefix, "POST")));
+        Assert.Contains(result.Events, e => e.Kind == RunEventKind.Request && e.Title.EndsWith("/protected"));
+        Assert.DoesNotContain(token.Value, AllText(result));
+        Assert.DoesNotContain(server.Password, AllText(result));
+    }
+
+    [Fact]
+    public async Task Con_token_vigente_no_ejecuta_el_login()
+    {
+        using var first = await RunProtectedAsync(LoginVars(), AppLoginConfig());
+        var token = first.Token!;
+        var issued = server.TokensIssued;
+
+        using var second = await RunProtectedAsync(
+            LoginVars(new Dictionary<string, string> { ["token"] = token.Value }), AppLoginConfig(), token.ExpiresAt);
+
+        Assert.Equal(200, second.StatusCode);
+        Assert.Null(second.Token);
+        Assert.Equal(issued, server.TokensIssued);
+        Assert.DoesNotContain(second.Events, e => e.Title.StartsWith(string.Format(CoreTexts.Login_Prefix, "")));
+    }
+
+    [Fact]
+    public async Task Con_token_por_vencer_ejecuta_el_login_antes_de_enviar()
+    {
+        using var first = await RunProtectedAsync(LoginVars(), AppLoginConfig());
+        var issued = server.TokensIssued;
+
+        // Vence dentro del margen: se renueva antes de enviar, sin pasar por un 401.
+        using var second = await RunProtectedAsync(
+            LoginVars(new Dictionary<string, string> { ["token"] = first.Token!.Value }), AppLoginConfig(),
+            DateTimeOffset.UtcNow + RequestRunner.RenewMargin / 2);
+
+        Assert.Equal(200, second.StatusCode);
+        Assert.NotNull(second.Token);
+        Assert.Equal(issued + 1, server.TokensIssued);
+        Assert.Equal(CoreTexts.Login_Expired, second.Events.First(e => e.Kind == RunEventKind.Auth).Title);
+        Assert.DoesNotContain(second.Events, e => e.Title == CoreTexts.Login_Renew401);
+    }
+
+    [Fact]
+    public async Task Ante_un_401_renueva_el_token_una_vez_y_reintenta()
+    {
+        using var result = await RunProtectedAsync(
+            LoginVars(new Dictionary<string, string> { ["token"] = "viejo" }), AppLoginConfig(TokenExpiry.None));
+
+        Assert.Equal(200, result.StatusCode);
+        Assert.Null(result.Token!.ExpiresAt);
+        var titles = result.Events.Select(e => e.Title).ToList();
+        Assert.Contains(CoreTexts.Login_Renew401, titles);
+        Assert.Contains(CoreTexts.Login_NoExpiry, result.Events.Select(e => e.Detail));
+        Assert.Equal(2, result.Events.Count(e => e.Kind == RunEventKind.Request && e.Title.EndsWith("/protected")));
+    }
+
+    [Fact]
+    public async Task Si_el_login_falla_no_envia_el_request_y_explica_por_que()
+    {
+        var wrong = Guid.NewGuid().ToString("N");
+        using var result = await RunProtectedAsync(LoginVars(password: wrong), AppLoginConfig());
+
+        Assert.Equal(RunOutcome.Failed, result.Outcome);
+        Assert.Null(result.Token);
+        Assert.Contains("400", result.Error);
+        Assert.DoesNotContain(result.Events, e => e.Kind == RunEventKind.Request && e.Title.EndsWith("/protected"));
+        var error = Assert.Single(result.Events, e => e.Level == RunEventLevel.Error);
+        Assert.Contains("credenciales_rechazadas", error.Detail);
+        Assert.DoesNotContain(wrong, AllText(result));
+    }
+
+    [Fact]
+    public async Task Si_el_login_tambien_falla_tras_un_401_muestra_el_401()
+    {
+        using var result = await RunProtectedAsync(
+            LoginVars(new Dictionary<string, string> { ["token"] = "viejo" }, Guid.NewGuid().ToString("N")), AppLoginConfig());
+
+        Assert.Equal(RunOutcome.Completed, result.Outcome);
+        Assert.Equal(401, result.StatusCode);
+        Assert.Null(result.Token);
+        Assert.Single(result.Events, e => e.Level == RunEventLevel.Error && e.Kind == RunEventKind.Auth);
+    }
+
+    [Fact]
+    public async Task Un_viewer_sin_acceso_a_las_credenciales_no_puede_obtener_el_token()
+    {
+        var vars = VariableContext.From([Var("clave", null, secret: true)], null);
+        var issued = server.TokensIssued;
+        using var result = await RunProtectedAsync(vars, AppLoginConfig());
+
+        Assert.Equal(RunOutcome.Failed, result.Outcome);
+        Assert.Contains("clave", result.Error);
+        Assert.Equal(issued, server.TokensIssued);
+    }
+
+    [Fact]
+    public async Task Un_request_con_auth_propia_no_usa_el_login_de_la_App()
+    {
+        var issued = server.TokensIssued;
+        using var result = await RunProtectedAsync(LoginVars(), AppLoginConfig(), auth: new AuthSpec(AuthType.Bearer, Token: "propio"));
+
+        Assert.Equal(401, result.StatusCode);
+        Assert.Equal(issued, server.TokensIssued);
+        Assert.Null(result.Token);
+    }
+
+    [Fact]
+    public async Task Vencimiento_fijo_se_cuenta_desde_el_reloj_del_runner()
+    {
+        var now = new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        using var runner = new RequestRunner(new FixedTime(now));
+        using var result = await RunProtectedAsync(LoginVars(), AppLoginConfig(TokenExpiry.Fixed, 15), runner: runner);
+
+        Assert.Equal(now.AddMinutes(15), result.Token!.ExpiresAt);
+    }
+
+    [Theory]
+    [InlineData("3600", 3600)]
+    [InlineData("90.5", 90.5)]
+    public void Vencimiento_en_segundos_es_desde_ahora(string value, double seconds)
+    {
+        var now = DateTimeOffset.UtcNow;
+        Assert.Equal(now.AddSeconds(seconds), RequestRunner.ParseExpiry(value, now));
+    }
+
+    [Fact]
+    public void Vencimiento_como_instante_unix_o_fecha()
+    {
+        var now = DateTimeOffset.UtcNow;
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1_900_000_000), RequestRunner.ParseExpiry("1900000000", now));
+        Assert.Equal(new DateTimeOffset(2031, 5, 6, 7, 8, 9, TimeSpan.Zero), RequestRunner.ParseExpiry("2031-05-06T07:08:09Z", now));
+        Assert.Equal(new DateTimeOffset(2031, 5, 6, 7, 8, 9, TimeSpan.Zero), RequestRunner.ParseExpiry("2031-05-06 07:08:09", now));
+        Assert.Null(RequestRunner.ParseExpiry("pronto", now));
+        Assert.Null(RequestRunner.ParseExpiry("-5", now));
+        Assert.Null(RequestRunner.ParseExpiry(null, now));
+    }
+
+    [Fact]
+    public void Exp_del_jwt()
+    {
+        var expires = new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        Assert.Equal(expires, RequestRunner.JwtExpiry(EchoServer.Jwt(expires, 1)));
+        Assert.Null(RequestRunner.JwtExpiry("no-es-un-jwt"));
+        Assert.Null(RequestRunner.JwtExpiry("a.%%%.c"));
+    }
+
+    private sealed class FixedTime(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 }

@@ -11,8 +11,10 @@ namespace Raf.Client.Core.Execution;
 public sealed class RequestBuildException(string message) : Exception(message);
 
 /// <summary>Ejecuta requests desde el cliente: merge del sample, resolución de variables y envío.</summary>
-public sealed class RequestRunner : IDisposable
+public sealed partial class RequestRunner(TimeProvider? time = null) : IDisposable
 {
+    private readonly TimeProvider _time = time ?? TimeProvider.System;
+
     /// <summary>Tope de lo que se conserva en memoria y se muestra de un body.</summary>
     public const int PreviewLimit = 2 * 1024 * 1024;
 
@@ -72,7 +74,8 @@ public sealed class RequestRunner : IDisposable
         return AppendQuery(spec.Url.Trim(), spec.QueryParams);
     }
 
-    public async Task<RunResult> RunAsync(RunInput input, CancellationToken ct = default)
+    /// <summary>Un solo envío, sin login de la App: el request y sus redirecciones.</summary>
+    private async Task<RunResult> RunOnceAsync(RunInput input, CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
         var trace = new RunTrace(input.Variables, input.Options);

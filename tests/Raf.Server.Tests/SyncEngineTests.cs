@@ -179,6 +179,33 @@ public class SyncEngineTests(RafApp app)
     }
 
     [Fact]
+    public async Task El_login_de_la_App_llega_al_otro_cliente_y_el_store_rechaza_uno_invalido()
+    {
+        var (a, b, ws) = await TwoDevicesAsync();
+        var login = Raf.Domain.Requests.AppLogin.Default with
+        {
+            Enabled = true,
+            Request = Raf.Domain.Requests.AppLogin.Default.Request with { Url = "{{base}}/auth/token" },
+        };
+        await a.Store.CreateAppAsync(ws, new CreateAppRequest("Pagos", Login: login));
+        await a.SyncAsync();
+        await b.SyncAsync();
+        Assert.Equivalent(login, (await OneAppAsync(b, ws)).Login, strict: true);
+
+        var seen = await OneAppAsync(b, ws);
+        var off = login with { Enabled = false, TokenPath = "$.data.token" };
+        await b.Store.UpdateAppAsync(ws, seen.Id, new UpdateAppRequest("Cobros", 0, seen.Version, Login: off));
+        await b.SyncAsync();
+        await a.SyncAsync();
+        var synced = await OneAppAsync(a, ws);
+        Assert.Equal("Cobros", synced.Name);
+        Assert.Equivalent(off, synced.Login, strict: true);
+
+        await Assert.ThrowsAsync<ApiException>(() => a.Store.UpdateAppAsync(
+            ws, synced.Id, new UpdateAppRequest("Cobros", 0, synced.Version, Login: login with { Variable = "mal nombre" })));
+    }
+
+    [Fact]
     public async Task Sin_conexion_se_trabaja_y_al_volver_se_envia_padre_antes_que_hijo()
     {
         var (a, b, ws) = await TwoDevicesAsync();

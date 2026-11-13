@@ -175,6 +175,21 @@
   <data name="AppAuth_Title" xml:space="preserve"><value>Authentication of {0}</value></data>
   <data name="AppAuth_Hint" xml:space="preserve"><value>Used by this App's requests whose auth is Inherit. Accepts variables: for example, Bearer with the token in a session variable.</value></data>
   <data name="AppAuth_Saved" xml:space="preserve"><value>Authentication of {0} saved.</value></data>
+  <data name="AppLogin_Tab" xml:space="preserve"><value>Automatic login</value></data>
+  <data name="AppLogin_Enabled" xml:space="preserve"><value>Get the token automatically with this login</value></data>
+  <data name="AppLogin_Hint" xml:space="preserve"><value>Before a request with Inherit auth, if there is no token or it expired, RAF runs this login and saves the token in the session variable; on a 401 it renews it once and retries. The App auth uses it as {{token}}. This login is synced with the team: put the credentials in secret variables.</value></data>
+  <data name="AppLogin_Token" xml:space="preserve"><value>Token</value></data>
+  <data name="AppLogin_TokenPathTip" xml:space="preserve"><value>Where the token is in the response: a JSON path like $.access_token, an XPath or, if the source is Header, its name.</value></data>
+  <data name="AppLogin_VariableTip" xml:space="preserve"><value>Session variable where the token is saved. Use it in the App auth, for example Bearer {{token}}.</value></data>
+  <data name="AppLogin_Expiry" xml:space="preserve"><value>Expiration</value></data>
+  <data name="AppLogin_ExpiryFieldTip" xml:space="preserve"><value>Body field with the expiration: seconds (like expires_in), a date or a Unix timestamp.</value></data>
+  <data name="AppLogin_Minutes" xml:space="preserve"><value>minutes</value></data>
+  <data name="AppLogin_ExpiryJwt" xml:space="preserve"><value>JWT exp</value></data>
+  <data name="AppLogin_ExpiryField" xml:space="preserve"><value>Response field</value></data>
+  <data name="AppLogin_ExpiryFixed" xml:space="preserve"><value>Fixed time</value></data>
+  <data name="AppLogin_ExpiryNone" xml:space="preserve"><value>No expiration (only on a 401)</value></data>
+  <data name="Session_ExpiresAt" xml:space="preserve"><value>Expires: {0}</value></data>
+  <data name="Session_Expired" xml:space="preserve"><value>Expired: {0}</value></data>
   <data name="MainV_Session" xml:space="preserve"><value>Session</value></data>
   <data name="Session_Scope" xml:space="preserve"><value>Environment: {0}. These variables stay on this computer and are not synced.</value></data>
   <data name="Session_NoEnvironment" xml:space="preserve"><value>none</value></data>

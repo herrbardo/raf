@@ -220,6 +220,9 @@ namespace Raf.Server.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Login")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)

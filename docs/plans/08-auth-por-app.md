@@ -1,6 +1,6 @@
 # Plan 08 — Autenticación por App
 
-Estado: **etapas 1 y 2 implementadas** (Ticket-017). La etapa 3 está en el Ticket-025. Las variables por App son del Ticket-018.
+Estado: **implementado**: etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025. Las variables por App son del Ticket-018.
 
 ## Objetivo
 
@@ -49,7 +49,13 @@ Si todos los requests de una App se autentican igual, configurarlo una sola vez 
 
 ## Etapa 3 — Obtener el token automáticamente (Ticket-025)
 
-- En la configuración de la App: el request de login (método, URL, headers, body y auth propios, con variables), la ruta del token y cómo se calcula el vencimiento.
-- Antes de ejecutar un request con auth `Inherit`, si no hay token o venció, se ejecuta el login, se guarda el token en una variable de sesión y se sigue.
-- Ante un 401 se renueva una vez y se reintenta. Todo queda en la consola del request.
-- Un Viewer no puede leer variables secretas: si las credenciales del login lo son, no va a poder obtener el token.
+- En la configuración de la App (`App.Login`, pestaña **"Login automático"** de la ventana de autenticación): el request de login (método, URL, query, headers, body y auth propios, con variables; no puede heredar), dónde está el token (JSON path, XPath o header), la variable de sesión donde se guarda (por defecto `token`) y cómo se calcula el vencimiento.
+- **Token y auth (acordado con el usuario el 13/11/2026):** el login solo guarda el token en la variable de sesión; la auth de la App lo usa como cualquier variable, por ejemplo `Bearer {{token}}`, así sirve también para ApiKey u otros esquemas. Al encender el login con la App sin auth, se completa sola en `Bearer {{token}}`. El login guarda **solo el token**: otros valores (refresh token, id) quedan para más adelante.
+- Vencimiento: `exp` del JWT (sin validar la firma), un campo del body (segundos como `expires_in`, un instante Unix o una fecha), un tiempo fijo en minutos, o ninguno (se renueva solo ante un 401). Se guarda junto a la variable de sesión y se renueva 30 segundos antes.
+- Antes de ejecutar un request con auth `Inherit`, si no hay token o venció, se ejecuta el login, se guarda el token en una variable de sesión y se sigue. Si el login falla, el request no se envía y la consola explica por qué (con el inicio del body de la respuesta del login).
+- Ante un 401 se renueva una vez y se reintenta (solo si en esa ejecución no se acababa de hacer el login). Todo queda en la consola del request, con los pasos del login marcados como "Login · …" y el token enmascarado.
+- Un Viewer no puede leer variables secretas: si las credenciales del login lo son, no va a poder obtener el token; se avisa sin enviar el login.
+- Se puede apagar (`Enabled` en false) sin perder la configuración. El login se sincroniza con el equipo como el resto de la App: las credenciales tienen que ir en variables secretas.
+- La pestaña "Sesión" muestra cuándo vence cada token.
+
+**Compatibilidad:** la columna `Login` es nueva (migración `AppLogin`) y opcional; un cliente anterior ignora el campo. Un cliente anterior que renombra la App no lo borra, porque `UpdateAppRequest` sin `Login` no lo cambia.

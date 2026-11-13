@@ -40,6 +40,16 @@ public sealed class VariableContext
         return new VariableContext(winners, winners.Values.ToList(), sessionKeys);
     }
 
+    /// <summary>Las mismas variables con una de sesión nueva, por ejemplo el token que acaba de obtener el login.</summary>
+    public VariableContext WithSession(string key, string value)
+    {
+        var winners = new Dictionary<string, VariableDto>(_winners, StringComparer.Ordinal)
+        {
+            [key] = new VariableDto(Guid.Empty, null, key, value, IsSecret: true, 0, 0),
+        };
+        return new VariableContext(winners, winners.Values.ToList(), new HashSet<string>(_session, StringComparer.Ordinal) { key });
+    }
+
     public bool IsDefined(string key) => _winners.ContainsKey(key);
 
     /// <summary>El valor vigente sale de una variable de sesión.</summary>

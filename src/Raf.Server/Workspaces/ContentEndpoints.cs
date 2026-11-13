@@ -277,10 +277,24 @@ public static class ContentEndpoints
 
     // ---------- Apps ----------
 
-    private static AppDto ToDto(this App a) => new(a.Id, a.Name, a.Order, a.Version, a.ChangeSeq, a.Auth);
+    private static AppDto ToDto(this App a) => new(a.Id, a.Name, a.Order, a.Version, a.ChangeSeq, a.Auth, a.Login);
 
-    private static IResult? ValidateAppAuth(AuthSpec? auth) =>
-        auth is { Type: AuthType.Inherit } ? Problems.BadRequest("Una app no puede heredar la autenticación.") : null;
+    private static IResult? ValidateAppAuth(AuthSpec? auth, AppLogin? login)
+    {
+        if (auth is { Type: AuthType.Inherit }) return Problems.BadRequest("Una app no puede heredar la autenticación.");
+        var problem = login?.Problem() ?? AppLoginProblem.None;
+        return problem == AppLoginProblem.None ? null : Problems.BadRequest(problem switch
+        {
+            AppLoginProblem.Incomplete => "'login' incompleto: el request necesita headers, queryParams, body y auth.",
+            AppLoginProblem.InheritAuth => "El login de la app no puede heredar la autenticación.",
+            AppLoginProblem.InvalidMethod => "El login de la app tiene un método inválido.",
+            AppLoginProblem.MissingUrl => "El login de la app no tiene URL.",
+            AppLoginProblem.MissingTokenPath => "El login de la app no indica dónde está el token.",
+            AppLoginProblem.InvalidVariable => "El nombre de la variable del token no es válido.",
+            AppLoginProblem.MissingExpiryPath => "El login de la app no indica el campo del vencimiento.",
+            _ => "Los minutos de vencimiento del token tienen que ser mayores que cero.",
+        });
+    }
 
     private static void MapApps(RouteGroupBuilder g)
     {
@@ -293,13 +307,13 @@ public static class ContentEndpoints
         g.MapPost("/", async (Guid ws, CreateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
-            if (ValidateAppAuth(req.Auth) is { } badAuth) return badAuth;
+            if (ValidateAppAuth(req.Auth, req.Login) is { } badAuth) return badAuth;
             if (await RetriedCreateAsync(db.Apps, ws, req.Id, "apps", x => x.ToDto(), ct) is { } retried) return retried;
 
             var a = new App
             {
                 Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Order = req.Order,
-                Auth = req.Auth ?? AuthSpec.None,
+                Auth = req.Auth ?? AuthSpec.None, Login = req.Login,
             };
             db.Apps.Add(a);
             await db.SaveChangesAsync(ct);
@@ -309,7 +323,7 @@ public static class ContentEndpoints
         g.MapPut("/{id:guid}", async (Guid ws, Guid id, UpdateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
-            if (ValidateAppAuth(req.Auth) is { } badAuth) return badAuth;
+            if (ValidateAppAuth(req.Auth, req.Login) is { } badAuth) return badAuth;
             var a = await db.Apps.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
             if (a is null) return Problems.NotFound("App");
             if (a.Version != req.Version) return Problems.VersionConflict(a);
@@ -317,6 +331,7 @@ public static class ContentEndpoints
             a.Name = req.Name.Trim();
             a.Order = req.Order;
             if (req.Auth is not null) a.Auth = req.Auth;
+            if (req.Login is not null) a.Login = req.Login;
             await db.SaveChangesAsync(ct);
             return Results.Ok(a.ToDto());
         }).RequireWorkspaceRole(WorkspaceRole.Editor);

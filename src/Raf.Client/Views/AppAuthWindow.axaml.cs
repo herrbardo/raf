@@ -8,9 +8,10 @@ public partial class AppAuthWindow : Window
 {
     public AppAuthWindow() => InitializeComponent();
 
+    /// <summary>Si falta algo del login, la ventana queda abierta con el motivo.</summary>
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
-        (DataContext as AppAuthViewModel)?.Accept();
+        if (DataContext is AppAuthViewModel vm && !vm.Accept()) return;
         Close();
     }
 

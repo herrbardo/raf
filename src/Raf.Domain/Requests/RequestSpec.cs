@@ -48,3 +48,65 @@ public sealed record RequestSpec(
 {
     public static RequestSpec Empty { get; } = new("GET", "", [], [], BodySpec.None, AuthSpec.None);
 }
+
+/// <summary>
+/// Cómo se calcula cuándo vence el token: el <c>exp</c> del JWT, un campo del body de la respuesta (segundos como
+/// <c>expires_in</c>, una fecha o un instante Unix), un tiempo fijo, o nunca (se renueva solo ante un 401).
+/// </summary>
+public enum TokenExpiry { JwtExp, ResponseField, Fixed, None }
+
+/// <summary>
+/// Login automático de una App: antes de un request que hereda la auth de la App, si no hay token o venció, se
+/// ejecuta <see cref="Request"/> y el valor de <see cref="TokenPath"/> se guarda en la variable de sesión
+/// <see cref="Variable"/>, que la auth de la App usa como <c>{{nombre}}</c>. <see cref="Enabled"/> en false lo
+/// apaga sin perder la configuración.
+/// </summary>
+public sealed record AppLogin(
+    bool Enabled,
+    RequestSpec Request,
+    ExtractionSource TokenSource,
+    string TokenPath,
+    string Variable,
+    TokenExpiry Expiry = TokenExpiry.JwtExp,
+    string? ExpiryPath = null,
+    int? ExpiryMinutes = null)
+{
+    public const string DefaultVariable = "token";
+
+    public static AppLogin Default { get; } = new(
+        false, RequestSpec.Empty with { Method = "POST", Body = new BodySpec(BodyType.Json, "") },
+        ExtractionSource.Body, "$.access_token", DefaultVariable);
+
+    /// <summary>
+    /// Qué le falta para poder guardarse. Apagado se acepta incompleto, salvo que herede la auth: el login de la
+    /// App no tiene de dónde heredarla.
+    /// </summary>
+    public AppLoginProblem Problem()
+    {
+        if (Request is not { Headers: not null, QueryParams: not null, Body: not null, Auth: not null }) return AppLoginProblem.Incomplete;
+        if (Request.Auth.Type == AuthType.Inherit) return AppLoginProblem.InheritAuth;
+        if (!Enabled) return AppLoginProblem.None;
+        if (string.IsNullOrWhiteSpace(Request.Method) || Request.Method.Length > 20) return AppLoginProblem.InvalidMethod;
+        if (string.IsNullOrWhiteSpace(Request.Url)) return AppLoginProblem.MissingUrl;
+        if (string.IsNullOrWhiteSpace(TokenPath)) return AppLoginProblem.MissingTokenPath;
+        if (!VariableNames.IsValid(Variable)) return AppLoginProblem.InvalidVariable;
+        return Expiry switch
+        {
+            TokenExpiry.ResponseField when string.IsNullOrWhiteSpace(ExpiryPath) => AppLoginProblem.MissingExpiryPath,
+            TokenExpiry.Fixed when ExpiryMinutes is not > 0 => AppLoginProblem.InvalidExpiryMinutes,
+            _ => AppLoginProblem.None,
+        };
+    }
+}
+
+public enum AppLoginProblem
+{
+    None, Incomplete, InheritAuth, InvalidMethod, MissingUrl, MissingTokenPath, InvalidVariable, MissingExpiryPath, InvalidExpiryMinutes,
+}
+
+public static class VariableNames
+{
+    /// <summary>Un nombre que se puede usar como <c>{{nombre}}</c>.</summary>
+    public static bool IsValid(string? name) =>
+        !string.IsNullOrEmpty(name) && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-');
+}
