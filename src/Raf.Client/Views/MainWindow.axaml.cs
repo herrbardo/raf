@@ -19,6 +19,7 @@ public partial class MainWindow : Window
             if (DataContext is not ShellViewModel shell) return;
             shell.ShowEventConsole = () => ShowEventConsole(shell);
             shell.ShowPreferences = vm => new PreferencesWindow { DataContext = vm }.ShowDialog(this);
+            shell.ShowAbout = vm => new AboutWindow { DataContext = vm }.ShowDialog(this);
         };
     }
 

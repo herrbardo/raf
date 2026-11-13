@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:views="using:Raf.Client.Views"
+        x:Class="Raf.Client.Views.AboutWindow"
+        x:DataType="vm:AboutViewModel"
+        Title="{x:Static l:Texts.About_Title}"
+        Width="380" SizeToContent="Height" CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <Button HorizontalAlignment="Right" Classes="accent" IsDefault="True" IsCancel="True"
+              Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
+    </Border>
+
+    <StackPanel Margin="20,18" Spacing="14">
+      <views:BrandHeader />
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+        <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.About_Version}" />
+        <SelectableTextBlock Grid.Column="1" Classes="mono" VerticalAlignment="Center" Text="{Binding Version}" />
+        <TextBlock Grid.Row="1" Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.About_Developer}" />
+        <SelectableTextBlock Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Text="{Binding Developer}" />
+      </Grid>
+    </StackPanel>
+  </DockPanel>
+</Window>

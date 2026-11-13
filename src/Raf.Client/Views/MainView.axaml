@@ -42,6 +42,8 @@
                 <MenuItem Header="{x:Static l:Texts.MainV_Admin}" Command="{Binding OpenAdminCommand}" IsVisible="{Binding IsAdmin}" />
                 <MenuItem Header="{x:Static l:Texts.MainV_ChangePassword}" Command="{Binding ChangePasswordCommand}" />
                 <MenuItem Header="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}" />
+                <MenuItem Header="{x:Static l:Texts.MainV_About}" Command="{Binding Shell.OpenAboutCommand}" />
+                <Separator />
                 <MenuItem Header="{x:Static l:Texts.MainV_Logout}" Command="{Binding LogoutCommand}" />
               </MenuFlyout>
             </Button.Flyout>

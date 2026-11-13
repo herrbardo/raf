@@ -22,12 +22,12 @@
                      Text="{x:Static l:Texts.ConnV_Insecure}" />
           <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
-        <DockPanel>
-          <Button Classes="link" Content="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}"
-                  VerticalAlignment="Center" />
-          <Button Classes="accent" Content="{x:Static l:Texts.ConnV_Continue}" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
-                  HorizontalContentAlignment="Center" Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
-        </DockPanel>
+        <Button Classes="accent" Content="{x:Static l:Texts.ConnV_Continue}" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
+                HorizontalContentAlignment="Center" Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Classes="link" Content="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}" />
+          <Button Classes="link" Content="{x:Static l:Texts.MainV_About}" Command="{Binding Shell.OpenAboutCommand}" />
+        </StackPanel>
       </StackPanel>
     </Border>
   </ScrollViewer>
