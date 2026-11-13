@@ -18,6 +18,8 @@ Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
 **v0.1.0**, primer release estable, cierra los planes 02 a 07 (Ticket-011). El despliegue y el tiempo real del Plan 05 se validaron en Railway (Ticket-022); el despliegue en AWS sigue pendiente en el Ticket-004.
 
+**v0.2.0** suma lo hecho desde la v0.1.0: consola por request, autocompletar de variables, formato del body, menú contextual en la respuesta, interfaz en inglés y español, autenticación por App con variables de sesión y login automático (plan 08). Como un cliente anterior no entiende la auth `Inherit`, hay que desplegar primero el servidor y después subir `Clients:MinVersion` a `0.2.0`.
+
 ## Decisiones pendientes
 
 | # | Decisión | Afecta | Recomendación |
