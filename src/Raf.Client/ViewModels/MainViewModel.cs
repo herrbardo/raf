@@ -286,6 +286,21 @@ public sealed partial class MainViewModel : ObservableObject
 
     public void ReportStatus(string message) => Status = message;
 
+    /// <summary>URL del servidor de la sesión, para pasársela a otro usuario. La ve cualquier rol.</summary>
+    public string ServerUrlText =>
+        (Services.Session.Server?.ToString() ?? Services.Settings.Current.ServerUrl ?? "").TrimEnd('/');
+
+    /// <summary>Lo implementa la vista, que tiene acceso al portapapeles.</summary>
+    public Func<string, Task>? CopyToClipboard { get; set; }
+
+    [RelayCommand]
+    private async Task CopyServerUrlAsync()
+    {
+        if (CopyToClipboard is null || ServerUrlText.Length == 0) return;
+        await CopyToClipboard(ServerUrlText);
+        ReportStatus(string.Format(Texts.Main_ServerUrlCopied, ServerUrlText));
+    }
+
     private async Task GuardAsync(Func<Task> action)
     {
         try

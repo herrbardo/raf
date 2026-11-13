@@ -17,6 +17,7 @@ public partial class MainView : UserControl
             vm.ShowConflicts = ShowConflictsAsync;
             vm.ShowWorkspaceSettings = ShowWorkspaceSettingsAsync;
             vm.ShowAdmin = ShowAdminAsync;
+            vm.CopyToClipboard = text => TopLevel.GetTopLevel(this)?.Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
         };
     }
 
