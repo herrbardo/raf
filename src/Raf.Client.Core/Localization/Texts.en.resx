@@ -32,6 +32,9 @@
   <data name="Sync_Pending" xml:space="preserve"><value>{0} pending</value></data>
   <data name="Sync_Syncing" xml:space="preserve"><value>Syncing…</value></data>
   <data name="Sync_DetailServer" xml:space="preserve"><value>Server: {0}</value></data>
+  <data name="Main_ServerTip" xml:space="preserve"><value>Server RAF is connected to. Share this URL with anyone who wants to connect.</value></data>
+  <data name="Main_CopyServerUrl" xml:space="preserve"><value>Copy the server URL</value></data>
+  <data name="Main_ServerUrlCopied" xml:space="preserve"><value>Server URL copied: {0}</value></data>
   <data name="Sync_DetailLast" xml:space="preserve"><value>Last sync: {0}</value></data>
   <data name="Sync_DetailNever" xml:space="preserve"><value>Not synced yet in this session.</value></data>
   <data name="Sync_DetailError" xml:space="preserve"><value>Last error: {0}</value></data>

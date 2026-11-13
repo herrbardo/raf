@@ -85,7 +85,20 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Classes="statusbar">
-      <TextBlock Classes="caption" Text="{Binding Status}" TextTrimming="CharacterEllipsis" MinHeight="16" />
+      <DockPanel>
+        <!-- URL del servidor, visible para cualquier rol, para pasársela a quien quiera conectarse -->
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0"
+                    ToolTip.Tip="{x:Static l:Texts.Main_ServerTip}">
+          <SelectableTextBlock Classes="caption mono" VerticalAlignment="Center" MaxWidth="360"
+                               TextTrimming="CharacterEllipsis" Text="{Binding ServerUrlText}" />
+          <Button Classes="icon" Padding="3" VerticalAlignment="Center"
+                  ToolTip.Tip="{x:Static l:Texts.Main_CopyServerUrl}" AutomationProperties.Name="{x:Static l:Texts.Main_CopyServerUrl}"
+                  Command="{Binding CopyServerUrlCommand}">
+            <ctl:Icon Width="12" Height="12" Data="{StaticResource IconCopy}" />
+          </Button>
+        </StackPanel>
+        <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding Status}" TextTrimming="CharacterEllipsis" MinHeight="16" />
+      </DockPanel>
     </Border>
 
     <Grid ColumnDefinitions="300,5,*">
