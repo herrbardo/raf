@@ -1,10 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
         xmlns:vm="using:Raf.Client.ViewModels"
         xmlns:ctl="using:Raf.Client.Controls"
         x:Class="Raf.Client.Views.AdminWindow"
         x:DataType="vm:AdminViewModel"
-        Title="Administración del servidor"
+        Title="{x:Static l:Texts.AdminW_Title}"
         Width="920" Height="600" MinWidth="700" MinHeight="420"
         WindowStartupLocation="CenterOwner">
   <DockPanel>
@@ -14,10 +15,10 @@
           <Button Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <ctl:Icon Data="{StaticResource IconRefresh}" />
-              <TextBlock VerticalAlignment="Center" Text="Actualizar" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Refresh}" />
             </StackPanel>
           </Button>
-          <Button Content="Cerrar" Click="OnCloseClick" />
+          <Button Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
         </StackPanel>
         <TextBlock Classes="error" VerticalAlignment="Center" Margin="0,0,12,0" Text="{Binding Error}"
                    IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -25,17 +26,17 @@
     </Border>
 
     <TabControl Classes="section" Margin="20,8,20,12" Padding="0,10,0,0">
-      <TabItem Header="Usuarios">
+      <TabItem Header="{x:Static l:Texts.AdminW_Users}">
         <Grid ColumnDefinitions="*,16,320">
           <DockPanel>
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
               <Button DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding NewUserCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <ctl:Icon Data="{StaticResource IconPlus}" />
-                  <TextBlock VerticalAlignment="Center" Text="Nuevo usuario" />
+                  <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.Admin_NewUser}" />
                 </StackPanel>
               </Button>
-              <TextBox Text="{Binding Search}" Watermark="Buscar por nombre o email" />
+              <TextBox Text="{Binding Search}" Watermark="{x:Static l:Texts.AdminW_Search}" />
             </DockPanel>
             <ListBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}">
               <ListBox.ItemTemplate>
@@ -55,30 +56,30 @@
             <Panel>
               <StackPanel Classes="empty" IsVisible="{Binding !IsEditing}">
                 <ctl:Icon Data="{StaticResource IconUser}" />
-                <TextBlock Classes="caption" Text="Elegí un usuario de la lista o creá uno nuevo." />
+                <TextBlock Classes="caption" Text="{x:Static l:Texts.AdminW_Pick}" />
               </StackPanel>
               <StackPanel Spacing="12" IsVisible="{Binding IsEditing}">
                 <TextBlock Classes="heading" Text="{Binding EditorTitle}" TextTrimming="CharacterEllipsis" />
                 <StackPanel Spacing="6">
-                  <TextBlock Classes="label" Text="Email (es el usuario para entrar)" />
+                  <TextBlock Classes="label" Text="{x:Static l:Texts.AdminW_EmailLabel}" />
                   <TextBox Text="{Binding EditEmail}" />
                 </StackPanel>
                 <StackPanel Spacing="6">
-                  <TextBlock Classes="label" Text="Nombre" />
+                  <TextBlock Classes="label" Text="{x:Static l:Texts.V_Name}" />
                   <TextBox Text="{Binding EditName}" />
                 </StackPanel>
-                <CheckBox IsChecked="{Binding EditIsAdmin}" Content="Admin del servidor" />
+                <CheckBox IsChecked="{Binding EditIsAdmin}" Content="{x:Static l:Texts.AdminW_ServerAdmin}" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Classes="accent" Content="{Binding SaveText}" Command="{Binding SaveUserCommand}" IsEnabled="{Binding !IsBusy}" />
-                  <Button Content="Cancelar" Command="{Binding CancelEditCommand}" />
+                  <Button Content="{x:Static l:Texts.V_Cancel}" Command="{Binding CancelEditCommand}" />
                 </StackPanel>
                 <Separator Margin="0,4" IsVisible="{Binding CanResetPassword}" />
                 <StackPanel Spacing="8" IsVisible="{Binding CanResetPassword}">
-                  <Button Content="Resetear contraseña" Command="{Binding ResetPasswordCommand}" IsEnabled="{Binding !IsBusy}" />
+                  <Button Content="{x:Static l:Texts.AdminW_ResetPassword}" Command="{Binding ResetPasswordCommand}" IsEnabled="{Binding !IsBusy}" />
                   <Button Classes="danger" Content="{Binding ToggleDisabledText}" Command="{Binding ToggleDisabledCommand}"
                           IsVisible="{Binding CanToggleDisabled}" IsEnabled="{Binding !IsBusy}" />
                   <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !CanToggleDisabled}"
-                             Text="No podés deshabilitar tu propia cuenta." />
+                             Text="{x:Static l:Texts.AdminW_CantDisableSelf}" />
                 </StackPanel>
               </StackPanel>
             </Panel>
@@ -86,15 +87,15 @@
         </Grid>
       </TabItem>
 
-      <TabItem Header="Workspaces">
+      <TabItem Header="{x:Static l:Texts.AdminW_Workspaces}">
         <DockPanel>
           <Border DockPanel.Dock="Bottom" Classes="group" Margin="0,12,0,0">
             <StackPanel Spacing="10">
               <TextBlock Classes="caption" TextWrapping="Wrap"
-                         Text="Reasignar el Owner sirve cuando el actual fue deshabilitado o dejó el equipo. El Owner anterior queda como Editor." />
+                         Text="{x:Static l:Texts.AdminW_ReassignHint}" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding OwnerCandidates}" SelectedItem="{Binding NewOwner}"
-                          PlaceholderText="Nuevo Owner">
+                          PlaceholderText="{x:Static l:Texts.AdminW_NewOwner}">
                   <ComboBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:UserRow">
                       <TextBlock TextTrimming="CharacterEllipsis">
@@ -105,7 +106,7 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <Button Grid.Column="1" Content="Reasignar Owner" Command="{Binding ReassignOwnerCommand}" />
+                <Button Grid.Column="1" Content="{x:Static l:Texts.Admin_ReassignTitle}" Command="{Binding ReassignOwnerCommand}" />
               </Grid>
             </StackPanel>
           </Border>

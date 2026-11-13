@@ -16,7 +16,9 @@ public partial class MainWindow : Window
         Activated += (_, _) => (DataContext as ShellViewModel)?.Main?.OnWindowActivated();
         DataContextChanged += (_, _) =>
         {
-            if (DataContext is ShellViewModel shell) shell.ShowEventConsole = () => ShowEventConsole(shell);
+            if (DataContext is not ShellViewModel shell) return;
+            shell.ShowEventConsole = () => ShowEventConsole(shell);
+            shell.ShowPreferences = vm => new PreferencesWindow { DataContext = vm }.ShowDialog(this);
         };
     }
 
@@ -41,7 +43,7 @@ public partial class MainWindow : Window
 
         e.Cancel = true;
         if (await main.Services.Dialogs.ConfirmAsync(
-                "Cambios sin guardar", "Hay pestañas con cambios sin guardar. ¿Salir y descartarlos?", "Salir"))
+                Texts.Main_UnsavedTitle, Texts.Window_ExitUnsaved, Texts.Window_Exit))
         {
             _confirmedClose = true;
             Close();

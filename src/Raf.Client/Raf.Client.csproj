@@ -25,6 +25,10 @@
     <PackageReference Include="Velopack" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Textos de la interfaz: viven en Raf.Client.Core/Localization. -->
+    <Using Include="Raf.Client.Core.Localization" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Raf.Client.Core\Raf.Client.Core.csproj" />
   </ItemGroup>
 </Project>

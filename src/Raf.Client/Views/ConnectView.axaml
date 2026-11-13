@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.Views.ConnectView"
@@ -9,20 +10,24 @@
       <StackPanel Spacing="14">
         <views:BrandHeader />
         <StackPanel Spacing="4">
-          <TextBlock Classes="title" Text="Conectar con el servidor" />
+          <TextBlock Classes="title" Text="{x:Static l:Texts.ConnV_Title}" />
           <TextBlock Classes="caption" TextWrapping="Wrap"
-                     Text="Indicá la URL del servidor RAF de tu equipo, incluido el subpath si lo tiene." />
+                     Text="{x:Static l:Texts.ConnV_Intro}" />
         </StackPanel>
         <StackPanel Spacing="6">
-          <TextBlock Classes="label" Text="URL del servidor" />
+          <TextBlock Classes="label" Text="{x:Static l:Texts.ConnV_UrlLabel}" />
           <AutoCompleteBox Text="{Binding Url}" ItemsSource="{Binding RecentServers}"
-                           FilterMode="Contains" MinimumPrefixLength="0" Watermark="https://dominio/raf" />
+                           FilterMode="Contains" MinimumPrefixLength="0" Watermark="{x:Static l:Texts.ConnV_UrlHint}" />
           <TextBlock Classes="warning" IsVisible="{Binding InsecureWarning}"
-                     Text="Esta URL no usa https: tu contraseña y tus tokens viajarían sin cifrar." />
+                     Text="{x:Static l:Texts.ConnV_Insecure}" />
           <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
-        <Button Classes="accent" Content="Continuar" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
-                HorizontalContentAlignment="Center" Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
+        <DockPanel>
+          <Button Classes="link" Content="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}"
+                  VerticalAlignment="Center" />
+          <Button Classes="accent" Content="{x:Static l:Texts.ConnV_Continue}" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
+                  HorizontalContentAlignment="Center" Command="{Binding ConnectCommand}" IsEnabled="{Binding !IsBusy}" />
+        </DockPanel>
       </StackPanel>
     </Border>
   </ScrollViewer>

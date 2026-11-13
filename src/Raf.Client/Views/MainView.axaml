@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              xmlns:dto="using:Raf.Contracts"
@@ -38,9 +39,10 @@
               <MenuFlyout>
                 <MenuItem Header="{Binding RoleText}" IsEnabled="False" />
                 <Separator />
-                <MenuItem Header="Administración del servidor…" Command="{Binding OpenAdminCommand}" IsVisible="{Binding IsAdmin}" />
-                <MenuItem Header="Cambiar contraseña" Command="{Binding ChangePasswordCommand}" />
-                <MenuItem Header="Cerrar sesión" Command="{Binding LogoutCommand}" />
+                <MenuItem Header="{x:Static l:Texts.MainV_Admin}" Command="{Binding OpenAdminCommand}" IsVisible="{Binding IsAdmin}" />
+                <MenuItem Header="{x:Static l:Texts.MainV_ChangePassword}" Command="{Binding ChangePasswordCommand}" />
+                <MenuItem Header="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}" />
+                <MenuItem Header="{x:Static l:Texts.MainV_Logout}" Command="{Binding LogoutCommand}" />
               </MenuFlyout>
             </Button.Flyout>
           </Button>
@@ -48,32 +50,32 @@
 
         <StackPanel Orientation="Horizontal" Spacing="4">
           <ComboBox MinWidth="180" MaxWidth="260" ItemsSource="{Binding Workspaces}" SelectedItem="{Binding SelectedWorkspace}"
-                    PlaceholderText="Workspace" ToolTip.Tip="Workspace">
+                    PlaceholderText="{x:Static l:Texts.MainV_Workspace}" ToolTip.Tip="{x:Static l:Texts.MainV_Workspace}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="dto:WorkspaceDto">
                 <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Classes="icon" ToolTip.Tip="Nuevo workspace" Command="{Binding NewWorkspaceCommand}">
+          <Button Classes="icon" ToolTip.Tip="{x:Static l:Texts.MainV_NewWorkspace}" Command="{Binding NewWorkspaceCommand}">
             <ctl:Icon Data="{StaticResource IconPlus}" />
           </Button>
-          <Button Classes="icon" ToolTip.Tip="Nombre y miembros del workspace" Command="{Binding OpenWorkspaceSettingsCommand}">
+          <Button Classes="icon" ToolTip.Tip="{x:Static l:Texts.MainV_WorkspaceSettings}" Command="{Binding OpenWorkspaceSettingsCommand}">
             <ctl:Icon Data="{StaticResource IconMembers}" />
           </Button>
           <Border Width="1" Height="20" Margin="8,0" Background="{DynamicResource RafBorderBrush}" />
           <ComboBox MinWidth="150" MaxWidth="220" ItemsSource="{Binding Environments}" SelectedItem="{Binding SelectedEnvironment}"
-                    PlaceholderText="Environment" ToolTip.Tip="Environment activo">
+                    PlaceholderText="{x:Static l:Texts.MainV_Environment}" ToolTip.Tip="{x:Static l:Texts.MainV_ActiveEnvironment}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:EnvironmentChoice">
                 <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Classes="ghost" ToolTip.Tip="Environments y variables" Command="{Binding EditEnvironmentsCommand}">
+          <Button Classes="ghost" ToolTip.Tip="{x:Static l:Texts.EnvW_Title}" Command="{Binding EditEnvironmentsCommand}">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <ctl:Icon Data="{StaticResource IconVariables}" />
-              <TextBlock VerticalAlignment="Center" Text="Variables" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Variables}" />
             </StackPanel>
           </Button>
         </StackPanel>
@@ -88,24 +90,24 @@
       <!-- Barra lateral -->
       <Border Grid.Column="0" Classes="sidebar">
         <TabControl Classes="section" Padding="0" Margin="6,2,0,0">
-          <TabItem Header="Colección">
+          <TabItem Header="{x:Static l:Texts.MainV_Collection}">
             <DockPanel>
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="2" Margin="0,4,6,4">
-                <Button Classes="ghost" ToolTip.Tip="Nueva app" Command="{Binding NewAppCommand}">
+                <Button Classes="ghost" ToolTip.Tip="{x:Static l:Texts.MainV_NewApp}" Command="{Binding NewAppCommand}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <ctl:Icon Data="{StaticResource IconPlus}" />
-                    <TextBlock VerticalAlignment="Center" Text="App" />
+                    <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.MainV_App}" />
                   </StackPanel>
                 </Button>
-                <Button Classes="icon" ToolTip.Tip="Actualizar" Command="{Binding RefreshCommand}">
+                <Button Classes="icon" ToolTip.Tip="{x:Static l:Texts.V_Refresh}" Command="{Binding RefreshCommand}">
                   <ctl:Icon Data="{StaticResource IconRefresh}" />
                 </Button>
               </StackPanel>
               <Grid>
                 <StackPanel Classes="empty" IsVisible="{Binding !Roots.Count}">
                   <ctl:Icon Data="{StaticResource IconFolder}" />
-                  <TextBlock Classes="empty-title" Text="La colección está vacía" />
-                  <TextBlock Classes="caption" Text="Creá una app con «+ App» para agrupar sus requests." IsVisible="{Binding CanEdit}" />
+                  <TextBlock Classes="empty-title" Text="{x:Static l:Texts.MainV_EmptyCollection}" />
+                  <TextBlock Classes="caption" Text="{x:Static l:Texts.MainV_EmptyCollectionHint}" IsVisible="{Binding CanEdit}" />
                 </StackPanel>
                 <TreeView ItemsSource="{Binding Roots}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                   <TreeView.Styles>
@@ -118,13 +120,13 @@
                       <Grid ColumnDefinitions="Auto,*" Background="Transparent" Tapped="OnNodeTapped">
                         <Grid.ContextMenu>
                           <ContextMenu>
-                            <MenuItem Header="Nueva carpeta" Command="{Binding NewFolderCommand}" IsVisible="{Binding CanAddContainer}" />
-                            <MenuItem Header="Nuevo request" Command="{Binding NewRequestCommand}" IsVisible="{Binding CanAddContainer}" />
-                            <MenuItem Header="Nuevo sample" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
-                            <MenuItem Header="Renombrar" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="Subir" Command="{Binding MoveUpCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="Bajar" Command="{Binding MoveDownCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="Eliminar" Command="{Binding DeleteCommand}" IsVisible="{Binding CanEdit}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_NewFolder}" Command="{Binding NewFolderCommand}" IsVisible="{Binding CanAddContainer}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_NewRequest}" Command="{Binding NewRequestCommand}" IsVisible="{Binding CanAddContainer}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_NewSample}" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
+                            <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_MoveUp}" Command="{Binding MoveUpCommand}" IsVisible="{Binding CanEdit}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_MoveDown}" Command="{Binding MoveDownCommand}" IsVisible="{Binding CanEdit}" />
+                            <MenuItem Header="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" IsVisible="{Binding CanEdit}" />
                           </ContextMenu>
                         </Grid.ContextMenu>
                         <Panel Margin="0,0,8,0">
@@ -142,12 +144,12 @@
               </Grid>
             </DockPanel>
           </TabItem>
-          <TabItem Header="Historial">
+          <TabItem Header="{x:Static l:Texts.MainV_History}">
             <Grid>
               <StackPanel Classes="empty" IsVisible="{Binding !History.Count}">
                 <ctl:Icon Data="{StaticResource IconHistory}" />
-                <TextBlock Classes="empty-title" Text="Sin historial" />
-                <TextBlock Classes="caption" Text="Los requests que envíes desde este equipo aparecen acá." />
+                <TextBlock Classes="empty-title" Text="{x:Static l:Texts.MainV_NoHistory}" />
+                <TextBlock Classes="caption" Text="{x:Static l:Texts.MainV_NoHistoryHint}" />
               </StackPanel>
               <ListBox ItemsSource="{Binding History}" Tapped="OnHistoryTapped" Margin="0,4,0,0"
                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -176,13 +178,13 @@
         <Border Classes="surface" IsVisible="{Binding !Tabs.Count}">
           <StackPanel Classes="empty">
             <ctl:Icon Data="{StaticResource IconLayers}" />
-            <TextBlock Classes="empty-title" Text="Ningún request abierto" />
-            <TextBlock Classes="caption" Text="Elegí un request del árbol para editarlo y enviarlo." />
+            <TextBlock Classes="empty-title" Text="{x:Static l:Texts.MainV_NoTabs}" />
+            <TextBlock Classes="caption" Text="{x:Static l:Texts.MainV_NoTabsHint}" />
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" Margin="0,6,0,0">
               <Border Classes="kbd"><TextBlock Text="Ctrl+Enter" /></Border>
-              <TextBlock Classes="caption" VerticalAlignment="Center" Text="envía" />
+              <TextBlock Classes="caption" VerticalAlignment="Center" Text="{x:Static l:Texts.MainV_Sends}" />
               <Border Classes="kbd" Margin="10,0,0,0"><TextBlock Text="Ctrl+S" /></Border>
-              <TextBlock Classes="caption" VerticalAlignment="Center" Text="guarda" />
+              <TextBlock Classes="caption" VerticalAlignment="Center" Text="{x:Static l:Texts.MainV_Saves}" />
             </StackPanel>
           </StackPanel>
         </Border>
@@ -194,8 +196,8 @@
                 <ctl:MethodBadge Method="{Binding Node.Method}" IsVisible="{Binding Node.IsRequest}" MaxWidth="56" Margin="0,0,7,0" />
                 <ctl:Icon Classes="node" Width="13" Height="13" Margin="0,0,7,0" Data="{StaticResource IconSample}" IsVisible="{Binding Node.IsSample}" />
                 <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Node.Name}" />
-                <Ellipse Grid.Column="2" Classes="dirty" Margin="7,0,0,0" ToolTip.Tip="Cambios sin guardar" IsVisible="{Binding IsDirty}" />
-                <Button Grid.Column="3" Classes="icon small tab-close" Margin="4,0,0,0" ToolTip.Tip="Cerrar" Command="{Binding CloseCommand}">
+                <Ellipse Grid.Column="2" Classes="dirty" Margin="7,0,0,0" ToolTip.Tip="{x:Static l:Texts.V_Unsaved}" IsVisible="{Binding IsDirty}" />
+                <Button Grid.Column="3" Classes="icon small tab-close" Margin="4,0,0,0" ToolTip.Tip="{x:Static l:Texts.V_Close}" Command="{Binding CloseCommand}">
                   <ctl:Icon Data="{StaticResource IconClose}" />
                 </Button>
               </Grid>

@@ -21,7 +21,7 @@ public abstract partial class PageViewModel : ObservableObject
     public EventLog? Events { get; init; }
 
     /// <summary>Cómo se nombra la pantalla en la consola de eventos.</summary>
-    protected virtual string EventContext => "la app";
+    protected virtual string EventContext => Texts.Page_ContextApp;
 
     protected async Task GuardAsync(Func<Task> action)
     {
@@ -39,7 +39,7 @@ public abstract partial class PageViewModel : ObservableObject
         {
             Error = e.Message;
             var status = e.Status is { } code ? $" (HTTP {(int)code})" : "";
-            Events?.Warning(EventCategory.App, $"Error en {EventContext}{status}: {e.Message}", e.InnerException?.ToString());
+            Events?.Warning(EventCategory.App, string.Format(Texts.Page_ErrorIn, EventContext, status, e.Message), e.InnerException?.ToString());
         }
         finally
         {
@@ -64,12 +64,12 @@ public sealed partial class ShellViewModel : ObservableObject
         _clientVersion = version.ClientVersion;
         services.Session.SessionExpired += () => Dispatcher.UIThread.Post(() =>
         {
-            if (Page is not LoginViewModel and not UpdateRequiredViewModel) ShowLogin("La sesión expiró. Volvé a iniciar sesión.");
+            if (Page is not LoginViewModel and not UpdateRequiredViewModel) ShowLogin(Texts.Shell_SessionExpired);
         });
         version.Outdated += min =>
         {
             services.Events.Warning(EventCategory.Connection,
-                $"El servidor exige la versión {min} o posterior y esta es la {version.ClientVersion}: se deja de sincronizar.");
+                string.Format(Texts.Shell_Outdated, min, version.ClientVersion));
             Dispatcher.UIThread.Post(() => ShowUpdateRequired(min));
         };
     }
@@ -88,6 +88,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [RelayCommand]
     private void RestartToUpdate() => Updates.ApplyAndRestart();
+
+    /// <summary>Lo implementa la ventana principal, que abre las preferencias como diálogo.</summary>
+    public Func<PreferencesViewModel, Task>? ShowPreferences { get; set; }
+
+    [RelayCommand]
+    private Task OpenPreferencesAsync() =>
+        ShowPreferences?.Invoke(new PreferencesViewModel(_services.Settings)) ?? Task.CompletedTask;
 
     /// <summary>El servidor ya no acepta esta versión: se deja de sincronizar y se ofrece actualizar.</summary>
     public void ShowUpdateRequired(string minVersion)
@@ -179,7 +186,9 @@ public sealed partial class ConnectViewModel(ClientServices services, ShellViewM
         : services.Settings.Current.ServerUrl is { } last ? [last]
         : [];
 
-    protected override string EventContext => "la conexión al servidor";
+    protected override string EventContext => Texts.Page_ContextConnect;
+
+    public ShellViewModel Shell => shell;
 
     public bool InsecureWarning =>
         ServerUrl.Normalize(Url) is { Scheme: "http", IsLoopback: false };
@@ -190,7 +199,7 @@ public sealed partial class ConnectViewModel(ClientServices services, ShellViewM
         var server = ServerUrl.Normalize(Url);
         if (server is null)
         {
-            Error = "Ingresá una URL http o https válida, incluido el subpath si lo tiene.";
+            Error = Texts.Connect_InvalidUrl;
             return;
         }
 
@@ -208,12 +217,14 @@ public sealed partial class LoginViewModel(ClientServices services, ShellViewMod
 
     public string? ServerText => services.Session.Server?.ToString();
 
+    public ShellViewModel Shell => shell;
+
     [RelayCommand]
     private Task LoginAsync() => GuardAsync(async () =>
     {
         if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrEmpty(Password))
         {
-            Error = "Completá el email y la contraseña.";
+            Error = Texts.Login_Missing;
             return;
         }
 
@@ -238,25 +249,25 @@ public sealed partial class ChangePasswordViewModel(
 
     public bool IsForced => returnTo is null;
 
-    protected override string EventContext => "el cambio de contraseña";
+    protected override string EventContext => Texts.Page_ContextChangePassword;
 
-    public string Heading => IsForced ? "Elegí una contraseña nueva" : "Cambiar contraseña";
+    public string Heading => IsForced ? Texts.Password_HeadingForced : Texts.Password_Heading;
 
     public string Intro => IsForced
-        ? "Tu contraseña es temporal: hay que cambiarla antes de continuar."
-        : "Al cambiarla se cierran tus sesiones en otros equipos.";
+        ? Texts.Password_IntroForced
+        : Texts.Password_Intro;
 
     [RelayCommand]
     private Task SaveAsync() => GuardAsync(async () =>
     {
         if (string.IsNullOrEmpty(Current) || string.IsNullOrEmpty(Next))
         {
-            Error = "Completá todos los campos.";
+            Error = Texts.Password_MissingFields;
             return;
         }
         if (Next != Repeat)
         {
-            Error = "Las contraseñas nuevas no coinciden.";
+            Error = Texts.Password_Mismatch;
             return;
         }
 

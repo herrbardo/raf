@@ -5,7 +5,7 @@ description: "Convenciones para escribir y modificar la UI de RAF en Avalonia 11
 
 # Avalonia en RAF
 
-Stack: Avalonia 11.3, `FluentTheme`, `CommunityToolkit.Mvvm`, AvaloniaEdit. Las versiones están en `Directory.Packages.props`. **No usar ReactiveUI ni `System.Reactive`.** Los textos de la UI van en español rioplatense.
+Stack: Avalonia 11.3, `FluentTheme`, `CommunityToolkit.Mvvm`, AvaloniaEdit. Las versiones están en `Directory.Packages.props`. **No usar ReactiveUI ni `System.Reactive`.** Los textos de la UI nunca van literales: salen de recursos (ver "Textos").
 
 Antes de agregar algo, copiar el patrón de una vista parecida. Si esta guía y la API instalada no coinciden, manda la API: compilar y corregir la guía.
 
@@ -57,6 +57,18 @@ Los compiled bindings están activos por defecto, así que falta `x:DataType` si
 - Negación y nulos: `{Binding !IsRunning}` y `{Binding Texto, Converter={x:Static ObjectConverters.IsNotNull}}`.
 - Con más de un aspecto según el estado, usar una clase condicional en lugar de duplicar el control: `Classes.success="{Binding IsSuccess}"`.
 - El code-behind queda para lo puramente visual, como `Tapped` en árboles o el foco.
+
+## Textos
+
+La UI está en español (rioplatense) e inglés. Ningún texto que vea el usuario va literal en AXAML ni en C#.
+
+- **Dónde:** `src/Raf.Client.Core/Localization/`. `Texts.resx` tiene la interfaz y `CoreTexts.resx` los mensajes de `Raf.Client.Core` (errores, consola, sincronización). El `.resx` sin sufijo es el español; `.en.resx`, el inglés. La clase tipada se genera al compilar.
+- **Un texto nuevo** se agrega en los dos archivos con la misma clave (`Área_Nombre`, por ejemplo `Main_NewApp`). `LocalizationTests` falla si falta una traducción o si no coinciden los `{0}`.
+- **En AXAML:** `xmlns:l="using:Raf.Client.Core.Localization"` y `Text="{x:Static l:Texts.Clave}"`.
+- **En C#:** `Texts.Clave`; con datos, `string.Format(Texts.Clave, valor)`. El `using` es global.
+- Quedan literales los nombres técnicos iguales en los dos idiomas (`Headers`, `Body`, `Query`, `Auth`, `URL`), los atajos y la marca.
+- El idioma se elige en Preferencias, se guarda en `LocalSettings.Language` y se aplica al arrancar (`Languages.Apply` en `App.Initialize`): cambiarlo requiere reiniciar. Sin elección, español si el sistema está en español y si no, inglés. Para revisar un idioma, poner `"language": "en"` en el `settings.json` de un `RAF_DATA_DIR` de prueba.
+- Los mensajes que manda el servidor llegan en español en los dos idiomas.
 
 ## Estilos y colores
 

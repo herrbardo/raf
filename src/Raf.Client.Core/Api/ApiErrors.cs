@@ -42,7 +42,7 @@ public class ApiException(HttpStatusCode? status, string message, Exception? inn
         }
 
         var message = errors.Count > 0 ? string.Join(Environment.NewLine, errors)
-            : detail ?? title ?? $"El servidor respondió {(int)response.StatusCode}.";
+            : detail ?? title ?? string.Format(CoreTexts.Api_ServerAnswered, (int)response.StatusCode);
 
         if (response.StatusCode == HttpStatusCode.Conflict && title == "Conflicto de versión")
             return new VersionConflictException(message);
@@ -57,4 +57,4 @@ public sealed class VersionConflictException(string message) : ApiException(Http
 
 /// <summary>La sesión ya no es válida: hay que volver a iniciarla.</summary>
 public sealed class SessionExpiredException()
-    : ApiException(HttpStatusCode.Unauthorized, "La sesión expiró. Volvé a iniciar sesión.");
+    : ApiException(HttpStatusCode.Unauthorized, CoreTexts.Api_SessionExpired);

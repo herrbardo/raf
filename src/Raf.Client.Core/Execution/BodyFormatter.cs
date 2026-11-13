@@ -30,10 +30,10 @@ public static partial class BodyFormatter
 
     public static BodyFormatResult Format(string text, BodyType type) => type switch
     {
-        _ when string.IsNullOrWhiteSpace(text) => new BodyFormatResult(null, "El body está vacío: no hay nada para formatear."),
+        _ when string.IsNullOrWhiteSpace(text) => new BodyFormatResult(null, CoreTexts.Format_Empty),
         BodyType.Json => FormatJson(text),
         BodyType.Xml => FormatXml(text),
-        _ => new BodyFormatResult(null, "Solo se puede formatear un body JSON o XML."),
+        _ => new BodyFormatResult(null, CoreTexts.Format_Unsupported),
     };
 
     private static BodyFormatResult FormatJson(string text)
@@ -49,8 +49,9 @@ public static partial class BodyFormatter
         }
         catch (JsonException e)
         {
-            var where = e.LineNumber is { } line ? $" (línea {line + 1})" : "";
-            return new BodyFormatResult(null, $"El JSON no es válido{where}: no se cambió el body.");
+            return new BodyFormatResult(null, e.LineNumber is { } line
+                ? string.Format(CoreTexts.Format_JsonInvalidLine, line + 1)
+                : CoreTexts.Format_JsonInvalid);
         }
     }
 
@@ -112,7 +113,7 @@ public static partial class BodyFormatter
         }
         catch (XmlException e)
         {
-            return new BodyFormatResult(null, $"El XML no es válido (línea {e.LineNumber}): no se cambió el body.");
+            return new BodyFormatResult(null, string.Format(CoreTexts.Format_XmlInvalidLine, e.LineNumber));
         }
     }
 

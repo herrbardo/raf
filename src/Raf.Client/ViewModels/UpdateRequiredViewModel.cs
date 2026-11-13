@@ -11,8 +11,8 @@ public sealed partial class UpdateRequiredViewModel(
     public UpdateService Updates { get; } = updates;
 
     public string Message => string.IsNullOrEmpty(minVersion)
-        ? $"Esta versión de RAF ({clientVersion}) ya no es compatible con el servidor."
-        : $"Esta versión de RAF ({clientVersion}) ya no es compatible con el servidor, que pide la {minVersion} o posterior.";
+        ? string.Format(Texts.Update_Incompatible, clientVersion)
+        : string.Format(Texts.Update_IncompatibleMin, clientVersion, minVersion);
 
     public bool CanUpdateInApp => Updates.IsSupported;
 
@@ -21,8 +21,8 @@ public sealed partial class UpdateRequiredViewModel(
     public bool CanOpenReleases => !CanUpdateInApp && ReleasesPage is not null;
 
     public string ManualHint => CanOpenReleases
-        ? "Descargá e instalá la última versión. Tus datos locales se conservan."
-        : "Pedile la versión nueva al administrador del servidor. Tus datos locales se conservan.";
+        ? Texts.Update_HowInstaller
+        : Texts.Update_HowAdmin;
 
     [RelayCommand]
     private async Task UpdateNowAsync()
@@ -32,7 +32,7 @@ public sealed partial class UpdateRequiredViewModel(
         try
         {
             if (await Updates.CheckAndDownloadAsync()) Updates.ApplyAndRestart();
-            else Error = "No se encontró una versión nueva o no se pudo descargar. Revisá la conexión y probá de nuevo.";
+            else Error = Texts.Update_NotFound;
         }
         finally
         {
@@ -50,7 +50,7 @@ public sealed partial class UpdateRequiredViewModel(
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            Error = $"No se pudo abrir el navegador. La versión nueva está en {ReleasesPage}";
+            Error = string.Format(Texts.Update_BrowserFailed, ReleasesPage);
         }
     }
 

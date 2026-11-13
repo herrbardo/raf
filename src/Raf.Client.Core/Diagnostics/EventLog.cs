@@ -62,7 +62,7 @@ public sealed partial class EventLog(TimeProvider clock, int capacity = 1000)
     public static string? Redact(string? text)
     {
         if (string.IsNullOrEmpty(text)) return text;
-        text = Jwt().Replace(text, "[token oculto]");
+        text = Jwt().Replace(text, CoreTexts.Log_HiddenToken);
         text = Bearer().Replace(text, "$1 [oculto]");
         return SecretParameter().Replace(text, "$1[oculto]");
     }

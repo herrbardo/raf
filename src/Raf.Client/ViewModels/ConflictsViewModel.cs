@@ -15,13 +15,13 @@ public sealed record ConflictRow(SyncConflict Conflict)
 
     private static string KindText(ChangeKind kind) => kind switch
     {
-        ChangeKind.Workspace => "Workspace",
-        ChangeKind.Environment => "Environment",
-        ChangeKind.Variable => "Variable",
-        ChangeKind.App => "App",
-        ChangeKind.Folder => "Carpeta",
-        ChangeKind.Request => "Request",
-        ChangeKind.Sample => "Sample",
+        ChangeKind.Workspace => Texts.Kind_Workspace,
+        ChangeKind.Environment => Texts.Kind_Environment,
+        ChangeKind.Variable => Texts.Kind_Variable,
+        ChangeKind.App => Texts.Kind_App,
+        ChangeKind.Folder => Texts.Kind_Folder,
+        ChangeKind.Request => Texts.Kind_Request,
+        ChangeKind.Sample => Texts.Kind_Sample,
         _ => kind.ToString(),
     };
 }
@@ -95,7 +95,7 @@ public sealed partial class ConflictsViewModel(SyncSession sync, IDialogs dialog
     [RelayCommand]
     private async Task DiscardAsync()
     {
-        if (await dialogs.ConfirmAsync("Descartar", "Tu cambio se pierde. ¿Continuar?", "Descartar"))
+        if (await dialogs.ConfirmAsync(Texts.Conflicts_DiscardTitle, Texts.Conflicts_DiscardMessage, Texts.Conflicts_DiscardTitle))
             await ResolveAsync(id => sync.Store.DiscardAsync(id));
     }
 }

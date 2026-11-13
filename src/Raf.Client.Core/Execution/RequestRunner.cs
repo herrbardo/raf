@@ -88,7 +88,7 @@ public sealed class RequestRunner : IDisposable
                 if (RedirectTarget(message.RequestUri!, response, trace) is not { } target) break;
                 if (redirects == MaxRedirects)
                 {
-                    trace.Warn(RunEventKind.Redirect, $"Se alcanzó el máximo de {MaxRedirects} redirecciones: se muestra la última respuesta.");
+                    trace.Warn(RunEventKind.Redirect, string.Format(CoreTexts.Run_MaxRedirects, MaxRedirects));
                     break;
                 }
 
@@ -120,16 +120,16 @@ public sealed class RequestRunner : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            trace.Fail(RunEventLevel.Warning, "Se canceló la ejecución");
+            trace.Fail(RunEventLevel.Warning, CoreTexts.Run_CancelledTrace);
             return new RunResult
             {
-                Outcome = RunOutcome.Cancelled, Elapsed = stopwatch.Elapsed, Error = "Ejecución cancelada.", Events = trace.Finish(),
+                Outcome = RunOutcome.Cancelled, Elapsed = stopwatch.Elapsed, Error = CoreTexts.Run_Cancelled, Events = trace.Finish(),
             };
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested)
         {
-            var error = $"Sin respuesta después de {input.Options.Timeout.TotalSeconds:0.#} s.";
-            trace.Fail(RunEventLevel.Error, "Timeout: " + error);
+            var error = string.Format(CoreTexts.Run_Timeout, input.Options.Timeout.TotalSeconds.ToString("0.#"));
+            trace.Fail(RunEventLevel.Error, string.Format(CoreTexts.Run_TimeoutTrace, error));
             return new RunResult { Outcome = RunOutcome.TimedOut, Elapsed = stopwatch.Elapsed, Error = error, Events = trace.Finish() };
         }
         catch (Exception e) when (e is HttpRequestException or RequestBuildException or IOException)
@@ -154,7 +154,7 @@ public sealed class RequestRunner : IDisposable
         if ((int)response.StatusCode is not (300 or 301 or 302 or 303 or 307 or 308)) return null;
         if (response.Headers.Location is not { } location)
         {
-            trace.Warn(RunEventKind.Redirect, "La respuesta es una redirección sin header Location: no se sigue.");
+            trace.Warn(RunEventKind.Redirect, CoreTexts.Run_RedirectNoLocation);
             return null;
         }
 
@@ -164,12 +164,12 @@ public sealed class RequestRunner : IDisposable
 
         if (location.Scheme != Uri.UriSchemeHttp && location.Scheme != Uri.UriSchemeHttps)
         {
-            trace.Warn(RunEventKind.Redirect, $"No se sigue la redirección a {location.Scheme}: solo se siguen HTTP y HTTPS.");
+            trace.Warn(RunEventKind.Redirect, string.Format(CoreTexts.Run_RedirectScheme, location.Scheme));
             return null;
         }
         if (from.Scheme == Uri.UriSchemeHttps && location.Scheme == Uri.UriSchemeHttp)
         {
-            trace.Warn(RunEventKind.Redirect, $"No se sigue la redirección de HTTPS a HTTP: {location.AbsoluteUri}");
+            trace.Warn(RunEventKind.Redirect, string.Format(CoreTexts.Run_RedirectDowngrade, location.AbsoluteUri));
             return null;
         }
         return location;
@@ -234,7 +234,7 @@ public sealed class RequestRunner : IDisposable
             query.Add(new KeyValueItem(queryName, spec.Auth.ApiKeyValue ?? ""));
 
         var uri = BuildUri(spec.Url, query);
-        if (string.IsNullOrWhiteSpace(spec.Method)) throw new RequestBuildException("Falta el método HTTP.");
+        if (string.IsNullOrWhiteSpace(spec.Method)) throw new RequestBuildException(CoreTexts.Run_MissingMethod);
 
         HttpMethod method;
         try
@@ -243,7 +243,7 @@ public sealed class RequestRunner : IDisposable
         }
         catch (FormatException)
         {
-            throw new RequestBuildException("El método HTTP no es válido.");
+            throw new RequestBuildException(CoreTexts.Run_InvalidMethod);
         }
 
         var message = new HttpRequestMessage(method, uri) { Content = BuildContent(spec.Body) };
@@ -263,12 +263,12 @@ public sealed class RequestRunner : IDisposable
     private static Uri BuildUri(string url, IReadOnlyList<KeyValueItem> query)
     {
         var text = AppendQuery(url.Trim(), query);
-        if (text.Length == 0) throw new RequestBuildException("Falta la URL.");
+        if (text.Length == 0) throw new RequestBuildException(CoreTexts.Run_MissingUrl);
         if (!text.Contains("://", StringComparison.Ordinal)) text = "http://" + text;
 
         if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            throw new RequestBuildException("La URL no es válida. Revisá que sea http(s) y que sus variables tengan valor.");
+            throw new RequestBuildException(CoreTexts.Run_InvalidUrl);
         return uri;
     }
 
@@ -292,7 +292,7 @@ public sealed class RequestRunner : IDisposable
         BodyType.Xml => new StringContent(body.Content ?? "", Encoding.UTF8, "application/xml"),
         BodyType.FormUrlEncoded => new FormUrlEncodedContent(
             (body.Form ?? []).Select(f => KeyValuePair.Create(f.Key, f.Value))),
-        _ => throw new RequestBuildException("Tipo de body no soportado."),
+        _ => throw new RequestBuildException(CoreTexts.Run_UnsupportedBody),
     };
 
     private static void ApplyHeaders(HttpRequestMessage message, IReadOnlyList<KeyValueItem> headers)
@@ -306,7 +306,7 @@ public sealed class RequestRunner : IDisposable
             if (message.Headers.TryAddWithoutValidation(key, header.Value)) continue;
 
             if (!contentProbe.Headers.TryAddWithoutValidation(key, header.Value))
-                throw new RequestBuildException($"El header '{key}' no es válido.");
+                throw new RequestBuildException(string.Format(CoreTexts.Run_InvalidHeader, key));
 
             // Content-Length lo calcula HttpClient; y sin body no hay dónde poner los headers de contenido.
             if (message.Content is null || key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)) continue;
@@ -329,7 +329,7 @@ public sealed class RequestRunner : IDisposable
             case AuthType.ApiKey when auth is { ApiKeyIn: ApiKeyLocation.Header, ApiKeyName: { Length: > 0 } name }:
                 message.Headers.Remove(name);
                 if (!message.Headers.TryAddWithoutValidation(name, auth.ApiKeyValue ?? ""))
-                    throw new RequestBuildException("El nombre de la API key no es un header válido.");
+                    throw new RequestBuildException(CoreTexts.Run_InvalidApiKeyName);
                 break;
         }
     }

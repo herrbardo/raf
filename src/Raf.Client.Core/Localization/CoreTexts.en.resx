@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Trace_Undefined" xml:space="preserve"><value>No value: </value></data>
+  <data name="Trace_Unreadable" xml:space="preserve"><value>Secrets your role can't read: </value></data>
+  <data name="Trace_MissingVariables" xml:space="preserve"><value>Some variables were not replaced: they are sent as {{name}}</value></data>
+  <data name="Trace_ConnectProxy" xml:space="preserve"><value>TCP connection to the proxy {0} ({1})</value></data>
+  <data name="Trace_Connect" xml:space="preserve"><value>TCP connection to {0}</value></data>
+  <data name="Trace_Reused" xml:space="preserve"><value>An open connection was reused</value></data>
+  <data name="Trace_ReusedDetail" xml:space="preserve"><value>No DNS, TCP connection or TLS: the request went out over a connection already open with the server.</value></data>
+  <data name="Trace_Response" xml:space="preserve"><value>Response {0} · {1}</value></data>
+  <data name="Trace_RedirectNoAuth" xml:space="preserve"><value>The Authorization header is not forwarded: it is always removed on a redirect.</value></data>
+  <data name="Trace_RedirectToGet" xml:space="preserve"><value>Switches to GET and the body is not forwarded ({0} with {1}).</value></data>
+  <data name="Trace_Redirect" xml:space="preserve"><value>Redirect {0} → {1}</value></data>
+  <data name="Trace_NoBody" xml:space="preserve"><value>The response has no body</value></data>
+  <data name="Trace_BodyReceived" xml:space="preserve"><value>Body received: {0}</value></data>
+  <data name="Trace_StageBeforeResponse" xml:space="preserve"><value>Stage: before receiving the response.</value></data>
+  <data name="Trace_StageDownload" xml:space="preserve"><value>Stage: while downloading the body.</value></data>
+  <data name="Trace_TimeConnect" xml:space="preserve"><value>TCP connection</value></data>
+  <data name="Trace_TimeWait" xml:space="preserve"><value>Waiting for the response</value></data>
+  <data name="Trace_TimeDownload" xml:space="preserve"><value>Body download</value></data>
+  <data name="Trace_Redirects" xml:space="preserve"><value>Redirects: {0}</value></data>
+  <data name="Trace_Total" xml:space="preserve"><value>Total: {0}</value></data>
+  <data name="Trace_BodyPreview" xml:space="preserve"><value>… (showing the first {0} KB of the body)</value></data>
+  <data name="Trace_BasicMasked" xml:space="preserve"><value>(the credentials use a secret variable)</value></data>
+  <data name="Trace_Cipher" xml:space="preserve"><value>Cipher: {0}</value></data>
+  <data name="Trace_Certificate" xml:space="preserve"><value>Certificate: {0}</value></data>
+  <data name="Trace_Issuer" xml:space="preserve"><value>Issued by: {0}</value></data>
+  <data name="Trace_Expires" xml:space="preserve"><value>Expires: {0}</value></data>
+  <data name="Trace_InsecureTls" xml:space="preserve"><value>This request accepts invalid certificates: the certificate was not validated.</value></data>
+  <data name="Sync_Recovered" xml:space="preserve"><value>The connection to the server came back after {0} failed.</value></data>
+  <data name="Sync_PushedOne" xml:space="preserve"><value>Sent 1 change to the server.</value></data>
+  <data name="Sync_PushedMany" xml:space="preserve"><value>Sent {0} changes to the server.</value></data>
+  <data name="Sync_UnexpectedLog" xml:space="preserve"><value>Unexpected error while syncing: {0}</value></data>
+  <data name="Sync_Unexpected" xml:space="preserve"><value>Unexpected error: {0}</value></data>
+  <data name="Sync_Failed" xml:space="preserve"><value>Could not sync{0}: {1}. Retrying every 15 seconds.</value></data>
+  <data name="Sync_AttemptOne" xml:space="preserve"><value>1 attempt</value></data>
+  <data name="Sync_AttemptMany" xml:space="preserve"><value>{0} attempts</value></data>
+  <data name="Sync_ChangeOne" xml:space="preserve"><value>1 change</value></data>
+  <data name="Sync_ChangeMany" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="Sync_WorkspaceLost" xml:space="preserve"><value>Access to the workspace "{0}" was lost.</value></data>
+  <data name="Sync_WorkspaceLostPending" xml:space="preserve"><value>Access to the workspace "{0}" was lost with {1} not sent.</value></data>
+  <data name="Sync_ChangesArrived" xml:space="preserve"><value>Changes arrived from the server.</value></data>
+  <data name="Sync_RoleChanged" xml:space="preserve"><value>Your role in "{0}" changed from {1} to {2}.</value></data>
+  <data name="Sync_Rejected" xml:space="preserve"><value>The server rejected a change ({0}): HTTP {1} — {2}</value></data>
+  <data name="Sync_VersionConflict" xml:space="preserve"><value>Version conflict while sending a change ({0}): it must be resolved by hand.</value></data>
+  <data name="Sync_DeletedOnServer" xml:space="preserve"><value>The item was deleted on the server.</value></data>
+  <data name="Sync_NoLongerAllowed" xml:space="preserve"><value>You no longer have permission to edit this workspace.</value></data>
+  <data name="Sync_ParentDeleted" xml:space="preserve"><value>The item that contained it was deleted on the server.</value></data>
+  <data name="Sync_ChangeDescription" xml:space="preserve"><value>{1} {0}</value></data>
+  <data name="Sync_OpCreate" xml:space="preserve"><value>creation</value></data>
+  <data name="Sync_OpUpdate" xml:space="preserve"><value>update</value></data>
+  <data name="Sync_OpDelete" xml:space="preserve"><value>deletion</value></data>
+  <data name="Sync_KindWorkspace" xml:space="preserve"><value>workspace</value></data>
+  <data name="Sync_KindEnvironment" xml:space="preserve"><value>environment</value></data>
+  <data name="Sync_KindVariable" xml:space="preserve"><value>variable</value></data>
+  <data name="Sync_KindApp" xml:space="preserve"><value>app</value></data>
+  <data name="Sync_KindFolder" xml:space="preserve"><value>folder</value></data>
+  <data name="Sync_KindRequest" xml:space="preserve"><value>request</value></data>
+  <data name="Sync_KindSample" xml:space="preserve"><value>sample</value></data>
+  <data name="Realtime_Lost" xml:space="preserve"><value>The real-time connection dropped{0}. Meanwhile the server is polled every {1}.</value></data>
+  <data name="Realtime_Recovered" xml:space="preserve"><value>The real-time connection came back.</value></data>
+  <data name="Realtime_Closed" xml:space="preserve"><value>The server closed the real-time connection{0}. Reconnecting.</value></data>
+  <data name="Realtime_Seconds" xml:space="preserve"><value>{0} seconds</value></data>
+  <data name="Realtime_Connected" xml:space="preserve"><value>Real-time connection established.</value></data>
+  <data name="Realtime_ConnectedAfter" xml:space="preserve"><value>Real-time connection established after {0} attempts.</value></data>
+  <data name="Realtime_OpenFailed" xml:space="preserve"><value>Could not open the real-time connection: {0}. Retrying, and meanwhile the server is polled every {1}.</value></data>
+  <data name="Run_MaxRedirects" xml:space="preserve"><value>Reached the maximum of {0} redirects: showing the last response.</value></data>
+  <data name="Run_CancelledTrace" xml:space="preserve"><value>The run was cancelled</value></data>
+  <data name="Run_Cancelled" xml:space="preserve"><value>Run cancelled.</value></data>
+  <data name="Run_Timeout" xml:space="preserve"><value>No response after {0} s.</value></data>
+  <data name="Run_TimeoutTrace" xml:space="preserve"><value>Timeout: {0}</value></data>
+  <data name="Run_RedirectNoLocation" xml:space="preserve"><value>The response is a redirect without a Location header: not followed.</value></data>
+  <data name="Run_RedirectScheme" xml:space="preserve"><value>The redirect to {0} is not followed: only HTTP and HTTPS are followed.</value></data>
+  <data name="Run_RedirectDowngrade" xml:space="preserve"><value>The redirect from HTTPS to HTTP is not followed: {0}</value></data>
+  <data name="Run_MissingMethod" xml:space="preserve"><value>The HTTP method is missing.</value></data>
+  <data name="Run_InvalidMethod" xml:space="preserve"><value>The HTTP method is not valid.</value></data>
+  <data name="Run_MissingUrl" xml:space="preserve"><value>The URL is missing.</value></data>
+  <data name="Run_InvalidUrl" xml:space="preserve"><value>The URL is not valid. Check that it is http(s) and that its variables have a value.</value></data>
+  <data name="Run_UnsupportedBody" xml:space="preserve"><value>Unsupported body type.</value></data>
+  <data name="Run_InvalidHeader" xml:space="preserve"><value>The header '{0}' is not valid.</value></data>
+  <data name="Run_InvalidApiKeyName" xml:space="preserve"><value>The API key name is not a valid header.</value></data>
+  <data name="Format_Empty" xml:space="preserve"><value>The body is empty: there is nothing to format.</value></data>
+  <data name="Format_Unsupported" xml:space="preserve"><value>Only a JSON or XML body can be formatted.</value></data>
+  <data name="Format_JsonInvalid" xml:space="preserve"><value>The JSON is not valid: the body was not changed.</value></data>
+  <data name="Format_JsonInvalidLine" xml:space="preserve"><value>The JSON is not valid (line {0}): the body was not changed.</value></data>
+  <data name="Format_XmlInvalidLine" xml:space="preserve"><value>The XML is not valid (line {0}): the body was not changed.</value></data>
+  <data name="Completion_Global" xml:space="preserve"><value>Global</value></data>
+  <data name="Completion_Environment" xml:space="preserve"><value>Active environment</value></data>
+  <data name="Completion_SecretUnreadable" xml:space="preserve"><value>secret, your role can't read it</value></data>
+  <data name="Completion_Secret" xml:space="preserve"><value>secret</value></data>
+  <data name="Completion_NoValue" xml:space="preserve"><value>no value</value></data>
+  <data name="Role_Owner" xml:space="preserve"><value>Owner</value></data>
+  <data name="Role_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Role_Viewer" xml:space="preserve"><value>Viewer (read-only)</value></data>
+  <data name="Api_NotRafServer" xml:space="preserve"><value>This doesn't look like a RAF server: it answered {0}.</value></data>
+  <data name="Api_CannotConnectUrl" xml:space="preserve"><value>Could not connect to that URL.</value></data>
+  <data name="Api_CannotConnect" xml:space="preserve"><value>Could not connect to the server.</value></data>
+  <data name="Api_ServerAnswered" xml:space="preserve"><value>The server answered {0}.</value></data>
+  <data name="Api_SessionExpired" xml:space="preserve"><value>Your session expired. Please sign in again.</value></data>
+  <data name="Session_StoredExpired" xml:space="preserve"><value>The saved session expired: you need to sign in again.</value></data>
+  <data name="Session_Restored" xml:space="preserve"><value>Restored the saved session on {0} as {1}.</value></data>
+  <data name="Session_LoginUnreachable" xml:space="preserve"><value>Could not connect to {0} to sign in: {1}</value></data>
+  <data name="Session_LoginRejected" xml:space="preserve"><value>Sign-in rejected (HTTP {0}): {1}</value></data>
+  <data name="Session_Started" xml:space="preserve"><value>Signed in on {0} as {1}.</value></data>
+  <data name="Session_NoLongerAccepted" xml:space="preserve"><value>The server no longer accepts the session: you need to sign in again.</value></data>
+  <data name="Session_Closed" xml:space="preserve"><value>Signed out.</value></data>
+  <data name="Session_RefreshUnreachable" xml:space="preserve"><value>Could not renew the session, no connection to the server: {0}</value></data>
+  <data name="Session_RefreshFailed" xml:space="preserve"><value>Could not renew the session (HTTP {0}): {1}</value></data>
+  <data name="Session_Refreshed" xml:space="preserve"><value>The access token was renewed.</value></data>
+  <data name="Store_ItemGone" xml:space="preserve"><value>The item no longer exists.</value></data>
+  <data name="Store_NameRequired" xml:space="preserve"><value>The name is required.</value></data>
+  <data name="Store_NameTooLong" xml:space="preserve"><value>The name can have at most 200 characters.</value></data>
+  <data name="Store_KeyRequired" xml:space="preserve"><value>The key is required.</value></data>
+  <data name="Store_KeyTooLong" xml:space="preserve"><value>The key can have at most 200 characters.</value></data>
+  <data name="Store_KeyChars" xml:space="preserve"><value>The key only allows letters, numbers, '_', '.' and '-'.</value></data>
+  <data name="Store_WorkspaceGone" xml:space="preserve"><value>The workspace no longer exists.</value></data>
+  <data name="Store_NoEditPermission" xml:space="preserve"><value>You don't have permission to edit this workspace.</value></data>
+  <data name="Store_ConflictResolved" xml:space="preserve"><value>The conflict was already resolved.</value></data>
+  <data name="Store_EditedNotJson" xml:space="preserve"><value>The edited content is not valid JSON for this item.</value></data>
+  <data name="Store_EditedMismatch" xml:space="preserve"><value>The edited content doesn't match this item.</value></data>
+  <data name="Store_NoLocalData" xml:space="preserve"><value>There is no local data left to recreate it.</value></data>
+  <data name="Store_NoLocalParent" xml:space="preserve"><value>There is no local data left of the parent item to recreate it.</value></data>
+  <data name="Keychain_WriteFailed" xml:space="preserve"><value>Could not write to the Keychain (code {0}).</value></data>
+  <data name="Log_HiddenToken" xml:space="preserve"><value>[hidden token]</value></data>
+</root>

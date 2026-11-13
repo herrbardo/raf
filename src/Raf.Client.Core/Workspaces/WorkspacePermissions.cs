@@ -46,9 +46,9 @@ public sealed record WorkspacePermissions(WorkspaceRole? Role, bool IsAdmin)
 
     public string RoleText => Role switch
     {
-        WorkspaceRole.Owner => "Owner",
-        WorkspaceRole.Editor => "Editor",
-        WorkspaceRole.Viewer => "Viewer (solo lectura)",
+        WorkspaceRole.Owner => CoreTexts.Role_Owner,
+        WorkspaceRole.Editor => CoreTexts.Role_Editor,
+        WorkspaceRole.Viewer => CoreTexts.Role_Viewer,
         _ => "",
     };
 }

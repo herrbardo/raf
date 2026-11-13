@@ -145,12 +145,12 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string SyncText => SyncStatus.State switch
     {
-        SyncState.Synced => "Sincronizado",
-        SyncState.Offline when SyncStatus.Pending > 0 => $"Sin conexión · {SyncStatus.Pending} pendientes",
-        SyncState.Offline => "Sin conexión",
-        SyncState.Conflict => $"{SyncStatus.Conflicts} en conflicto",
-        _ when SyncStatus.Pending > 0 => $"{SyncStatus.Pending} pendientes",
-        _ => "Sincronizando…",
+        SyncState.Synced => Texts.Sync_Synced,
+        SyncState.Offline when SyncStatus.Pending > 0 => string.Format(Texts.Sync_OfflinePending, SyncStatus.Pending),
+        SyncState.Offline => Texts.Sync_Offline,
+        SyncState.Conflict => string.Format(Texts.Sync_Conflicts, SyncStatus.Conflicts),
+        _ when SyncStatus.Pending > 0 => string.Format(Texts.Sync_Pending, SyncStatus.Pending),
+        _ => Texts.Sync_Syncing,
     };
 
     /// <summary>Tooltip del indicador: contra qué servidor, cuándo sincronizó y por qué falló.</summary>
@@ -158,14 +158,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         get
         {
-            var lines = new List<string> { $"Servidor: {Services.Settings.Current.ServerUrl}" };
+            var lines = new List<string> { string.Format(Texts.Sync_DetailServer, Services.Settings.Current.ServerUrl) };
             lines.Add(SyncStatus.LastSyncedAt is { } at
-                ? $"Última sincronización: {at:HH:mm:ss}"
-                : "Todavía no se sincronizó en esta sesión.");
-            if (SyncStatus.LastError is { } error) lines.Add($"Último error: {error}");
-            if (SyncStatus.State == SyncState.Offline) lines.Add("Se reintenta cada 15 segundos.");
-            if (HasConflicts) lines.Add("Hacé clic para resolver los conflictos.");
-            lines.Add("El detalle está en la consola de eventos (Ctrl+Shift+L).");
+                ? string.Format(Texts.Sync_DetailLast, at.ToString("HH:mm:ss"))
+                : Texts.Sync_DetailNever);
+            if (SyncStatus.LastError is { } error) lines.Add(string.Format(Texts.Sync_DetailError, error));
+            if (SyncStatus.State == SyncState.Offline) lines.Add(Texts.Sync_DetailRetry);
+            if (HasConflicts) lines.Add(Texts.Sync_DetailConflicts);
+            lines.Add(Texts.Sync_DetailConsole);
             return string.Join(Environment.NewLine, lines);
         }
     }
@@ -236,7 +236,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             // Las pestañas abiertas se armaron con el rol anterior: se rehacen en la próxima recarga.
             _roleChanged = true;
-            ReportStatus($"Tu rol en \"{current.Name}\" cambió: ahora sos {Permissions.RoleText}.");
+            ReportStatus(string.Format(Texts.Main_RoleChanged, current.Name, Permissions.RoleText));
         }
 
         if (SelectedWorkspace is null && Workspaces.Count > 0) SelectedWorkspace = Workspaces[0];
@@ -248,13 +248,13 @@ public sealed partial class MainViewModel : ObservableObject
         if (lost.PendingChanges > 0)
         {
             await Services.Dialogs.InfoAsync(
-                "Perdiste el acceso a un workspace",
-                $"Ya no tenés acceso a \"{lost.Name}\". Se van a descartar {lost.PendingChanges} cambios tuyos que no se llegaron a enviar.");
+                Texts.Main_LostTitle,
+                string.Format(Texts.Main_LostMessage, lost.Name, lost.PendingChanges));
             await GuardAsync(() => _sync.Store.ForgetWorkspaceAsync(lost.Id));
         }
         else
         {
-            ReportStatus($"Ya no tenés acceso a \"{lost.Name}\".");
+            ReportStatus(string.Format(Texts.Main_LostStatus, lost.Name));
         }
         await ReloadFromSyncAsync();
     }
@@ -304,7 +304,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             ReportStatus(e.Message);
             var status = e.Status is { } code ? $" (HTTP {(int)code})" : "";
-            Services.Events.Warning(EventCategory.App, $"Falló una operación{status}: {e.Message}", e.InnerException?.ToString());
+            Services.Events.Warning(EventCategory.App, string.Format(Texts.Main_OperationFailed, status, e.Message), e.InnerException?.ToString());
         }
     }
 
@@ -317,7 +317,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         var last = Services.Settings.Current.LastWorkspaceId;
         SelectedWorkspace = Workspaces.FirstOrDefault(w => w.Id == last) ?? Workspaces.FirstOrDefault();
-        if (SelectedWorkspace is null) ReportStatus("Creá tu primer workspace con el botón + de arriba.");
+        if (SelectedWorkspace is null) ReportStatus(Texts.Main_FirstWorkspace);
         SyncStatus = await _sync.Engine.GetStatusAsync();
         _sync.Engine.Start();
     });
@@ -334,7 +334,7 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task SwitchWorkspaceAsync(WorkspaceDto? workspace)
     {
         if (HasUnsavedChanges && !await Services.Dialogs.ConfirmAsync(
-                "Cambios sin guardar", "Si cambiás de workspace se pierden los cambios sin guardar.", "Cambiar"))
+                Texts.Main_UnsavedTitle, Texts.Main_UnsavedSwitch, Texts.Main_Switch))
         {
             // Se difiere para que el ComboBox termine de procesar la selección actual.
             Dispatcher.UIThread.Post(() =>
@@ -467,7 +467,7 @@ public sealed partial class MainViewModel : ObservableObject
         var keep = SelectedEnvironment?.Id ?? saved;
 
         Environments.Clear();
-        Environments.Add(new EnvironmentChoice(null, "Sin environment"));
+        Environments.Add(new EnvironmentChoice(null, Texts.Main_NoEnvironment));
         foreach (var e in environments) Environments.Add(new EnvironmentChoice(e.Id, e.Name));
         SelectedEnvironment = Environments.FirstOrDefault(e => e.Id == keep) ?? Environments[0];
         ApplyVariables();
@@ -512,14 +512,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var id = row.Entry.SampleId ?? row.Entry.RequestId;
         var node = Roots.SelectMany(r => r.SelfAndDescendants()).FirstOrDefault(n => n.Id == id);
-        if (node is null) ReportStatus("Ese elemento ya no está en este workspace.");
+        if (node is null) ReportStatus(Texts.Main_NodeGone);
         else Open(node);
     }
 
     public async Task CloseTabAsync(EditorTabViewModel tab)
     {
         if (tab.IsDirty && !await Services.Dialogs.ConfirmAsync(
-                "Cambios sin guardar", $"\"{tab.Node.Name}\" tiene cambios sin guardar. ¿Cerrar y descartarlos?", "Descartar"))
+                Texts.Main_UnsavedTitle, string.Format(Texts.Main_UnsavedClose, tab.Node.Name), Texts.Main_Discard))
             return;
         tab.Dispose();
         Tabs.Remove(tab);
@@ -550,7 +550,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private Task NewWorkspaceAsync() => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync("Nuevo workspace", "Nombre");
+        var name = await Services.Dialogs.PromptAsync(Texts.Main_NewWorkspace, Texts.Main_Name);
         if (name is null) return;
         var created = await Services.Store.CreateWorkspaceAsync(name);
         Workspaces.Add(created);
@@ -562,7 +562,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasWorkspaceToEdit))]
     private Task NewAppAsync() => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync("Nueva app", "Nombre");
+        var name = await Services.Dialogs.PromptAsync(Texts.Main_NewApp, Texts.Main_Name);
         if (name is null) return;
         var order = NextOrder(Roots, NodeKind.App);
         var dto = await Services.Store.CreateAppAsync(WorkspaceId, new CreateAppRequest(name, order));
@@ -587,7 +587,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public Task NewFolderAsync(TreeNodeViewModel parent) => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync("Nueva carpeta", "Nombre");
+        var name = await Services.Dialogs.PromptAsync(Texts.Main_NewFolder, Texts.Main_Name);
         if (name is null) return;
         var (appId, folderId) = Container(parent);
         var dto = await Services.Store.CreateFolderAsync(WorkspaceId, new CreateFolderRequest(
@@ -597,7 +597,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public Task NewRequestAsync(TreeNodeViewModel parent) => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync("Nuevo request", "Nombre");
+        var name = await Services.Dialogs.PromptAsync(Texts.Main_NewRequest, Texts.Main_Name);
         if (name is null) return;
         var (appId, folderId) = Container(parent);
         var dto = await Services.Store.CreateRequestAsync(WorkspaceId, new CreateRequestRequest(
@@ -609,7 +609,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public Task NewSampleAsync(TreeNodeViewModel request) => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync("Nuevo sample", "Nombre");
+        var name = await Services.Dialogs.PromptAsync(Texts.Main_NewSample, Texts.Main_Name);
         if (name is null) return;
         var dto = await Services.Store.CreateSampleAsync(WorkspaceId, new CreateSampleRequest(
             request.Id, name, null, NextOrder(request.Children, NodeKind.Sample)));
@@ -620,7 +620,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public Task RenameAsync(TreeNodeViewModel node) => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync("Renombrar", "Nombre", node.Name);
+        var name = await Services.Dialogs.PromptAsync(Texts.Main_Rename, Texts.Main_Name, node.Name);
         if (name is null || name == node.Name) return;
         await UpdateNodeAsync(node, name, node.Order);
     });
@@ -646,7 +646,7 @@ public sealed partial class MainViewModel : ObservableObject
     public Task DeleteAsync(TreeNodeViewModel node) => GuardAsync(async () =>
     {
         if (!await Services.Dialogs.ConfirmAsync(
-                "Eliminar", $"¿Eliminar \"{node.Name}\" y todo lo que contiene?", "Eliminar"))
+                Texts.Main_Delete, string.Format(Texts.Main_DeleteConfirm, node.Name), Texts.Main_Delete))
             return;
 
         var store = Services.Store;
@@ -697,7 +697,7 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task LogoutAsync()
     {
         if (HasUnsavedChanges && !await Services.Dialogs.ConfirmAsync(
-                "Cambios sin guardar", "Si cerrás sesión se pierden los cambios sin guardar.", "Cerrar sesión"))
+                Texts.Main_UnsavedTitle, Texts.Main_UnsavedLogout, Texts.Main_Logout))
             return;
         CloseAllTabs();
         await Services.Session.LogoutAsync();

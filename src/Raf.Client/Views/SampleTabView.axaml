@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.SampleTabView"
@@ -10,47 +11,47 @@
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
         <ctl:Icon Classes="node" Data="{StaticResource IconSample}" />
         <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap"
-                   Text="Sample: lo que no sobreescribas se hereda del request." />
+                   Text="{x:Static l:Texts.Sample_Hint}" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
           <Panel>
             <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
-                    ToolTip.Tip="Enviar (Ctrl+Enter)">
+                    ToolTip.Tip="{x:Static l:Texts.V_SendTip}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <ctl:Icon Data="{StaticResource IconSend}" />
-                <TextBlock VerticalAlignment="Center" Text="Enviar" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
               </StackPanel>
             </Button>
             <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
               <StackPanel Orientation="Horizontal" Spacing="7">
                 <ctl:Icon Data="{StaticResource IconClose}" />
-                <TextBlock VerticalAlignment="Center" Text="Cancelar" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Cancel}" />
               </StackPanel>
             </Button>
           </Panel>
-          <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="Guardar (Ctrl+S)">
+          <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.V_SaveTip}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <ctl:Icon Data="{StaticResource IconSave}" />
-              <TextBlock VerticalAlignment="Center" Text="Guardar" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Save}" />
             </StackPanel>
           </Button>
         </StackPanel>
       </Grid>
 
       <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
-        <TextBlock Classes="label" VerticalAlignment="Center" Text="Método" />
+        <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.Req_Method}" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding MethodInherited}">
           <ctl:MethodBadge Classes="large" Method="{Binding InheritedMethod}" />
-          <TextBlock Classes="caption" VerticalAlignment="Center" Text="heredado" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="{x:Static l:Texts.Sample_InheritedLower}" />
         </StackPanel>
         <ComboBox Grid.Column="1" Width="124" IsVisible="{Binding MethodOverridden}" ItemsSource="{Binding AvailableMethods}" SelectedItem="{Binding Method}" IsEnabled="{Binding CanEdit}">
           <ComboBox.ItemTemplate>
             <DataTemplate x:DataType="x:String"><ctl:MethodBadge Classes="large" Method="{Binding}" /></DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
-        <Button Grid.Column="2" Classes="link" Content="Sobreescribir" Command="{Binding OverrideMethodCommand}">
+        <Button Grid.Column="2" Classes="link" Content="{x:Static l:Texts.V_Override}" Command="{Binding OverrideMethodCommand}">
           <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="MethodInherited" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
         </Button>
-        <Button Grid.Column="2" Classes="link" Content="Volver a heredar" Command="{Binding InheritMethodCommand}">
+        <Button Grid.Column="2" Classes="link" Content="{x:Static l:Texts.V_Reinherit}" Command="{Binding InheritMethodCommand}">
           <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="MethodOverridden" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
         </Button>
       </Grid>
@@ -60,10 +61,10 @@
         <TextBlock Grid.Column="1" Classes="mono" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" IsVisible="{Binding UrlInherited}"
                    Text="{Binding InheritedUrl}" ToolTip.Tip="{Binding InheritedUrl}" />
         <ctl:TextField Grid.Column="1" IsVisible="{Binding UrlOverridden}" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
-        <Button Grid.Column="2" Classes="link" Content="Sobreescribir" Command="{Binding OverrideUrlCommand}">
+        <Button Grid.Column="2" Classes="link" Content="{x:Static l:Texts.V_Override}" Command="{Binding OverrideUrlCommand}">
           <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="UrlInherited" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
         </Button>
-        <Button Grid.Column="2" Classes="link" Content="Volver a heredar" Command="{Binding InheritUrlCommand}">
+        <Button Grid.Column="2" Classes="link" Content="{x:Static l:Texts.V_Reinherit}" Command="{Binding InheritUrlCommand}">
           <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="UrlOverridden" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
         </Button>
       </Grid>
@@ -78,10 +79,10 @@
       <TabItem Header="Body">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,4">
-            <Button Classes="link" Content="Sobreescribir" Command="{Binding OverrideBodyCommand}">
+            <Button Classes="link" Content="{x:Static l:Texts.V_Override}" Command="{Binding OverrideBodyCommand}">
               <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="BodyInherited" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
             </Button>
-            <Button Classes="link" Content="Volver a heredar" Command="{Binding InheritBodyCommand}">
+            <Button Classes="link" Content="{x:Static l:Texts.V_Reinherit}" Command="{Binding InheritBodyCommand}">
               <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="BodyOverridden" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
             </Button>
           </StackPanel>
@@ -96,10 +97,10 @@
       <TabItem Header="Auth">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,4">
-            <Button Classes="link" Content="Sobreescribir" Command="{Binding OverrideAuthCommand}">
+            <Button Classes="link" Content="{x:Static l:Texts.V_Override}" Command="{Binding OverrideAuthCommand}">
               <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="AuthInherited" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
             </Button>
-            <Button Classes="link" Content="Volver a heredar" Command="{Binding InheritAuthCommand}">
+            <Button Classes="link" Content="{x:Static l:Texts.V_Reinherit}" Command="{Binding InheritAuthCommand}">
               <Button.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="AuthOverridden" /><Binding Path="CanEdit" /></MultiBinding></Button.IsVisible>
             </Button>
           </StackPanel>
@@ -109,14 +110,14 @@
           </Grid>
         </DockPanel>
       </TabItem>
-      <TabItem Header="Opciones">
+      <TabItem Header="{x:Static l:Texts.V_Options}">
         <StackPanel Spacing="12" Margin="0,4" MaxWidth="460" HorizontalAlignment="Left">
-          <TextBlock Classes="caption" Text="Se comparten con el request y se guardan solo en este equipo." />
+          <TextBlock Classes="caption" Text="{x:Static l:Texts.Sample_OptionsHint}" />
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock VerticalAlignment="Center" Text="Timeout (segundos)" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Timeout}" />
             <TextBox Width="190" Text="{Binding TimeoutText}" Watermark="{Binding TimeoutHint}" />
           </StackPanel>
-          <CheckBox IsChecked="{Binding AcceptInvalidCertificates}" Content="Aceptar certificados inválidos (APIs internas)" />
+          <CheckBox IsChecked="{Binding AcceptInvalidCertificates}" Content="{x:Static l:Texts.V_AcceptInvalidCerts}" />
         </StackPanel>
       </TabItem>
     </TabControl>

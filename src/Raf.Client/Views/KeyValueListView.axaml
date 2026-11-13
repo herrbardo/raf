@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.KeyValueListView"
@@ -8,7 +9,7 @@
     <Button DockPanel.Dock="Bottom" Classes="link" Margin="0,6,0,0" Command="{Binding AddCommand}" IsVisible="{Binding CanEdit}">
       <StackPanel Orientation="Horizontal" Spacing="5">
         <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
-        <TextBlock VerticalAlignment="Center" Text="Agregar" />
+        <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Add}" />
       </StackPanel>
     </Button>
     <ScrollViewer>
@@ -16,10 +17,10 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:KeyValueRowViewModel">
             <Grid ColumnDefinitions="Auto,*,2*,30" ColumnSpacing="6" Margin="0,2,10,2">
-              <CheckBox MinWidth="0" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="Incluir al enviar" />
+              <CheckBox MinWidth="0" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.Kv_Include}" />
               <ctl:TextField Grid.Column="1" BoundText="{Binding Key}" IsReadOnly="{Binding IsReadOnly}" />
               <ctl:TextField Grid.Column="2" BoundText="{Binding Value}" IsReadOnly="{Binding IsReadOnly}" />
-              <Button Grid.Column="3" Classes="icon small danger" ToolTip.Tip="Quitar" Command="{Binding RemoveCommand}" IsVisible="{Binding CanEdit}">
+              <Button Grid.Column="3" Classes="icon small danger" ToolTip.Tip="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanEdit}">
                 <ctl:Icon Data="{StaticResource IconClose}" />
               </Button>
             </Grid>

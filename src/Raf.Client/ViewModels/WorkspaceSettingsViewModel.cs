@@ -30,7 +30,7 @@ public sealed partial class MemberRowViewModel : ObservableObject
 
     public MemberDto Member { get; private set; }
     public bool IsMe { get; }
-    public string Name => IsMe ? $"{Member.DisplayName} (vos)" : Member.DisplayName;
+    public string Name => IsMe ? string.Format(Texts.Ws_Me, Member.DisplayName) : Member.DisplayName;
     public string Email => Member.Email;
     public string RoleText => Member.Role.ToString();
 
@@ -92,8 +92,8 @@ public sealed partial class WorkspaceSettingsViewModel : PageViewModel
     }
 
     public WorkspacePermissions Permissions { get; private set; }
-    public string Title => $"Workspace \"{_workspace.Name}\"";
-    public string RoleText => $"Tu rol: {Permissions.RoleText}";
+    public string Title => string.Format(Texts.Ws_Title, _workspace.Name);
+    public string RoleText => string.Format(Texts.Ws_Role, Permissions.RoleText);
     public ObservableCollection<MemberRowViewModel> Members { get; } = [];
     public ObservableCollection<UserSummaryDto> Candidates { get; } = [];
     public WorkspaceSettingsOutcome Outcome { get; private set; }
@@ -142,13 +142,12 @@ public sealed partial class WorkspaceSettingsViewModel : PageViewModel
     private Task DeleteAsync() => GuardAsync(async () =>
     {
         var typed = await _dialogs.PromptAsync(
-            "Eliminar workspace",
-            $"Se elimina \"{_workspace.Name}\" con todo su contenido, para todos sus miembros. " +
-            "Para confirmar, escribí el nombre del workspace.");
+            Texts.Ws_DeleteTitle,
+            string.Format(Texts.Ws_DeletePrompt, _workspace.Name));
         if (typed is null) return;
         if (typed != _workspace.Name)
         {
-            Error = "El nombre no coincide: no se eliminó el workspace.";
+            Error = Texts.Ws_DeleteMismatch;
             return;
         }
 
@@ -160,8 +159,8 @@ public sealed partial class WorkspaceSettingsViewModel : PageViewModel
     [RelayCommand]
     private Task LeaveAsync() => GuardAsync(async () =>
     {
-        if (!await _dialogs.ConfirmAsync("Salir del workspace",
-                $"Dejás de ver \"{_workspace.Name}\". Para volver, el Owner te tiene que agregar de nuevo.", "Salir"))
+        if (!await _dialogs.ConfirmAsync(Texts.Ws_LeaveTitle,
+                string.Format(Texts.Ws_LeaveMessage, _workspace.Name), Texts.Ws_Leave))
             return;
 
         await _api.RemoveMemberAsync(_workspace.Id, _myUserId);
@@ -224,8 +223,8 @@ public sealed partial class WorkspaceSettingsViewModel : PageViewModel
 
     internal Task RemoveAsync(MemberRowViewModel row) => GuardAsync(async () =>
     {
-        if (!await _dialogs.ConfirmAsync("Quitar miembro",
-                $"{row.Member.DisplayName} deja de tener acceso a \"{_workspace.Name}\".", "Quitar"))
+        if (!await _dialogs.ConfirmAsync(Texts.Ws_RemoveTitle,
+                string.Format(Texts.Ws_RemoveMessage, row.Member.DisplayName, _workspace.Name), Texts.Ws_Remove))
             return;
         await _api.RemoveMemberAsync(_workspace.Id, row.Member.UserId);
         MarkChanged();
@@ -234,9 +233,8 @@ public sealed partial class WorkspaceSettingsViewModel : PageViewModel
 
     internal Task TransferAsync(MemberRowViewModel row) => GuardAsync(async () =>
     {
-        if (!await _dialogs.ConfirmAsync("Transferir la propiedad",
-                $"{row.Member.DisplayName} pasa a ser el Owner de \"{_workspace.Name}\" y vos quedás como Editor. " +
-                "Ya no vas a poder gestionar miembros ni eliminar el workspace.", "Transferir"))
+        if (!await _dialogs.ConfirmAsync(Texts.Ws_TransferTitle,
+                string.Format(Texts.Ws_TransferMessage, row.Member.DisplayName, _workspace.Name), Texts.Ws_Transfer))
             return;
         await _api.TransferOwnershipAsync(_workspace.Id, row.Member.UserId);
         MarkChanged();

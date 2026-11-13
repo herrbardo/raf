@@ -141,9 +141,9 @@ public sealed class SyncEngine
             _pushed = 0;
             await RunCycleAsync(ct);
             if (_failedAttempts > 0)
-                _events?.Info(EventCategory.Sync, $"Se recuperó la conexión con el servidor después de {Attempts(_failedAttempts)} fallidos.");
+                _events?.Info(EventCategory.Sync, string.Format(CoreTexts.Sync_Recovered, Attempts(_failedAttempts)));
             if (_pushed > 0)
-                _events?.Info(EventCategory.Sync, _pushed == 1 ? "Se envió 1 cambio al servidor." : $"Se enviaron {_pushed} cambios al servidor.");
+                _events?.Info(EventCategory.Sync, _pushed == 1 ? CoreTexts.Sync_PushedOne : string.Format(CoreTexts.Sync_PushedMany, _pushed));
             _failedAttempts = 0;
             _offline = false;
             _lastError = null;
@@ -162,9 +162,9 @@ public sealed class SyncEngine
         catch (Exception e) when (e is not OperationCanceledException)
         {
             // Un fallo inesperado no debe matar el motor: se reintenta en el próximo ciclo.
-            _events?.Error(EventCategory.Sync, $"Error inesperado al sincronizar: {Describe(e)}", e);
+            _events?.Error(EventCategory.Sync, string.Format(CoreTexts.Sync_UnexpectedLog, Describe(e)), e);
             _offline = true;
-            _lastError = $"Error inesperado: {Describe(e)}";
+            _lastError = string.Format(CoreTexts.Sync_Unexpected, Describe(e));
             _failedAttempts++;
             return false;
         }
@@ -184,7 +184,7 @@ public sealed class SyncEngine
         if (_failedAttempts == 0 || error != _lastError)
         {
             var status = e.Status is { } code ? $" (HTTP {(int)code})" : "";
-            _events?.Warning(EventCategory.Sync, $"No se pudo sincronizar{status}: {error}. Se reintenta cada 15 segundos.",
+            _events?.Warning(EventCategory.Sync, string.Format(CoreTexts.Sync_Failed, status, error),
                 e.InnerException?.ToString());
         }
         _offline = true;
@@ -192,8 +192,8 @@ public sealed class SyncEngine
         _failedAttempts++;
     }
 
-    private static string Attempts(int n) => n == 1 ? "1 intento" : $"{n} intentos";
-    private static string Changes(int n) => n == 1 ? "1 cambio" : $"{n} cambios";
+    private static string Attempts(int n) => n == 1 ? CoreTexts.Sync_AttemptOne : string.Format(CoreTexts.Sync_AttemptMany, n);
+    private static string Changes(int n) => n == 1 ? CoreTexts.Sync_ChangeOne : string.Format(CoreTexts.Sync_ChangeMany, n);
 
     /// <summary>El mensaje propio más la causa técnica, por ejemplo la conexión rechazada.</summary>
     private static string Describe(Exception e) =>
@@ -219,8 +219,9 @@ public sealed class SyncEngine
         var (listChanged, lost) = await _store.ApplyWorkspaceListAsync(await _api.GetWorkspacesAsync(ct), ct);
         foreach (var item in lost.Where(l => l.PendingChanges == 0 || _announcedLost.Add(l.Id)))
         {
-            _events?.Warning(EventCategory.Sync, $"Se perdió el acceso al workspace \"{item.Name}\""
-                + (item.PendingChanges > 0 ? $" con {Changes(item.PendingChanges)} sin enviar." : "."));
+            _events?.Warning(EventCategory.Sync, item.PendingChanges > 0
+                ? string.Format(CoreTexts.Sync_WorkspaceLostPending, item.Name, Changes(item.PendingChanges))
+                : string.Format(CoreTexts.Sync_WorkspaceLost, item.Name));
             WorkspaceLost?.Invoke(item);
         }
 
@@ -231,7 +232,7 @@ public sealed class SyncEngine
             changed |= await PullAsync(workspace, ct);
         if (changed)
         {
-            _events?.Info(EventCategory.Sync, "Llegaron cambios del servidor.");
+            _events?.Info(EventCategory.Sync, CoreTexts.Sync_ChangesArrived);
             DataChanged?.Invoke();
         }
 
@@ -255,7 +256,7 @@ public sealed class SyncEngine
                 var page = await _api.GetChangesAsync(workspace.Id, since, PageSize, ct);
                 if (page.MyRole != role)
                 {
-                    _events?.Info(EventCategory.Sync, $"Tu rol en \"{workspace.Name}\" cambió de {role} a {page.MyRole}.");
+                    _events?.Info(EventCategory.Sync, string.Format(CoreTexts.Sync_RoleChanged, workspace.Name, role, page.MyRole));
                     await ApplyRoleChangeAsync(workspace.Id, role, page.MyRole, ct);
                     role = page.MyRole;
                     changed = true;
@@ -308,7 +309,7 @@ public sealed class SyncEngine
             catch (ApiException e) when (e is not SessionExpiredException && IsDefinitive(e))
             {
                 _events?.Warning(EventCategory.Sync,
-                    $"El servidor rechazó un cambio ({Describe(item)}): HTTP {(int)e.Status!.Value} — {e.Message}");
+                    string.Format(CoreTexts.Sync_Rejected, Describe(item), (int)e.Status!.Value, e.Message));
                 await HandleRejectionAsync(item, e);
             }
             catch
@@ -346,31 +347,31 @@ public sealed class SyncEngine
             return;
         }
 
-        _events?.Warning(EventCategory.Sync, $"Conflicto de versión al enviar un cambio ({Describe(item)}): queda para resolver a mano.");
-        if (remote is null) await _store.MarkConflictAsync(item, ConflictReason.Missing, "El elemento fue eliminado en el servidor.", null);
+        _events?.Warning(EventCategory.Sync, string.Format(CoreTexts.Sync_VersionConflict, Describe(item)));
+        if (remote is null) await _store.MarkConflictAsync(item, ConflictReason.Missing, CoreTexts.Sync_DeletedOnServer, null);
         else await _store.MarkConflictAsync(item, ConflictReason.Version, e.Message, remote);
     }
 
     /// <summary>Qué cambio era, sin su contenido: puede tener valores secretos.</summary>
-    private static string Describe(OutboxItem item) => $"{OpText(item.Op)} de {KindText(item.Kind)}";
+    private static string Describe(OutboxItem item) => string.Format(CoreTexts.Sync_ChangeDescription, OpText(item.Op), KindText(item.Kind));
 
     private static string OpText(OutboxOp op) => op switch
     {
-        OutboxOp.Create => "alta",
-        OutboxOp.Update => "modificación",
-        OutboxOp.Delete => "baja",
+        OutboxOp.Create => CoreTexts.Sync_OpCreate,
+        OutboxOp.Update => CoreTexts.Sync_OpUpdate,
+        OutboxOp.Delete => CoreTexts.Sync_OpDelete,
         _ => op.ToString(),
     };
 
     private static string KindText(ChangeKind kind) => kind switch
     {
-        ChangeKind.Workspace => "workspace",
-        ChangeKind.Environment => "environment",
-        ChangeKind.Variable => "variable",
-        ChangeKind.App => "app",
-        ChangeKind.Folder => "carpeta",
-        ChangeKind.Request => "request",
-        ChangeKind.Sample => "sample",
+        ChangeKind.Workspace => CoreTexts.Sync_KindWorkspace,
+        ChangeKind.Environment => CoreTexts.Sync_KindEnvironment,
+        ChangeKind.Variable => CoreTexts.Sync_KindVariable,
+        ChangeKind.App => CoreTexts.Sync_KindApp,
+        ChangeKind.Folder => CoreTexts.Sync_KindFolder,
+        ChangeKind.Request => CoreTexts.Sync_KindRequest,
+        ChangeKind.Sample => CoreTexts.Sync_KindSample,
         _ => kind.ToString(),
     };
 
@@ -378,11 +379,11 @@ public sealed class SyncEngine
     {
         if (e.Status == HttpStatusCode.Forbidden)
         {
-            await _store.MarkConflictAsync(item, ConflictReason.Forbidden, "Ya no tenés permiso para editar este workspace.", null);
+            await _store.MarkConflictAsync(item, ConflictReason.Forbidden, CoreTexts.Sync_NoLongerAllowed, null);
         }
         else if (e.Status == HttpStatusCode.NotFound)
         {
-            await _store.MarkConflictAsync(item, ConflictReason.Missing, "El elemento fue eliminado en el servidor.", null);
+            await _store.MarkConflictAsync(item, ConflictReason.Missing, CoreTexts.Sync_DeletedOnServer, null);
         }
         else if (e.Status == HttpStatusCode.Conflict)
         {
@@ -392,7 +393,7 @@ public sealed class SyncEngine
         }
         else if (await _store.HasMissingParentAsync(item))
         {
-            await _store.MarkConflictAsync(item, ConflictReason.Missing, "El elemento que lo contenía fue eliminado en el servidor.", null);
+            await _store.MarkConflictAsync(item, ConflictReason.Missing, CoreTexts.Sync_ParentDeleted, null);
         }
         else
         {
