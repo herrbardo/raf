@@ -23,13 +23,15 @@
           <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
         <DockPanel Margin="0,4,0,0">
-          <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-            <Button Classes="link" Content="{x:Static l:Texts.V_ChangeServer}" Command="{Binding ChangeServerCommand}" />
-            <Button Classes="link" Content="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}" />
-          </StackPanel>
+          <Button Classes="link" Content="{x:Static l:Texts.V_ChangeServer}" Command="{Binding ChangeServerCommand}"
+                  VerticalAlignment="Center" />
           <Button Classes="accent" Content="{x:Static l:Texts.LoginV_Enter}" IsDefault="True" HorizontalAlignment="Right" MinWidth="110"
                   HorizontalContentAlignment="Center" Command="{Binding LoginCommand}" IsEnabled="{Binding !IsBusy}" />
         </DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Classes="link" Content="{x:Static l:Texts.MainV_Preferences}" Command="{Binding Shell.OpenPreferencesCommand}" />
+          <Button Classes="link" Content="{x:Static l:Texts.MainV_About}" Command="{Binding Shell.OpenAboutCommand}" />
+        </StackPanel>
       </StackPanel>
     </Border>
   </ScrollViewer>

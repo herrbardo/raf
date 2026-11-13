@@ -96,6 +96,12 @@ public sealed partial class ShellViewModel : ObservableObject
     private Task OpenPreferencesAsync() =>
         ShowPreferences?.Invoke(new PreferencesViewModel(_services.Settings)) ?? Task.CompletedTask;
 
+    /// <summary>Lo implementa la ventana principal, que abre "Acerca de" como diálogo.</summary>
+    public Func<AboutViewModel, Task>? ShowAbout { get; set; }
+
+    [RelayCommand]
+    private Task OpenAboutAsync() => ShowAbout?.Invoke(new AboutViewModel(_clientVersion)) ?? Task.CompletedTask;
+
     /// <summary>El servidor ya no acepta esta versión: se deja de sincronizar y se ofrece actualizar.</summary>
     public void ShowUpdateRequired(string minVersion)
     {

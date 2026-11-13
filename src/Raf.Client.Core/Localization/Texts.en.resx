@@ -347,4 +347,8 @@
   <data name="Prefs_Language" xml:space="preserve"><value>LANGUAGE</value></data>
   <data name="Prefs_LanguageHint" xml:space="preserve"><value>Saved on this computer. On automatic, RAF uses Spanish if the system is in Spanish and English otherwise.</value></data>
   <data name="Prefs_RestartNeeded" xml:space="preserve"><value>The new language applies the next time you open RAF.</value></data>
+  <data name="MainV_About" xml:space="preserve"><value>About RAF…</value></data>
+  <data name="About_Title" xml:space="preserve"><value>About RAF</value></data>
+  <data name="About_Version" xml:space="preserve"><value>VERSION</value></data>
+  <data name="About_Developer" xml:space="preserve"><value>DEVELOPER</value></data>
 </root>
