@@ -114,7 +114,8 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
 
     public bool HasChanges => _removed.Count > 0 || Scopes.Any(s => s.Rows.Any(r => r.HasChanges));
 
-    public async Task LoadAsync()
+    /// <summary>Carga los alcances y elige el environment activo de la ventana principal, o las globales si no hay.</summary>
+    public async Task LoadAsync(Guid? activeEnvironment = null)
     {
         var environments = await services.Store.GetEnvironmentsAsync(workspaceId);
         var variables = await services.Store.GetVariablesAsync(workspaceId);
@@ -129,7 +130,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
             foreach (var v in variables.Where(v => v.EnvironmentId == scope.Id))
                 scope.Rows.Add(new VariableRowViewModel(this, scope.Id, v));
 
-        SelectedScope = global;
+        SelectedScope = Scopes.FirstOrDefault(s => s.Id is { } id && id == activeEnvironment) ?? global;
     }
 
     internal void OnEdited() => SavedMessage = null;

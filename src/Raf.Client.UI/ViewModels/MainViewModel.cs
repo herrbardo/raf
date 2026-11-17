@@ -843,7 +843,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (SelectedWorkspace is null || ShowEnvironments is null) return;
         var vm = new EnvironmentsViewModel(Services, WorkspaceId, CanEdit);
-        await vm.LoadAsync();
+        await vm.LoadAsync(SelectedEnvironment?.Id);
         await ShowEnvironments(vm);
         await ReloadVariablesAsync();
     });
