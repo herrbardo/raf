@@ -31,6 +31,10 @@ export default defineRailway((ctx, project) => {
       ASPNETCORE_ENVIRONMENT: "Production",
       Database__MigrateOnStartup: "false",
 
+      // Versión mínima del cliente: uno anterior recibe 426 y pide actualizarse. Se sube después de publicar la
+      // versión nueva del cliente (ver README.md, "Publicar una versión del cliente").
+      Clients__MinVersion: "0.3.0",
+
       // Base por la red privada del proyecto, que Railway ya cifra. Prefer usa TLS si la base lo ofrece (su
       // certificado es autofirmado, así que no se valida).
       Db__Host: db.env.PGHOST,
