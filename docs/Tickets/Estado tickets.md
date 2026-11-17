@@ -113,8 +113,8 @@
 
 - Ticket-028.md
     - Creado: 17/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Decisiones del usuario: las variables secretas coinciden solo por clave, nunca por valor, aunque el rol pueda leerlo (así la búsqueda no revela nada de un valor oculto); y el buscador filtra solo el alcance elegido (globales o el environment de la izquierda), conservando el texto al cambiar de alcance. Solución: EnvironmentsDialog.axaml tiene arriba de la grilla un campo "Buscar por clave o valor" con el icono de búsqueda. EnvironmentsViewModel suma Search y NoMatches; ApplyFilter recorre las filas del alcance elegido y les pone IsShown según VariableRowViewModel.Matches (contiene el texto en la clave o, si no es secreta, en el valor, sin distinguir mayúsculas). Se filtra al cambiar la búsqueda o el alcance, no al editar una fila, para que no desaparezca mientras se escribe; las filas nuevas se ven siempre aunque no coincidan. Si nada coincide se muestra "Ninguna variable coincide con la búsqueda.". Las filas ocultas siguen contando para guardar y para el aviso de cambios sin guardar. Textos nuevos EnvW_Search y EnvW_NoMatches en español e inglés. Cómo se probó: dotnet build sin advertencias; los 203 tests de Raf.Client.Core.Tests en verde corriendo el ejecutable, LocalizationTests incluido. No hay proyecto de tests de la UI, así que el filtro no tiene tests. No se probó: nada en la app, ni en Mac ni en el cliente web, en ningún tema ni idioma.
 
 - Ticket-029.md
     - Creado: 17/11/2026
