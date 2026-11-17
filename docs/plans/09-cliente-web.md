@@ -1,6 +1,6 @@
 # Plan 09 — Cliente web
 
-Estado: **🧪 implementado, falta la prueba humana** (desplegar en Railway y recorrerlo).
+Estado: **implementado y probado**: el usuario desplegó el sitio y lo recorrió contra el servidor.
 
 ## Cómo quedó (decisiones de implementación)
 

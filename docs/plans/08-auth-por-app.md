@@ -1,6 +1,6 @@
 # Plan 08 — Autenticación por App
 
-Estado: **implementado**: etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025. Las variables por App son del Ticket-018.
+Estado: **implementado y probado**: etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025 (el usuario probó el login automático en la app). Las variables por App son del Ticket-018.
 
 ## Objetivo
 
