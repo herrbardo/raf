@@ -46,6 +46,32 @@ public static class VariableCompletion
             })
             .ToList();
 
+    private const int TooltipValueChars = 300;
+
+    /// <summary>
+    /// Texto del tooltip de una <c>{{variable}}</c>: el nombre con de dónde sale el valor y, en otra línea, el
+    /// valor. Los secretos nunca se muestran, igual que en el autocompletar. Si no existe, lo dice.
+    /// </summary>
+    /// <param name="environmentName">El environment activo, para nombrarlo cuando el valor sale de él.</param>
+    public static string Tooltip(VariableContext variables, string key, string? environmentName)
+    {
+        var v = variables.Effective.FirstOrDefault(x => x.Key == key);
+        if (v is null) return string.Format(CoreTexts.Hover_Missing, key);
+
+        var scope = variables.IsSession(key) ? CoreTexts.Completion_Session
+            : v.EnvironmentId is null ? CoreTexts.Completion_Global
+            : environmentName is { Length: > 0 } name ? string.Format(CoreTexts.Hover_Environment, name)
+            : CoreTexts.Completion_Environment;
+        var value = v switch
+        {
+            { IsSecret: true, Value: null } => CoreTexts.Completion_SecretUnreadable,
+            { IsSecret: true } => CoreTexts.Hover_Secret,
+            { Value: null or "" } => CoreTexts.Completion_NoValue,
+            _ => v.Value.Length <= TooltipValueChars ? v.Value : v.Value[..TooltipValueChars] + "…",
+        };
+        return $"{key} · {scope}\n{value}";
+    }
+
     /// <summary>Lo que reemplaza al nombre escrito: el nombre elegido y el cierre, si no estaba ya.</summary>
     public static string Insertion(string key, string textAfter) =>
         textAfter.TrimStart().StartsWith("}}", StringComparison.Ordinal) ? key : key + "}}";

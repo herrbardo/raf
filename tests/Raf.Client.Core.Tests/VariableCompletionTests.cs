@@ -61,6 +61,30 @@ public sealed class VariableCompletionTests
         Assert.EndsWith("…", description);
     }
 
+    [Fact]
+    public void El_tooltip_muestra_origen_y_valor_sin_revelar_secretos_y_avisa_si_no_existe()
+    {
+        var env = Guid.NewGuid();
+        var vars = VariableContext.From(
+        [
+            Var("host", "global.local"),
+            Var("host", "env.local", env),
+            Var("puerto", "8080"),
+            Var("clave", "valor-secreto", env, secret: true),
+            Var("oculta", null, secret: true),
+            Var("vacia", ""),
+        ], env, new Dictionary<string, string> { ["token"] = "abc.def" });
+
+        Assert.Equal("host · Environment Dev\nenv.local", VariableCompletion.Tooltip(vars, "host", "Dev"));
+        Assert.Equal("host · Environment activo\nenv.local", VariableCompletion.Tooltip(vars, "host", null));
+        Assert.Equal("puerto · Global\n8080", VariableCompletion.Tooltip(vars, "puerto", "Dev"));
+        Assert.Equal("clave · Environment Dev\n•••••••• (secreta)", VariableCompletion.Tooltip(vars, "clave", "Dev"));
+        Assert.Equal("oculta · Global\nsecreta, tu rol no puede leerla", VariableCompletion.Tooltip(vars, "oculta", "Dev"));
+        Assert.Equal("vacia · Global\nsin valor", VariableCompletion.Tooltip(vars, "vacia", "Dev"));
+        Assert.Equal("token · Sesión\n•••••••• (secreta)", VariableCompletion.Tooltip(vars, "token", "Dev"));
+        Assert.StartsWith("nada no está definida", VariableCompletion.Tooltip(vars, "nada", "Dev"));
+    }
+
     [Theory]
     [InlineData("", "host}}")]
     [InlineData("/path", "host}}")]
