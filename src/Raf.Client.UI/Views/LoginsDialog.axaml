@@ -1,0 +1,68 @@
+<svc:DialogView xmlns:svc="using:Raf.Client.Services" xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
+        x:Class="Raf.Client.Views.LoginsDialog"
+        x:DataType="vm:LoginsViewModel"
+        Title="{x:Static l:Texts.LoginsW_Title}"
+        DialogWidth="960" DialogHeight="660" DialogMinWidth="720" DialogMinHeight="460"
+        ctl:VariableHighlight.Lookup="{Binding Lookup}">
+  <svc:DialogView.KeyBindings>
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+  </svc:DialogView.KeyBindings>
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="accent" Content="{x:Static l:Texts.V_Save}" Command="{Binding SaveCommand}" IsVisible="{Binding CanEdit}" IsEnabled="{Binding !IsBusy}"
+                  ToolTip.Tip="{x:Static l:Texts.V_SaveTip}" />
+          <Button Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
+        </StackPanel>
+        <TextBlock Classes="error" VerticalAlignment="Center" Margin="0,0,12,0" TextWrapping="Wrap" Text="{Binding Error}"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <Border Classes="chip success" HorizontalAlignment="Left" Margin="0,0,12,0"
+                IsVisible="{Binding SavedMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ctl:Icon Width="12" Height="12" Data="{StaticResource IconCheck}" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding SavedMessage}" />
+          </StackPanel>
+        </Border>
+      </DockPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="220,*">
+      <Border Classes="sidebar" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="10,14,8,10">
+          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="{x:Static l:Texts.LoginsW_List}" />
+          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="2" Margin="0,8,0,0" IsVisible="{Binding CanEdit}">
+            <Button Classes="link" Command="{Binding AddCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.EnvW_New}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="link" Content="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" />
+            <Button Classes="link" Content="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" />
+          </StackPanel>
+          <Grid>
+            <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.LoginsW_Empty}"
+                       IsVisible="{Binding !Items.Count}" />
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:LoginItemViewModel">
+                  <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <DockPanel Grid.Column="1" Margin="20,14,16,10" IsVisible="{Binding HasSelection}">
+        <TextBlock DockPanel.Dock="Top" Classes="caption" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding Selected.UsedByText}" />
+        <ContentControl Content="{Binding Selected.Editor}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</svc:DialogView>

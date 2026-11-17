@@ -220,8 +220,8 @@ namespace Raf.Server.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("Login")
-                        .HasColumnType("jsonb");
+                    b.Property<Guid?>("LoginId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -245,6 +245,8 @@ namespace Raf.Server.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LoginId");
 
                     b.HasIndex("WorkspaceId", "ChangeSeq");
 
@@ -297,6 +299,47 @@ namespace Raf.Server.Data.Migrations
                     b.HasIndex("WorkspaceId", "ChangeSeq");
 
                     b.ToTable("Folders");
+                });
+
+            modelBuilder.Entity("Raf.Domain.Entities.Login", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ChangeSeq")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Config")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "ChangeSeq");
+
+                    b.ToTable("Logins");
                 });
 
             modelBuilder.Entity("Raf.Domain.Entities.Sample", b =>

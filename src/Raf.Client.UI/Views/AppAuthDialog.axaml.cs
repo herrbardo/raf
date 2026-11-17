@@ -8,10 +8,9 @@ public partial class AppAuthDialog : DialogView
 {
     public AppAuthDialog() => InitializeComponent();
 
-    /// <summary>Si falta algo del login, el diálogo queda abierto con el motivo.</summary>
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is AppAuthViewModel vm && !vm.Accept()) return;
+        (DataContext as AppAuthViewModel)?.Accept();
         Close();
     }
 

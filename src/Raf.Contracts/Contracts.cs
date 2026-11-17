@@ -85,17 +85,26 @@ public sealed record UpdateVariableRequest(string Key, string Value, bool IsSecr
 
 /// <summary>
 /// <see cref="Auth"/> null solo en datos de una versión anterior: equivale a sin autenticación.
-/// <see cref="Login"/> null: la App nunca tuvo login automático.
+/// <see cref="LoginId"/> null: la App no usa login automático.
 /// </summary>
-public sealed record AppDto(Guid Id, string Name, int Order, long Version, long ChangeSeq, AuthSpec? Auth = null, AppLogin? Login = null);
+public sealed record AppDto(Guid Id, string Name, int Order, long Version, long ChangeSeq, AuthSpec? Auth = null, Guid? LoginId = null);
 
-public sealed record CreateAppRequest(string Name, int Order = 0, Guid? Id = null, AuthSpec? Auth = null, AppLogin? Login = null);
+public sealed record CreateAppRequest(string Name, int Order = 0, Guid? Id = null, AuthSpec? Auth = null, Guid? LoginId = null);
 
 /// <summary>
-/// <see cref="Auth"/> o <see cref="Login"/> en null = no cambian. El login se apaga con
-/// <see cref="AppLogin.Enabled"/> en false, sin perder la configuración.
+/// <see cref="Auth"/> o <see cref="LoginId"/> en null = no cambian; <see cref="LoginId"/> en <see cref="Guid.Empty"/>
+/// quita el login de la App.
 /// </summary>
-public sealed record UpdateAppRequest(string Name, int Order, long Version, AuthSpec? Auth = null, AppLogin? Login = null);
+public sealed record UpdateAppRequest(string Name, int Order, long Version, AuthSpec? Auth = null, Guid? LoginId = null);
+
+// ---------- Logins compartidos ----------
+
+/// <summary>Login automático del workspace; lo eligen las Apps por su id.</summary>
+public sealed record LoginDto(Guid Id, string Name, AppLogin Config, long Version, long ChangeSeq);
+
+public sealed record CreateLoginRequest(string Name, AppLogin Config, Guid? Id = null);
+
+public sealed record UpdateLoginRequest(string Name, AppLogin Config, long Version);
 
 public sealed record FolderDto(
     Guid Id, Guid AppId, Guid? ParentFolderId, string Name, int Order, long Version, long ChangeSeq);
@@ -123,7 +132,7 @@ public sealed record UpdateSampleRequest(string Name, int Order, SampleOverrides
 
 // ---------- Sincronización ----------
 
-public enum ChangeKind { Workspace, Member, Environment, Variable, App, Folder, Request, Sample }
+public enum ChangeKind { Workspace, Member, Environment, Variable, App, Folder, Request, Sample, Login }
 
 /// <summary>Elemento borrado. En miembros, <see cref="Id"/> es el id del usuario.</summary>
 public sealed record DeletedItem(ChangeKind Kind, Guid Id, long ChangeSeq);
@@ -144,4 +153,5 @@ public sealed record ChangesResponse(
     IReadOnlyList<FolderDto> Folders,
     IReadOnlyList<RequestDto> Requests,
     IReadOnlyList<SampleDto> Samples,
-    IReadOnlyList<DeletedItem> Deleted);
+    IReadOnlyList<DeletedItem> Deleted,
+    IReadOnlyList<LoginDto>? Logins = null);

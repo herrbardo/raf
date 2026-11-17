@@ -61,6 +61,7 @@
   <data name="Sync_KindFolder" xml:space="preserve"><value>folder</value></data>
   <data name="Sync_KindRequest" xml:space="preserve"><value>request</value></data>
   <data name="Sync_KindSample" xml:space="preserve"><value>sample</value></data>
+  <data name="Sync_KindLogin" xml:space="preserve"><value>login</value></data>
   <data name="Realtime_Lost" xml:space="preserve"><value>The real-time connection dropped{0}. Meanwhile the server is polled every {1}.</value></data>
   <data name="Realtime_Recovered" xml:space="preserve"><value>The real-time connection came back.</value></data>
   <data name="Realtime_Closed" xml:space="preserve"><value>The server closed the real-time connection{0}. Reconnecting.</value></data>
@@ -93,6 +94,8 @@
   <data name="Completion_Environment" xml:space="preserve"><value>Active environment</value></data>
   <data name="Completion_Session" xml:space="preserve"><value>Session</value></data>
   <data name="Store_AppCannotInherit" xml:space="preserve"><value>An App cannot inherit authentication.</value></data>
+  <data name="Store_LoginGone" xml:space="preserve"><value>The selected login no longer exists.</value></data>
+  <data name="Store_LoginInUse" xml:space="preserve"><value>The login is used by: {0}. Remove it from those Apps first.</value></data>
   <data name="Trace_AuthInherited" xml:space="preserve"><value>Authentication inherited from the App: {0}</value></data>
   <data name="Trace_AuthInheritedNone" xml:space="preserve"><value>The request inherits the App's authentication, but the App has none: sent without authentication</value></data>
   <data name="Trace_Extracted" xml:space="preserve"><value>Session variable '{0}' saved</value></data>

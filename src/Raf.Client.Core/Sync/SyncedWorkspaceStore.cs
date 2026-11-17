@@ -188,6 +188,9 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     public async Task<IReadOnlyList<AppDto>> GetAppsAsync(Guid ws, CancellationToken ct = default) =>
         (await ListAsync<AppDto>(ws, ChangeKind.App, ct)).OrderBy(x => x.Order).ThenBy(x => x.Name).ToList();
 
+    public async Task<IReadOnlyList<LoginDto>> GetLoginsAsync(Guid ws, CancellationToken ct = default) =>
+        (await ListAsync<LoginDto>(ws, ChangeKind.Login, ct)).OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+
     public async Task<IReadOnlyList<FolderDto>> GetFoldersAsync(Guid ws, CancellationToken ct = default) =>
         (await ListAsync<FolderDto>(ws, ChangeKind.Folder, ct)).OrderBy(x => x.Order).ThenBy(x => x.Name).ToList();
 
@@ -369,28 +372,69 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
 
     public Task DeleteVariableAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.Variable, id, ct);
 
-    public Task<AppDto> CreateAppAsync(Guid ws, CreateAppRequest req, CancellationToken ct = default)
+    public async Task<AppDto> CreateAppAsync(Guid ws, CreateAppRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        ValidateAppAuth(req.Auth, req.Login);
-        return CreateAsync(ws, ChangeKind.App, new AppDto(
-            req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Order, 0, 0, req.Auth ?? Raf.Domain.Requests.AuthSpec.None, req.Login), ct);
+        ValidateAppAuth(req.Auth);
+        var loginId = req.LoginId == Guid.Empty ? null : req.LoginId;
+        await EnsureLoginExistsAsync(ws, loginId, ct);
+        return await CreateAsync(ws, ChangeKind.App, new AppDto(
+            req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Order, 0, 0, req.Auth ?? Raf.Domain.Requests.AuthSpec.None, loginId), ct);
     }
 
-    public Task<AppDto> UpdateAppAsync(Guid ws, Guid id, UpdateAppRequest req, CancellationToken ct = default)
+    public async Task<AppDto> UpdateAppAsync(Guid ws, Guid id, UpdateAppRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        ValidateAppAuth(req.Auth, req.Login);
-        return UpdateAsync<AppDto>(ws, ChangeKind.App, id, req.Version,
-            x => x with { Name = req.Name.Trim(), Order = req.Order, Auth = req.Auth ?? x.Auth, Login = req.Login ?? x.Login }, ct);
+        ValidateAppAuth(req.Auth);
+        await EnsureLoginExistsAsync(ws, req.LoginId, ct);
+        return await UpdateAsync<AppDto>(ws, ChangeKind.App, id, req.Version, x => x with
+        {
+            Name = req.Name.Trim(), Order = req.Order, Auth = req.Auth ?? x.Auth,
+            LoginId = req.LoginId is not { } loginId ? x.LoginId : loginId == Guid.Empty ? null : loginId,
+        }, ct);
     }
 
     /// <summary>Las mismas reglas que aplica el servidor, para no encolar un cambio que va a rechazar.</summary>
-    private static void ValidateAppAuth(Raf.Domain.Requests.AuthSpec? auth, Raf.Domain.Requests.AppLogin? login)
+    private static void ValidateAppAuth(Raf.Domain.Requests.AuthSpec? auth)
     {
         if (auth is { Type: Raf.Domain.Requests.AuthType.Inherit }) throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_AppCannotInherit);
-        if (login?.Problem() is { } problem && problem != Raf.Domain.Requests.AppLoginProblem.None)
+    }
+
+    private Task EnsureLoginExistsAsync(Guid ws, Guid? loginId, CancellationToken ct) =>
+        loginId is not { } id || id == Guid.Empty
+            ? Task.CompletedTask
+            : RunAsync(async db =>
+            {
+                if (!await db.Items.AnyAsync(x => x.WorkspaceId == ws && x.Kind == ChangeKind.Login && x.Id == id && !x.IsDeleted, ct))
+                    throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_LoginGone);
+            }, ct);
+
+    private static void ValidateLogin(string? name, Raf.Domain.Requests.AppLogin? config)
+    {
+        ValidateName(name);
+        if (config is null) throw new ApiException(HttpStatusCode.BadRequest, AppLoginTexts.Describe(Raf.Domain.Requests.AppLoginProblem.Incomplete));
+        if (config.Problem() is var problem and not Raf.Domain.Requests.AppLoginProblem.None)
             throw new ApiException(HttpStatusCode.BadRequest, AppLoginTexts.Describe(problem));
+    }
+
+    public Task<LoginDto> CreateLoginAsync(Guid ws, CreateLoginRequest req, CancellationToken ct = default)
+    {
+        ValidateLogin(req.Name, req.Config);
+        return CreateAsync(ws, ChangeKind.Login, new LoginDto(req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Config, 0, 0), ct);
+    }
+
+    public Task<LoginDto> UpdateLoginAsync(Guid ws, Guid id, UpdateLoginRequest req, CancellationToken ct = default)
+    {
+        ValidateLogin(req.Name, req.Config);
+        return UpdateAsync<LoginDto>(ws, ChangeKind.Login, id, req.Version, x => x with { Name = req.Name.Trim(), Config = req.Config }, ct);
+    }
+
+    public async Task DeleteLoginAsync(Guid ws, Guid id, CancellationToken ct = default)
+    {
+        var users = (await GetAppsAsync(ws, ct)).Where(a => a.LoginId == id).Select(a => a.Name).ToList();
+        if (users.Count > 0)
+            throw new ApiException(HttpStatusCode.Conflict, string.Format(CoreTexts.Store_LoginInUse, string.Join(", ", users)));
+        await DeleteAsync(ws, ChangeKind.Login, id, ct);
     }
 
     public Task DeleteAppAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.App, id, ct);
@@ -754,6 +798,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
             Upsert(ChangeKind.Folder, page.Folders);
             Upsert(ChangeKind.Request, page.Requests);
             Upsert(ChangeKind.Sample, page.Samples);
+            Upsert(ChangeKind.Login, page.Logins ?? []);
 
             foreach (var gone in page.Deleted)
             {

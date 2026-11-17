@@ -181,7 +181,7 @@ public class SyncEngineTests(RafApp app)
     }
 
     [Fact]
-    public async Task El_login_de_la_App_llega_al_otro_cliente_y_el_store_rechaza_uno_invalido()
+    public async Task El_login_compartido_llega_al_otro_cliente_y_el_store_aplica_las_reglas_del_servidor()
     {
         var (a, b, ws) = await TwoDevicesAsync();
         var login = Raf.Domain.Requests.AppLogin.Default with
@@ -189,22 +189,46 @@ public class SyncEngineTests(RafApp app)
             Enabled = true,
             Request = Raf.Domain.Requests.AppLogin.Default.Request with { Url = "{{base}}/auth/token" },
         };
-        await a.Store.CreateAppAsync(ws, new CreateAppRequest("Pagos", Login: login));
+
+        // Sin conexión: el login y la App que lo usa se crean juntos; al volver, el login se envía antes que la App.
+        a.GoOffline();
+        var shared = await a.Store.CreateLoginAsync(ws, new CreateLoginRequest("Auth central", login));
+        await a.Store.CreateAppAsync(ws, new CreateAppRequest("Pagos", LoginId: shared.Id));
+        a.GoOnline();
         await a.SyncAsync();
         await b.SyncAsync();
-        Assert.Equivalent(login, (await OneAppAsync(b, ws)).Login, strict: true);
+        Assert.Equivalent(login, Assert.Single(await b.Store.GetLoginsAsync(ws)).Config, strict: true);
+        Assert.Equal(shared.Id, (await OneAppAsync(b, ws)).LoginId);
 
-        var seen = await OneAppAsync(b, ws);
+        // Una edición del login llega al otro cliente; renombrar la App no le quita el login.
+        var seenLogin = Assert.Single(await b.Store.GetLoginsAsync(ws));
         var off = login with { Enabled = false, TokenPath = "$.data.token" };
-        await b.Store.UpdateAppAsync(ws, seen.Id, new UpdateAppRequest("Cobros", 0, seen.Version, Login: off));
+        await b.Store.UpdateLoginAsync(ws, shared.Id, new UpdateLoginRequest("Auth", off, seenLogin.Version));
+        var seenApp = await OneAppAsync(b, ws);
+        await b.Store.UpdateAppAsync(ws, seenApp.Id, new UpdateAppRequest("Cobros", 0, seenApp.Version));
         await b.SyncAsync();
         await a.SyncAsync();
+        var syncedLogin = Assert.Single(await a.Store.GetLoginsAsync(ws));
+        Assert.Equal("Auth", syncedLogin.Name);
+        Assert.Equivalent(off, syncedLogin.Config, strict: true);
         var synced = await OneAppAsync(a, ws);
-        Assert.Equal("Cobros", synced.Name);
-        Assert.Equivalent(off, synced.Login, strict: true);
+        Assert.Equal(("Cobros", (Guid?)shared.Id), (synced.Name, synced.LoginId));
 
+        // Las mismas reglas que el servidor: config inválida, login inexistente y borrar uno en uso.
+        await Assert.ThrowsAsync<ApiException>(() => a.Store.UpdateLoginAsync(
+            ws, shared.Id, new UpdateLoginRequest("Auth", login with { Variable = "mal nombre" }, syncedLogin.Version)));
         await Assert.ThrowsAsync<ApiException>(() => a.Store.UpdateAppAsync(
-            ws, synced.Id, new UpdateAppRequest("Cobros", 0, synced.Version, Login: login with { Variable = "mal nombre" })));
+            ws, synced.Id, new UpdateAppRequest("Cobros", 0, synced.Version, LoginId: Guid.NewGuid())));
+        var inUse = await Assert.ThrowsAsync<ApiException>(() => a.Store.DeleteLoginAsync(ws, shared.Id));
+        Assert.Contains("Cobros", inUse.Message);
+
+        // Quitado de la App, se puede borrar, y el borrado llega al otro cliente.
+        await a.Store.UpdateAppAsync(ws, synced.Id, new UpdateAppRequest("Cobros", 0, synced.Version, LoginId: Guid.Empty));
+        await a.Store.DeleteLoginAsync(ws, shared.Id);
+        await a.SyncAsync();
+        await b.SyncAsync();
+        Assert.Empty(await b.Store.GetLoginsAsync(ws));
+        Assert.Null((await OneAppAsync(b, ws)).LoginId);
     }
 
     [Fact]

@@ -80,6 +80,12 @@
               <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Variables}" />
             </StackPanel>
           </Button>
+          <Button Classes="ghost" ToolTip.Tip="{x:Static l:Texts.LoginsW_Title}" Command="{Binding EditLoginsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ctl:Icon Data="{StaticResource IconUser}" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.LoginsW_Button}" />
+            </StackPanel>
+          </Button>
         </StackPanel>
       </DockPanel>
     </Border>

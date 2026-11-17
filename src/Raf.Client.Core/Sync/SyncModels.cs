@@ -92,6 +92,7 @@ internal static class SyncItems
         ChangeKind.Request => JsonSerializer.Deserialize<RequestDto>(json, ClientJson.Options)!,
         ChangeKind.Sample => JsonSerializer.Deserialize<SampleDto>(json, ClientJson.Options)!,
         ChangeKind.Workspace => JsonSerializer.Deserialize<WorkspaceDto>(json, ClientJson.Options)!,
+        ChangeKind.Login => JsonSerializer.Deserialize<LoginDto>(json, ClientJson.Options)!,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -105,6 +106,7 @@ internal static class SyncItems
         RequestDto x => x.Id,
         SampleDto x => x.Id,
         WorkspaceDto x => x.Id,
+        LoginDto x => x.Id,
         _ => throw new ArgumentException(dto.GetType().Name),
     };
 
@@ -118,6 +120,7 @@ internal static class SyncItems
         RequestDto x => x.Version,
         SampleDto x => x.Version,
         WorkspaceDto x => x.Version,
+        LoginDto x => x.Version,
         _ => throw new ArgumentException(dto.GetType().Name),
     };
 
@@ -131,6 +134,7 @@ internal static class SyncItems
         RequestDto x => x.Name,
         SampleDto x => x.Name,
         WorkspaceDto x => x.Name,
+        LoginDto x => x.Name,
         _ => "",
     };
 
@@ -138,6 +142,7 @@ internal static class SyncItems
     public static IReadOnlyList<Guid> ParentsOf(object dto) => dto switch
     {
         VariableDto { EnvironmentId: { } env } => [env],
+        AppDto { LoginId: { } login } => [login],
         FolderDto { ParentFolderId: { } parent } x => [x.AppId, parent],
         FolderDto x => [x.AppId],
         RequestDto { FolderId: { } folder } x => [x.AppId, folder],
@@ -154,6 +159,7 @@ internal static class SyncItems
         FolderDto x => x with { Version = version, ChangeSeq = changeSeq },
         RequestDto x => x with { Version = version, ChangeSeq = changeSeq },
         SampleDto x => x with { Version = version, ChangeSeq = changeSeq },
+        LoginDto x => x with { Version = version, ChangeSeq = changeSeq },
         _ => dto,
     };
 
@@ -166,7 +172,8 @@ internal static class SyncItems
         {
             EnvironmentDto x => x with { Id = newId },
             VariableDto x => x with { Id = newId, EnvironmentId = ToOpt(x.EnvironmentId) },
-            AppDto x => x with { Id = newId },
+            AppDto x => x with { Id = newId, LoginId = ToOpt(x.LoginId) },
+            LoginDto x => x with { Id = newId },
             FolderDto x => x with { Id = newId, AppId = To(x.AppId), ParentFolderId = ToOpt(x.ParentFolderId) },
             RequestDto x => x with { Id = newId, AppId = To(x.AppId), FolderId = ToOpt(x.FolderId) },
             SampleDto x => x with { Id = newId, RequestId = To(x.RequestId) },
@@ -193,6 +200,7 @@ internal static class SyncItems
             Id = c.Id, AppId = c.AppId, FolderId = c.FolderId, Version = c.Version, ChangeSeq = c.ChangeSeq,
         },
         (SampleDto e, SampleDto c) => e with { Id = c.Id, RequestId = c.RequestId, Version = c.Version, ChangeSeq = c.ChangeSeq },
+        (LoginDto e, LoginDto c) => e with { Id = c.Id, Version = c.Version, ChangeSeq = c.ChangeSeq },
         _ => throw new ApiException(System.Net.HttpStatusCode.BadRequest, CoreTexts.Store_EditedMismatch),
     };
 
