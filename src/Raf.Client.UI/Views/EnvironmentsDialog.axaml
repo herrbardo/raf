@@ -62,7 +62,7 @@
             <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.EnvW_AddVariable}" />
           </StackPanel>
         </Button>
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="10,*,2*,70,70,30" ColumnSpacing="6" Margin="0,0,14,6">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="10,*,*,70,70,30" ColumnSpacing="6" Margin="0,0,14,6">
           <TextBlock Grid.Column="1" Classes="label" Text="{x:Static l:Texts.EnvW_KeyHeader}" />
           <TextBlock Grid.Column="2" Classes="label" Text="{x:Static l:Texts.EnvW_ValueHeader}" />
           <TextBlock Grid.Column="3" Classes="label" Text="{x:Static l:Texts.EnvW_SecretHeader}" />
@@ -71,7 +71,7 @@
           <ItemsControl ItemsSource="{Binding SelectedScope.Rows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:VariableRowViewModel">
-                <Grid ColumnDefinitions="10,*,2*,70,70,30" ColumnSpacing="6" Margin="0,2,14,2">
+                <Grid ColumnDefinitions="10,*,*,70,70,30" ColumnSpacing="6" Margin="0,2,14,2">
                   <Ellipse Classes="dirty" ToolTip.Tip="{x:Static l:Texts.V_Unsaved}" IsVisible="{Binding HasChanges}" />
                   <TextBox Grid.Column="1" Classes="mono" Text="{Binding Key}" IsReadOnly="{Binding IsReadOnly}"
                            Loaded="OnKeyLoaded" />

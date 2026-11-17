@@ -108,8 +108,8 @@
 
 - Ticket-027.md
     - Creado: 17/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Causa: en EnvironmentsDialog.axaml la grilla de variables repartía el ancho libre 1 a 2 entre clave y valor (ColumnDefinitions "10,*,2*,70,70,30"), así que con la ventana en su tamaño inicial (860 de ancho, menos la barra de 220 y las columnas fijas) la clave quedaba en unos 125 px. Solución: clave y valor comparten el ancho por partes iguales ("10,*,*,70,70,30"), en el encabezado y en las filas; con el tamaño inicial la clave pasa a unos 185 px y sigue creciendo si se agranda la ventana. Default elegido sin consultar: mitad y mitad, sin agrandar la ventana. Cómo se probó: dotnet build sin advertencias ni errores; el ancho se calculó a partir de los tamaños del XAML. No se probó: nada en la app ni en Mac; falta mirar que la clave alcance y que el valor no quede corto con valores largos.
 
 - Ticket-028.md
     - Creado: 17/11/2026
