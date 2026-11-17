@@ -128,5 +128,5 @@
 
 - Ticket-031.md
     - Creado: 17/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Causa: EnvironmentsViewModel.LoadAsync elegía siempre las globales al abrir la ventana, sin importar el environment activo. Solución: LoadAsync recibe el environment activo (MainViewModel.EditEnvironmentsAsync le pasa SelectedEnvironment?.Id) y lo deja seleccionado; si no hay environment activo ("Sin environment") o ya no existe, quedan las globales, como antes. Cómo se probó: dotnet build sin advertencias ni errores. No se probó: nada en la app, ni en Windows ni en Mac ni en el cliente web; falta abrir la ventana con un environment activo y ver que aparece seleccionado con sus variables, también con una lista larga de environments que necesite scroll.
