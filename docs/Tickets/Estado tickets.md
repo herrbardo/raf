@@ -103,30 +103,30 @@
 
 - Ticket-026.md
     - Creado: 17/11/2026
-    - Estado: INCOMPLETO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Solución: VariableRowViewModel (Raf.Client.UI/ViewModels/EnvironmentsViewModel.cs) tiene la marca interna FocusKeyOnShow, que AddVariable enciende en la fila nueva. En EnvironmentsDialog, el TextBox de la clave maneja Loaded (OnKeyLoaded en EnvironmentsDialog.axaml.cs): si su fila tiene la marca, la apaga, hace BringIntoView para que la fila se vea aunque la lista tenga scroll y le da el foco, así se puede escribir la clave directamente. La marca se usa una sola vez, así que al cambiar de environment y volver no se roba el foco. Cómo se probó: dotnet build sin advertencias ni errores. No se probó: nada en la app (ni en Windows ni en Mac ni en el cliente web); falta abrir la ventana de environments, tocar "Agregar variable" y ver que el cursor queda en la clave, también con una lista larga con scroll. Efectos secundarios posibles: ninguno esperado; las filas cargadas del servidor no tienen la marca. Los demás editores de filas (query, headers) no se tocaron.
 
 - Ticket-027.md
     - Creado: 17/11/2026
-    - Estado: INCOMPLETO
+    - Estado: CREADO
     - Comentarios:
 
 - Ticket-028.md
     - Creado: 17/11/2026
-    - Estado: INCOMPLETO
+    - Estado: CREADO
     - Comentarios:
 
 - Ticket-029.md
     - Creado: 17/11/2026
-    - Estado: INCOMPLETO
+    - Estado: CREADO
     - Comentarios:
 
 - Ticket-030.md
     - Creado: 17/11/2026
-    - Estado: INCOMPLETO
+    - Estado: CREADO
     - Comentarios:
 
 - Ticket-031.md
     - Creado: 17/11/2026
-    - Estado: INCOMPLETO
+    - Estado: CREADO
     - Comentarios:

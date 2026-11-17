@@ -27,6 +27,9 @@ public sealed partial class VariableRowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(MaskChar))]
     private bool _reveal;
 
+    /// <summary>La fila recién agregada pide el foco en la clave cuando la vista la muestra (una sola vez).</summary>
+    internal bool FocusKeyOnShow { get; set; }
+
     public VariableRowViewModel(EnvironmentsViewModel owner, Guid? environmentId, VariableDto? saved)
     {
         _owner = owner;
@@ -134,7 +137,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     private void AddVariable()
     {
         OnEdited();
-        SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null));
+        SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null) { FocusKeyOnShow = true });
     }
 
     private async Task GuardAsync(Func<Task> action)
