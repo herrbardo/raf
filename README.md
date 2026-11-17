@@ -38,8 +38,8 @@ dotnet ef migrations add <Nombre> --project src/Raf.Server.Data --startup-projec
 ## Publicar una versión del cliente
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 El workflow [release.yml](.github/workflows/release.yml) compila, empaqueta con Velopack y publica en GitHub Releases. Las apps instaladas encuentran la versión nueva al arrancar, la descargan en segundo plano y ofrecen reiniciar.
