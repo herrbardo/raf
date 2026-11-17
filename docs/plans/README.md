@@ -21,6 +21,8 @@ Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
 **v0.2.0** suma lo hecho desde la v0.1.0: consola por request, autocompletar de variables, formato del body, menú contextual en la respuesta, interfaz en inglés y español, autenticación por App con variables de sesión y login automático (plan 08). Como un cliente anterior no entiende la auth `Inherit`, hay que desplegar primero el servidor y después subir `Clients:MinVersion` a `0.2.0`.
 
+**v0.3.0** suma lo hecho desde la v0.2.0: cliente web (plan 09), renovación automática del token con el login de la App (Ticket-025), logins automáticos compartidos entre Apps (Ticket-029), tooltip con el valor de las variables (Ticket-030) y mejoras en la ventana de environments: buscador, columna de la clave más ancha, foco en la variable nueva y el environment activo seleccionado al abrir (Tickets 026, 027, 028 y 031). La migración `SharedLogins` pasa el login de cada App a un login compartido y un cliente anterior no conoce ese tipo de cambio: hay que desplegar primero el servidor y después subir `Clients:MinVersion` a `0.3.0`.
+
 ## Decisiones pendientes
 
 | # | Decisión | Afecta | Recomendación |
