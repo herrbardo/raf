@@ -114,6 +114,9 @@
   <data name="Completion_SecretUnreadable" xml:space="preserve"><value>secret, your role can't read it</value></data>
   <data name="Completion_Secret" xml:space="preserve"><value>secret</value></data>
   <data name="Completion_NoValue" xml:space="preserve"><value>no value</value></data>
+  <data name="Hover_Missing" xml:space="preserve"><value>{0} is not defined: there is no session, active environment or global variable with that name.</value></data>
+  <data name="Hover_Environment" xml:space="preserve"><value>Environment {0}</value></data>
+  <data name="Hover_Secret" xml:space="preserve"><value>•••••••• (secret)</value></data>
   <data name="Role_Owner" xml:space="preserve"><value>Owner</value></data>
   <data name="Role_Editor" xml:space="preserve"><value>Editor</value></data>
   <data name="Role_Viewer" xml:space="preserve"><value>Viewer (read-only)</value></data>

@@ -617,7 +617,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var session = CurrentSession();
         Variables = VariableContext.From(_variables, SelectedEnvironment?.Id, session);
-        VariableLookup.Update(Variables);
+        VariableLookup.Update(Variables, SelectedEnvironment?.Id is null ? null : SelectedEnvironment.Name);
         RefreshSessionRows();
         foreach (var tab in Tabs) tab.RefreshWarning();
     }

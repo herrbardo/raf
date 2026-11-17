@@ -23,11 +23,15 @@ public sealed class VariableLookup
 {
     public VariableContext Context { get; private set; } = VariableContext.Empty;
 
+    /// <summary>El environment activo, para nombrarlo en el tooltip; null si no hay.</summary>
+    public string? EnvironmentName { get; private set; }
+
     public event Action? Changed;
 
-    public void Update(VariableContext context)
+    public void Update(VariableContext context, string? environmentName = null)
     {
         Context = context;
+        EnvironmentName = environmentName;
         Changed?.Invoke();
     }
 }
@@ -80,6 +84,8 @@ public sealed partial class TextField : TextEditor
 
         _colorizer = new Colorizer(this);
         TextArea.TextView.LineTransformers.Add(_colorizer);
+        TextArea.TextView.PointerMoved += OnTextViewPointerMoved;
+        TextArea.TextView.PointerExited += (_, _) => HideVariableTip();
         TextChanged += OnEditorTextChanged;
         TextArea.AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         TextArea.TextEntered += OnTextEntered;
@@ -151,6 +157,50 @@ public sealed partial class TextField : TextEditor
     }
 
     private void Redraw() => TextArea.TextView.Redraw();
+
+    /// <summary>La variable bajo el mouse cuyo tooltip está abierto: su línea, inicio y texto.</summary>
+    private (int Offset, string Tip)? _tip;
+
+    /// <summary>Con el mouse sobre una <c>{{variable}}</c>, muestra su valor y de dónde sale (Ticket-030).</summary>
+    private void OnTextViewPointerMoved(object? sender, PointerEventArgs e)
+    {
+        var view = TextArea.TextView;
+        if (Variables is not { } variables || view.GetPositionFloor(e.GetPosition(view) + view.ScrollOffset) is not { } position)
+        {
+            HideVariableTip();
+            return;
+        }
+
+        var line = Document.GetLineByNumber(position.Line);
+        var column = position.Column - 1;
+        var match = Placeholder().Matches(Document.GetText(line))
+            .FirstOrDefault(m => column >= m.Index && column < m.Index + m.Length);
+        if (match is null)
+        {
+            HideVariableTip();
+            return;
+        }
+
+        var tip = VariableCompletion.Tooltip(variables, match.Groups[1].Value, _lookup?.EnvironmentName);
+        var offset = line.Offset + match.Index;
+        if (_tip is { } open && open.Offset == offset && open.Tip == tip) return;
+
+        _tip = (offset, tip);
+        ToolTip.SetIsOpen(view, false);
+        ToolTip.SetTip(view, tip);
+        ToolTip.SetIsOpen(view, true);
+    }
+
+    private void HideVariableTip()
+    {
+        if (_tip is null) return;
+        _tip = null;
+        ToolTip.SetIsOpen(TextArea.TextView, false);
+        ToolTip.SetTip(TextArea.TextView, null);
+    }
+
+    [GeneratedRegex(VariableResolver.PlaceholderPattern)]
+    private static partial Regex Placeholder();
 
     /// <summary>Solo lectura (Viewer, respuesta) con otro fondo, para distinguirlo de un campo editable.</summary>
     private void ApplyBackground() =>
@@ -314,7 +364,7 @@ public sealed partial class TextField : TextEditor
         _syncing = false;
     }
 
-    private sealed partial class Colorizer(TextField owner) : DocumentColorizingTransformer
+    private sealed class Colorizer(TextField owner) : DocumentColorizingTransformer
     {
         private IBrush? _known, _missing, _unreadable;
 
@@ -328,7 +378,7 @@ public sealed partial class TextField : TextEditor
             var unreadable = _unreadable ??= owner.ThemeBrush("RafWarningBrush");
 
             var text = CurrentContext.Document.GetText(line);
-            foreach (Match m in Placeholder().Matches(text))
+            foreach (Match m in TextField.Placeholder().Matches(text))
             {
                 var key = m.Groups[1].Value;
                 var brush = !variables.IsDefined(key) ? missing : variables.IsUnreadable(key) ? unreadable : known;
@@ -341,8 +391,6 @@ public sealed partial class TextField : TextEditor
             }
         }
 
-        [GeneratedRegex(VariableResolver.PlaceholderPattern)]
-        private static partial Regex Placeholder();
     }
 }
 

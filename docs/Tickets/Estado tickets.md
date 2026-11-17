@@ -123,8 +123,8 @@
 
 - Ticket-030.md
     - Creado: 17/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Decisiones del usuario: los secretos se muestran siempre enmascarados, igual que en el autocompletar, aunque el rol pueda leerlos; y el tooltip indica de dónde sale el valor, con el nombre del environment. Solución: VariableCompletion.Tooltip (Raf.Client.Core/Execution) arma el texto: en la primera línea el nombre y el origen ("Sesión", "Environment Dev" o "Global") y en la segunda el valor, recortado a 300 caracteres; una secreta muestra "•••••••• (secreta)", una que el rol no puede leer "secreta, tu rol no puede leerla", una vacía "sin valor", y una inexistente "{nombre} no está definida: no hay una variable de sesión, del environment activo ni global con ese nombre.". Las variables de sesión cuentan como secretas, como en el resto de la app. En TextField, el área de texto escucha PointerMoved: busca la {{variable}} bajo el mouse con la misma regex del resaltado (ahora compartida con el Colorizer) y abre el tooltip; al salir de la variable o del campo lo cierra. VariableLookup guarda el nombre del environment activo, que MainViewModel.ApplyVariables le pasa. Vale para todos los TextField con resaltado de variables (URL, headers, query, body, auth, ventana de la App y de logins). Textos nuevos Hover_Missing, Hover_Environment y Hover_Secret en CoreTexts, en español e inglés. Cómo se probó: dotnet build sin advertencias; los 204 tests de Raf.Client.Core.Tests en verde corriendo el ejecutable, con un test nuevo del texto del tooltip en VariableCompletionTests (environment con y sin nombre, global, secreta, secreta ilegible, vacía, sesión e inexistente). No se probó: nada en la app; falta pasar el mouse por una variable y ver que el tooltip aparece donde corresponde, que se actualiza al pasar de una variable a otra y que se cierra al salir, en Windows, en Mac y en el cliente web. Efectos secundarios posibles: el tooltip se abre sin la demora habitual de los tooltips; si molesta, se puede agregar una espera.
 
 - Ticket-031.md
     - Creado: 17/11/2026
