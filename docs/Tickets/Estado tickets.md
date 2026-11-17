@@ -100,3 +100,33 @@
     - Creado: 13/11/2026
     - Estado: [HECHO]
     - Comentarios: Cierre (17/11/2026): el usuario probó el login automático en la app y dio el ticket por completado. Solución (etapa 3 del plan 08; el usuario eligió que el login guarde el token en una variable de sesión que la auth de la App usa como {{token}}, y que guarde solo el token): App tiene un login automático opcional, AppLogin en Raf.Domain/Requests/RequestSpec.cs (Enabled, el RequestSpec del login, origen y ruta del token, variable de sesión, por defecto "token", y vencimiento: exp del JWT, campo de la respuesta, tiempo fijo en minutos o ninguno). Se guarda en la columna nueva Apps.Login (migración AppLogin, jsonb, nullable) y viaja en AppDto, CreateAppRequest y UpdateAppRequest; sin Login el update no lo cambia, así un cliente anterior que renombra no lo borra. AppLogin.Problem() valida (no puede heredar la auth; encendido, necesita método, URL, ruta del token, nombre de variable válido y el dato del vencimiento) y lo aplican el servidor (ContentEndpoints) y la caché local (SyncedWorkspaceStore); apagado se acepta incompleto, así se conserva la configuración. En el cliente, RequestRunner.RunAsync (RequestRunner.Login.cs) orquesta: si el request hereda la auth y la App tiene el login encendido, sin token en la sesión o con el token a menos de 30 segundos de vencer ejecuta el login, saca el token con ResponseExtractor, calcula el vencimiento y sigue con el token; ante un 401 renueva una vez y reintenta, salvo que en esa ejecución se acabara de hacer el login. Si el login falla, el request no se envía y la consola dice por qué con el inicio del body de la respuesta; si falla tras un 401, se muestra el 401. Si las credenciales son secretas que el rol no puede leer (Viewer), avisa sin enviar el login. Los pasos del login aparecen en la consola del request como "Login · …", con el token y las credenciales enmascarados. SessionVariableStore guarda ahora un vencimiento opcional por variable (lee el formato anterior), RunResult.Token lleva el token obtenido y MainViewModel.SaveAppToken lo guarda; la pestaña Sesión muestra "Vence: …". El aviso de variables sin valor de la pestaña ya no marca la variable del token cuando la completa el login. La ventana de autenticación de la App (AppAuthWindow, ahora redimensionable) tiene dos pestañas: Auth y "Login automático", con el request de login (método, URL, Query, Headers, Body y Auth), token, variable y vencimiento; al encenderlo con la App sin auth, la deja en Bearer {{token}}; si falta algo, no cierra y muestra el motivo. Textos nuevos en CoreTexts y Texts, en español e inglés. Se actualizó docs/plans/08-auth-por-app.md. Cómo se probó: dotnet build sin advertencias; los 201 tests de Raf.Client.Core.Tests y los 105 de Raf.Server.Tests en verde, corriendo los ejecutables de tests (dotnet test sale con código 5 sin ejecutar nada, el problema del Ticket-005, ahora también en Raf.Server.Tests). Tests nuevos: en RequestRunnerTests, contra un servidor local que emite JWT y tiene un endpoint protegido, login sin token, token vigente sin login, token por vencer, renovación ante 401, login fallido sin enviar el request, login fallido tras 401, Viewer sin acceso a las credenciales, request con auth propia, vencimiento fijo con un reloj de prueba y lectura de expires_in, instante Unix, fecha y exp del JWT; AppLoginTests con las validaciones; en SessionVariableStoreTests, vencimiento y registros del formato anterior; en WorkspaceTests, guardar, conservar al omitirlo, apagar y rechazar logins inválidos en el servidor; en SyncEngineTests, que el login llega al otro cliente y el store rechaza uno inválido. Se reconstruyó el servidor local en contenedor (puerto 5081): aplicó la migración AppLogin y /health responde 200. No se probó: nada en la app, ni la ventana nueva ni la pestaña Sesión, en ningún tema ni idioma; tampoco contra una API real con OAuth. Efectos secundarios posibles: el login se sincroniza con el equipo, así que las credenciales escritas en claro en su body quedan en el servidor (el texto de la pestaña pide usar variables secretas); el exp del JWT se lee sin validar la firma, solo para saber cuándo renovar; la consola del request muestra los tiempos del login y del request, pero el "Total" final cubre solo el último envío. Compatibilidad: igual que el Ticket-017, al publicar hay que desplegar primero el servidor.
+
+- Ticket-026.md
+    - Creado: 17/11/2026
+    - Estado: INCOMPLETO
+    - Comentarios:
+
+- Ticket-027.md
+    - Creado: 17/11/2026
+    - Estado: INCOMPLETO
+    - Comentarios:
+
+- Ticket-028.md
+    - Creado: 17/11/2026
+    - Estado: INCOMPLETO
+    - Comentarios:
+
+- Ticket-029.md
+    - Creado: 17/11/2026
+    - Estado: INCOMPLETO
+    - Comentarios:
+
+- Ticket-030.md
+    - Creado: 17/11/2026
+    - Estado: INCOMPLETO
+    - Comentarios:
+
+- Ticket-031.md
+    - Creado: 17/11/2026
+    - Estado: INCOMPLETO
+    - Comentarios:
