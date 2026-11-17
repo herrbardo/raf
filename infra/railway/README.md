@@ -4,9 +4,13 @@ Alternativa al despliegue en AWS ([infra/README.md](../README.md)), sin piezas d
 
 ```
 Cliente ──HTTPS / WebSocket──> dominio de Railway ──> servicio "server" (Dockerfile) ──red privada──> Postgres de Railway
+Navegador ──HTTPS──> dominio de Railway ──> servicio "web" (Caddy, archivos estáticos)
+          └── el sitio llama a la API del servidor (CORS) y envía los requests por su relay
 ```
 
-- **Infraestructura como código:** [`.railway/railway.ts`](../../.railway/railway.ts) define la base y el servicio, con su build, el health check en `/health`, las migraciones antes de cada versión y las variables que no son secretas. Se aplica con `railway config apply`.
+- **Infraestructura como código:** [`.railway/railway.ts`](../../.railway/railway.ts) define la base y los servicios, con su build, el health check en `/health`, las migraciones antes de cada versión y las variables que no son secretas. Se aplica con `railway config apply`.
+- **Cliente web:** el servicio `web` se construye con [`src/Raf.Client.Browser/Dockerfile`](../../src/Raf.Client.Browser/Dockerfile) (compila a WebAssembly) y lo sirve Caddy. El servidor le habilita CORS con `Cors__AllowedOrigins__0`, una referencia al dominio público de `web`: el dominio no queda escrito en el repo. El sitio no trae la URL del servidor: la indica cada usuario, y puede conectarse a otro servidor RAF si ese servidor agrega el dominio del sitio a sus orígenes.
+- **Relay:** los requests que envía la web los ejecuta el servidor (`POST /relay`), con sesión, sin alcanzar direcciones internas (localhost, la red privada de Railway, la metadata de la nube) y con límites de tamaño, tiempo y cantidad por usuario (`Relay__*`, ver `appsettings.json`).
 - **Secretos:** no están en el repo. El archivo los declara con `preserve()` (Railway conserva el valor que ya tiene) y [`deploy.ps1`](deploy.ps1) los genera la primera vez.
 - **Migraciones:** el servicio arranca con `Database__MigrateOnStartup=false`. Railway corre `dotnet Raf.Server.dll --migrate` (pre-deploy) con la imagen nueva antes de pasarle el tráfico. Si falla, la versión anterior sigue atendiendo.
 - **Tiempo real:** el WebSocket de `/hubs/changes` va por el mismo dominio. Con una sola réplica no hace falta nada más; con varias, los avisos se reparten con `LISTEN/NOTIFY` de Postgres, igual que en AWS.
@@ -50,12 +54,16 @@ railway variable list --service server --kv | Select-String 'Confidential__Local
 2. En el panel, en *server → Variables*, sellar `Confidential__LocalKey` y `Jwt__SigningKey` (menú de cada variable → *Seal*). `Bootstrap__AdminPassword` también se puede sellar: el servidor pide cambiarla en el primer login.
 3. Ver el dominio con `railway domain list --service server` y comprobar `https://<dominio>/health` → `Healthy`.
 4. En la app: conectar a `https://<dominio>` e iniciar sesión con el email del admin y esa contraseña.
+5. Cliente web: abrir el dominio de `railway domain list --service web`, conectar al dominio del servidor e iniciar sesión igual.
 
 ## 2. Desplegar una versión nueva
 
 ```powershell
-.\infra\railway\deploy.ps1
+.\infra\railway\deploy.ps1              # servidor y después el sitio
+.\infra\railway\deploy.ps1 -Only web    # solo el sitio (o -Only server)
 ```
+
+El sitio se publica con un nombre de archivo por versión para lo pesado (`_framework/*.wasm`), así que el navegador no mezcla versiones: al recargar toma la nueva. Una pestaña abierta con una versión vieja recibe 426 si el servidor sube `Clients:MinVersion`, y ofrece recargar.
 
 Los secretos ya existen y no se tocan. Railway hace el cambio sin corte: la versión nueva recibe tráfico recién cuando pasa el health check. Como en AWS, las migraciones tienen que ser compatibles con la versión anterior, que sigue atendiendo mientras arranca la nueva.
 

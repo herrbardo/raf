@@ -24,11 +24,11 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<CacheDb> _options;
-    private readonly SecretCipher _cipher;
+    private readonly SecretCipher? _cipher;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private long? _inFlight;
 
-    private SyncedWorkspaceStore(SqliteConnection connection, SecretCipher cipher)
+    private SyncedWorkspaceStore(SqliteConnection connection, SecretCipher? cipher)
     {
         _connection = connection;
         _cipher = cipher;
@@ -38,8 +38,12 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     /// <summary>Hay ediciones nuevas para enviar o cambió lo pendiente.</summary>
     internal event Action? LocalChange;
 
-    /// <summary>Abre (o crea) la caché en <paramref name="path"/>. Un valor cifrado sin su clave se recupera del servidor.</summary>
-    internal static async Task<SyncedWorkspaceStore> OpenAsync(string path, ISecureStore secure)
+    /// <summary>
+    /// Abre (o crea) la caché en <paramref name="path"/>. Un valor cifrado sin su clave se recupera del servidor.
+    /// Sin <paramref name="encryptSecrets"/> los valores secretos quedan en claro: solo para una caché que vive en
+    /// memoria, como la del cliente web, donde además no existe <see cref="AesGcm"/>.
+    /// </summary>
+    internal static async Task<SyncedWorkspaceStore> OpenAsync(string path, ISecureStore secure, bool encryptSecrets = true)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
@@ -51,17 +55,23 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
             await pragma.ExecuteNonQueryAsync();
         }
 
-        var keyName = "cache-key-" + Path.GetFileNameWithoutExtension(path);
-        var stored = secure.Read(keyName);
-        var key = stored is null ? null : Convert.FromBase64String(stored);
-        var keyIsNew = key is null;
-        if (key is null)
+        var keyIsNew = false;
+        SecretCipher? cipher = null;
+        if (encryptSecrets)
         {
-            key = RandomNumberGenerator.GetBytes(32);
-            secure.Write(keyName, Convert.ToBase64String(key));
+            var keyName = "cache-key-" + Path.GetFileNameWithoutExtension(path);
+            var stored = secure.Read(keyName);
+            var key = stored is null ? null : Convert.FromBase64String(stored);
+            keyIsNew = key is null;
+            if (key is null)
+            {
+                key = RandomNumberGenerator.GetBytes(32);
+                secure.Write(keyName, Convert.ToBase64String(key));
+            }
+            cipher = new SecretCipher(key);
         }
 
-        var store = new SyncedWorkspaceStore(connection, new SecretCipher(key));
+        var store = new SyncedWorkspaceStore(connection, cipher);
         await using var db = store.NewDb();
         await db.Database.EnsureCreatedAsync();
         if (keyIsNew) await db.Workspaces.ExecuteUpdateAsync(s => s.SetProperty(w => w.LastSeq, 0L));
@@ -114,13 +124,13 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     // ---------- Formato en disco ----------
 
     private string Encode(object dto) => SyncItems.Serialize(
-        dto is VariableDto { IsSecret: true, Value: { } value } v ? v with { Value = _cipher.Protect(value) } : dto);
+        dto is VariableDto { IsSecret: true, Value: { } value } v && _cipher is not null ? v with { Value = _cipher.Protect(value) } : dto);
 
     private object Decode(ChangeKind kind, string json)
     {
         var dto = SyncItems.Deserialize(kind, json);
         return dto is VariableDto { IsSecret: true, Value: { } value } v && value.StartsWith(SecretCipher.Prefix, StringComparison.Ordinal)
-            ? v with { Value = _cipher.Unprotect(value) }
+            ? v with { Value = _cipher?.Unprotect(value) }
             : dto;
     }
 

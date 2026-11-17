@@ -25,6 +25,10 @@ public sealed class RafApp : IAsyncLifetime
 {
     public const string AdminEmail = "admin@test.local";
     public const string MinClientVersion = "2.1.0";
+    public const string WebOrigin = "https://web.test";
+    public const int RelayMaxRequestBytes = 1024 * 1024;
+    public const int RelayMaxResponseBytes = 64 * 1024;
+    public const int RelayPerMinute = 30;
     public static readonly string AdminPassword = "Aa1" + Guid.NewGuid().ToString("N");
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -54,6 +58,12 @@ public sealed class RafApp : IAsyncLifetime
             b.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             b.UseSetting("Bootstrap:AdminMustChangePassword", "false");
             b.UseSetting("Clients:MinVersion", MinClientVersion); // los clientes de los tests no mandan versión
+            b.UseSetting("Cors:AllowedOrigins", WebOrigin);
+            // El destino de los tests del relay corre en localhost: se habilita solo ese nombre, no las IPs.
+            b.UseSetting("Relay:AllowedPrivateHosts:0", "localhost");
+            b.UseSetting("Relay:MaxRequestBytes", RelayMaxRequestBytes.ToString());
+            b.UseSetting("Relay:MaxResponseBytes", RelayMaxResponseBytes.ToString());
+            b.UseSetting("Relay:PerMinute", RelayPerMinute.ToString());
             b.UseSetting("Confidential:LocalKey", Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)));
         });
         _ = _factory.Server; // arranca el host: migra y crea el admin

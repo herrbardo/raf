@@ -481,16 +481,19 @@ public sealed class SyncSession : IAsyncDisposable
     public SyncedWorkspaceStore Store { get; }
     public SyncEngine Engine { get; }
 
-    /// <summary>Abre la caché de ese usuario en ese servidor: cada combinación tiene su propio archivo.</summary>
+    /// <summary>
+    /// Abre la caché de ese usuario en ese servidor: cada combinación tiene su propio archivo. Sin
+    /// <paramref name="encryptSecrets"/> la caché no cifra los secretos (cliente web, caché en memoria).
+    /// </summary>
     public static async Task<SyncSession> OpenAsync(
         string directory, Uri server, Guid userId, RafApiClient api, ISecureStore secure, IChangeSubscriber? subscriber = null,
-        EventLog? events = null)
+        EventLog? events = null, bool encryptSecrets = true)
     {
         var serverHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(server.ToString())))[..16];
         var path = Path.Combine(directory, $"{serverHash}-{userId:N}.db");
 
-        var store = await SyncedWorkspaceStore.OpenAsync(path, secure);
+        var store = await SyncedWorkspaceStore.OpenAsync(path, secure, encryptSecrets);
         var engine = new SyncEngine(
             store, new ApiWorkspaceStore(api), subscriber ?? new PollingChangeSubscriber(PollInterval, TimeProvider.System), path + ".lock",
             events);

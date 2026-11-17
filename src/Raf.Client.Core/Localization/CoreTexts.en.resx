@@ -78,6 +78,7 @@
   <data name="Run_RedirectDowngrade" xml:space="preserve"><value>The redirect from HTTPS to HTTP is not followed: {0}</value></data>
   <data name="Run_MissingMethod" xml:space="preserve"><value>The HTTP method is missing.</value></data>
   <data name="Run_InvalidMethod" xml:space="preserve"><value>The HTTP method is not valid.</value></data>
+  <data name="Run_RelayFailed" xml:space="preserve"><value>The RAF server could not send the request: {0}</value></data>
   <data name="Run_MissingUrl" xml:space="preserve"><value>The URL is missing.</value></data>
   <data name="Run_InvalidUrl" xml:space="preserve"><value>The URL is not valid. Check that it is http(s) and that its variables have a value.</value></data>
   <data name="Run_UnsupportedBody" xml:space="preserve"><value>Unsupported body type.</value></data>

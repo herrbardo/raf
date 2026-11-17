@@ -10,8 +10,12 @@ namespace Raf.Client.Core.Execution;
 /// <summary>El request no se puede armar. El mensaje no incluye valores de variables.</summary>
 public sealed class RequestBuildException(string message) : Exception(message);
 
-/// <summary>Ejecuta requests desde el cliente: merge del sample, resolución de variables y envío.</summary>
-public sealed partial class RequestRunner(TimeProvider? time = null) : IDisposable
+/// <summary>
+/// Ejecuta requests desde el cliente: merge del sample, resolución de variables y envío. Cada salto HTTP pasa por
+/// el handler que arma <paramref name="handlers"/> (recibe si se aceptan certificados inválidos): por defecto,
+/// directo a la red; en el cliente web, por el relay del servidor (<see cref="RelayHandler"/>).
+/// </summary>
+public sealed partial class RequestRunner(TimeProvider? time = null, Func<bool, HttpMessageHandler>? handlers = null) : IDisposable
 {
     private readonly TimeProvider _time = time ?? TimeProvider.System;
 
@@ -21,10 +25,19 @@ public sealed partial class RequestRunner(TimeProvider? time = null) : IDisposab
     /// <summary>Mismo tope que usaba HttpClient al seguir las redirecciones solo.</summary>
     public const int MaxRedirects = 50;
 
-    private readonly HttpClient _strict = CreateClient(acceptInvalidCertificates: false);
-    private readonly HttpClient _permissive = CreateClient(acceptInvalidCertificates: true);
+    /// <summary>El timeout de la ejecución, adjunto a cada salto para el handler que lo necesite (el relay).</summary>
+    internal static readonly HttpRequestOptionsKey<TimeSpan> TimeoutKey = new("Raf.Timeout");
 
-    private static HttpClient CreateClient(bool acceptInvalidCertificates)
+    private readonly HttpClient _strict = CreateClient(handlers, acceptInvalidCertificates: false);
+    private readonly HttpClient _permissive = CreateClient(handlers, acceptInvalidCertificates: true);
+
+    private static HttpClient CreateClient(Func<bool, HttpMessageHandler>? handlers, bool acceptInvalidCertificates) =>
+        new(handlers?.Invoke(acceptInvalidCertificates) ?? CreateDirectHandler(acceptInvalidCertificates))
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
+
+    private static SocketsHttpHandler CreateDirectHandler(bool acceptInvalidCertificates)
     {
         var handler = new SocketsHttpHandler
         {
@@ -37,7 +50,7 @@ public sealed partial class RequestRunner(TimeProvider? time = null) : IDisposab
         };
         if (acceptInvalidCertificates)
             handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
-        return new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        return handler;
     }
 
     /// <summary>
@@ -103,6 +116,7 @@ public sealed partial class RequestRunner(TimeProvider? time = null) : IDisposab
             {
                 // Se lee por partes para que el timeout cubra también la descarga del body.
                 trace.BeginHop(message, body);
+                message.Options.Set(TimeoutKey, input.Options.Timeout);
                 response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
                 trace.EndHop(response);
 

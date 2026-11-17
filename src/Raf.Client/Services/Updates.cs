@@ -39,7 +39,7 @@ public static class AppIdentity
 /// reiniciar desde el aviso o, si el usuario no lo hace, la próxima vez que se abre la app (Velopack la aplica al
 /// arrancar).
 /// </summary>
-public sealed partial class UpdateService : ObservableObject
+public sealed partial class UpdateService : ObservableObject, IUpdateService
 {
     private readonly UpdateManager? _manager;
     private readonly EventLog _events;
@@ -76,6 +76,8 @@ public sealed partial class UpdateService : ObservableObject
     public bool IsSupported => _manager is not null;
 
     public bool IsReady => ReadyVersion is not null;
+
+    public string? ReleasesPage => AppIdentity.ReleasesPage;
 
     public string ReadyText => string.Format(Texts.Updates_Ready, ReadyVersion);
 

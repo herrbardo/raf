@@ -13,18 +13,21 @@ public static class AppPaths
     /// RAF_DATA_DIR la reemplaza, para probar dos clientes con usuarios distintos en el mismo equipo.
     /// </summary>
     public static string DataDirectory { get; } =
-        Environment.GetEnvironmentVariable("RAF_DATA_DIR") is { Length: > 0 } custom
-            ? Path.GetFullPath(custom)
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RAF");
+        OperatingSystem.IsBrowser() ? "/raf" // sistema de archivos en memoria de la pestaña
+        : Environment.GetEnvironmentVariable("RAF_DATA_DIR") is { Length: > 0 } custom ? Path.GetFullPath(custom)
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RAF");
 }
 
-/// <summary>Almacén de secretos del sistema operativo.</summary>
-public interface ISecureStore
+/// <summary>Textos con nombre. En web, el almacenamiento del navegador.</summary>
+public interface ITextStore
 {
     string? Read(string name);
     void Write(string name, string value);
     void Delete(string name);
 }
+
+/// <summary>Almacén de secretos del sistema operativo (en web, el de la pestaña).</summary>
+public interface ISecureStore : ITextStore;
 
 /// <summary>Solo memoria: la sesión no sobrevive al cierre de la app. Nunca se guardan tokens en claro.</summary>
 public sealed class MemorySecureStore : ISecureStore
@@ -199,17 +202,33 @@ public sealed class LocalSettings
     public Dictionary<Guid, RequestLocalOptions> RequestOptions { get; set; } = new();
 }
 
-public sealed class SettingsStore(string path)
+/// <summary>Preferencias del equipo: un archivo JSON en desktop, el almacenamiento del navegador en web.</summary>
+public sealed class SettingsStore
 {
     private readonly object _lock = new();
+    private readonly Action<string> _save;
 
-    public LocalSettings Current { get; private set; } = Load(path);
+    public SettingsStore(string path) : this(() => File.ReadAllText(path), json => WriteFile(path, json))
+    {
+    }
 
-    private static LocalSettings Load(string path)
+    public SettingsStore(ITextStore store, string name) : this(() => store.Read(name), json => store.Write(name, json))
+    {
+    }
+
+    private SettingsStore(Func<string?> load, Action<string> save)
+    {
+        _save = save;
+        Current = Load(load);
+    }
+
+    public LocalSettings Current { get; }
+
+    private static LocalSettings Load(Func<string?> load)
     {
         try
         {
-            return JsonSerializer.Deserialize<LocalSettings>(File.ReadAllText(path), ClientJson.Options) ?? new();
+            return load() is { } json ? JsonSerializer.Deserialize<LocalSettings>(json, ClientJson.Options) ?? new() : new();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -217,15 +236,20 @@ public sealed class SettingsStore(string path)
         }
     }
 
+    private static void WriteFile(string path, string json)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var temp = path + ".tmp";
+        File.WriteAllText(temp, json);
+        File.Move(temp, path, overwrite: true);
+    }
+
     public void Update(Action<LocalSettings> change)
     {
         lock (_lock)
         {
             change(Current);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var temp = path + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(Current, ClientJson.Options));
-            File.Move(temp, path, overwrite: true);
+            _save(JsonSerializer.Serialize(Current, ClientJson.Options));
         }
     }
 }

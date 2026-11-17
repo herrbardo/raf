@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Raf.Client.Views.BrandHeader">
+  <!-- Identidad de RAF en las pantallas de entrada -->
+  <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,8">
+    <Image Source="avares://Raf.Client.UI/Assets/raf.png" Width="40" Height="40" />
+    <StackPanel VerticalAlignment="Center" Spacing="1">
+      <TextBlock FontSize="17" FontWeight="Bold" Text="RAF" />
+      <TextBlock Classes="caption" Text="Requests and Friends" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

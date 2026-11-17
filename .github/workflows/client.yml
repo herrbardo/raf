@@ -22,3 +22,15 @@ jobs:
           global-json-file: global.json
       - run: dotnet build src/Raf.Client
       - run: dotnet test tests/Raf.Client.Core.Tests
+
+  # Cliente web: fuera de Raf.slnx porque necesita el workload de WebAssembly. Se publica (no solo se compila) para
+  # que el recorte de ensamblados también se controle.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet workload install wasm-tools
+      - run: dotnet publish src/Raf.Client.Browser -c Release -o web-out -p:NoWarn=WASM0001

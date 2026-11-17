@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- App de escritorio: la interfaz está en Raf.Client.UI, compartida con la web. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>RAF</AssemblyName>
@@ -10,25 +11,17 @@
     <Description>Cliente colaborativo para enviar requests HTTP.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <AvaloniaResource Include="Assets\raf.png" />
     <!-- Origen de las actualizaciones: lo pasa el workflow de release. Sin él, la app no busca versiones nuevas. -->
     <AssemblyMetadata Include="RafUpdateUrl" Value="$(RafUpdateUrl)" Condition="'$(RafUpdateUrl)' != ''" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
-    <PackageReference Include="Avalonia.Themes.Fluent" />
-    <PackageReference Include="Avalonia.Fonts.Inter" />
-    <PackageReference Include="Avalonia.AvaloniaEdit" />
-    <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Velopack" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Textos de la interfaz: viven en Raf.Client.Core/Localization. -->
     <Using Include="Raf.Client.Core.Localization" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raf.Client.Core\Raf.Client.Core.csproj" />
+    <ProjectReference Include="..\Raf.Client.UI\Raf.Client.UI.csproj" />
   </ItemGroup>
 </Project>

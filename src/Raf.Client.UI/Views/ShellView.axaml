@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             x:Class="Raf.Client.Views.ShellView"
+             x:DataType="vm:ShellViewModel"
+             Focusable="True">
+  <!-- Atajos de la pestaña activa. Van en la raíz porque el foco puede quedar fuera de la pestaña
+       (por ejemplo, después de Enviar el botón se deshabilita y el foco vuelve a la raíz). -->
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding Main.SelectedTab.SaveCommand}" />
+    <KeyBinding Gesture="Ctrl+Enter" Command="{Binding Main.SelectedTab.SendCommand}" />
+    <!-- La consola se abre desde cualquier pantalla, también antes de iniciar sesión. -->
+    <KeyBinding Gesture="Ctrl+Shift+L" Command="{Binding OpenEventConsoleCommand}" />
+  </UserControl.KeyBindings>
+  <Panel>
+    <DockPanel>
+      <Border DockPanel.Dock="Top" Classes="update-banner" Padding="12,6"
+              IsVisible="{Binding Updates.IsReady}">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="accent" Content="{x:Static l:Texts.MainW_Restart}"
+                  Command="{Binding RestartToUpdateCommand}" />
+          <TextBlock VerticalAlignment="Center" TextWrapping="Wrap">
+            <Run Text="{Binding Updates.ReadyText}" />
+            <Run Classes="caption" Text="{x:Static l:Texts.MainW_RestartHint}" />
+          </TextBlock>
+        </DockPanel>
+      </Border>
+      <ContentControl Content="{Binding Page}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    </DockPanel>
+    <!-- Diálogos superpuestos: los usa el cliente web, que no tiene ventanas (OverlayWindowService). -->
+    <Panel x:Name="DialogLayer" />
+  </Panel>
+</UserControl>

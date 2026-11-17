@@ -6,6 +6,17 @@ import { defineRailway, postgres, preserve, service } from "railway/iac";
 export default defineRailway((ctx, project) => {
   const db = postgres("postgres");
 
+  // Cliente web: archivos estáticos (WebAssembly) servidos por Caddy. Se conecta al servidor que indique cada
+  // usuario; el servidor de este proyecto le habilita CORS más abajo.
+  const web = service("web", {
+    build: { builder: "DOCKERFILE", dockerfilePath: "src/Raf.Client.Browser/Dockerfile" },
+    healthcheck: "/health",
+    replicas: 1,
+    env: {
+      PORT: "8080",
+    },
+  });
+
   const server = service("server", {
     build: { builder: "DOCKERFILE", dockerfilePath: "src/Raf.Server/Dockerfile" },
     // Antes de que la versión nueva atienda: migra, cifra los secretos heredados y crea el admin. Si falla, el
@@ -34,11 +45,15 @@ export default defineRailway((ctx, project) => {
       Confidential__AllowLocalKeyInProduction: "true",
       Confidential__LocalKey: preserve(),
 
+      // El sitio del servicio "web" puede usar la API desde el navegador. Es una referencia: el dominio no queda
+      // escrito acá (llega sin esquema y el servidor asume https).
+      Cors__AllowedOrigins__0: web.env.RAILWAY_PUBLIC_DOMAIN,
+
       Jwt__SigningKey: preserve(),
       Bootstrap__AdminEmail: preserve(),
       Bootstrap__AdminPassword: preserve(),
     },
   });
 
-  return project(ctx.projectName ?? "raf", { resources: [db, server] });
+  return project(ctx.projectName ?? "raf", { resources: [db, server, web] });
 });
