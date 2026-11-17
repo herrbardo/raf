@@ -27,6 +27,14 @@ public sealed partial class VariableRowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(MaskChar))]
     private bool _reveal;
 
+    /// <summary>Si la fila pasa el filtro del buscador. Las filas nuevas se ven siempre, aunque no coincidan.</summary>
+    [ObservableProperty] private bool _isShown = true;
+
+    /// <summary>Coincide por clave o por valor, sin distinguir mayúsculas. Las secretas solo por clave, para no revelar nada de su valor.</summary>
+    public bool Matches(string term) =>
+        (Key ?? "").Contains(term, StringComparison.OrdinalIgnoreCase) ||
+        !IsSecret && (Value ?? "").Contains(term, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>La fila recién agregada pide el foco en la clave cuando la vista la muestra (una sola vez).</summary>
     internal bool FocusKeyOnShow { get; set; }
 
@@ -126,11 +134,33 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
 
     internal void OnEdited() => SavedMessage = null;
 
+    /// <summary>Texto del buscador: filtra las filas del alcance elegido por clave o por valor.</summary>
+    [ObservableProperty] private string? _search;
+
+    /// <summary>Hay búsqueda y ninguna fila del alcance elegido coincide.</summary>
+    [ObservableProperty] private bool _noMatches;
+
+    partial void OnSearchChanged(string? value) => ApplyFilter();
+    partial void OnSelectedScopeChanged(VariableScopeViewModel? value) => ApplyFilter();
+
+    // Se filtra al cambiar la búsqueda o el alcance, no al editar: así una fila no desaparece mientras se escribe.
+    private void ApplyFilter()
+    {
+        var term = Search?.Trim() ?? "";
+        foreach (var row in SelectedScope?.Rows ?? [])
+            row.IsShown = term.Length == 0 || row.Matches(term);
+        UpdateNoMatches();
+    }
+
+    private void UpdateNoMatches() =>
+        NoMatches = !string.IsNullOrWhiteSpace(Search) && SelectedScope?.Rows.Any(r => r.IsShown) != true;
+
     internal void RemoveRow(VariableRowViewModel row)
     {
         OnEdited();
         Scopes.First(s => s.Id == row.EnvironmentId).Rows.Remove(row);
         if (row.Saved is not null) _removed.Add(row);
+        UpdateNoMatches();
     }
 
     [RelayCommand]
@@ -138,6 +168,7 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     {
         OnEdited();
         SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null) { FocusKeyOnShow = true });
+        UpdateNoMatches();
     }
 
     private async Task GuardAsync(Func<Task> action)

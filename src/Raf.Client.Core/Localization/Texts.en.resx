@@ -295,6 +295,8 @@
   <data name="EnvW_SecretHeader" xml:space="preserve"><value>SECRET</value></data>
   <data name="EnvW_SecretTip" xml:space="preserve"><value>Secret: stored encrypted and shown hidden</value></data>
   <data name="EnvW_Show" xml:space="preserve"><value>Show</value></data>
+  <data name="EnvW_Search" xml:space="preserve"><value>Search by key or value</value></data>
+  <data name="EnvW_NoMatches" xml:space="preserve"><value>No variable matches the search.</value></data>
   <data name="Auth_Token" xml:space="preserve"><value>Token</value></data>
   <data name="Auth_User" xml:space="preserve"><value>Username</value></data>
   <data name="Auth_SendIn" xml:space="preserve"><value>Send in</value></data>
