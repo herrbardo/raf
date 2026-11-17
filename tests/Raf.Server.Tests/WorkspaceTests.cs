@@ -130,10 +130,11 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
-    public async Task App_login_is_saved_kept_when_omitted_and_validated()
+    public async Task Shared_login_is_validated_assigned_kept_when_omitted_and_cannot_be_deleted_in_use()
     {
         var (owner, ws) = await NewWorkspaceAsync();
         var b = $"/workspaces/{ws.Id}/apps";
+        var logins = $"/workspaces/{ws.Id}/logins";
         var login = AppLogin.Default with
         {
             Enabled = true,
@@ -147,22 +148,11 @@ public class WorkspaceTests(RafApp app)
             ExpiryPath = "$.expires_in",
         };
 
-        var created = await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Api", Login: login));
-        Assert.Equivalent(login, created.Login, strict: true);
-        Assert.Null((await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Sin login"))).Login);
+        var shared = await owner.PostOkAsync<LoginDto>(logins, new CreateLoginRequest("Auth central", login));
+        Assert.Equivalent(login, shared.Config, strict: true);
 
-        // Renombrar o cambiar solo la auth no borra el login.
-        var url = $"{b}/{created.Id}";
-        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, created.Version, AuthSpec.None))).EnsureStatusAsync(HttpStatusCode.OK);
-        var renamed = await owner.GetOkAsync<AppDto>(url);
-        Assert.Equivalent(login, renamed.Login, strict: true);
-
-        // Apagarlo conserva la configuración.
-        var off = login with { Enabled = false };
-        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, renamed.Version, Login: off))).EnsureStatusAsync(HttpStatusCode.OK);
-        var current = await owner.GetOkAsync<AppDto>(url);
-        Assert.Equivalent(off, current.Login, strict: true);
-
+        // Apagado se acepta incompleto, así se puede guardar antes de completarlo.
+        var draft = await owner.PostOkAsync<LoginDto>(logins, new CreateLoginRequest("Borrador", AppLogin.Default));
         foreach (var bad in new[]
                  {
                      login with { Request = login.Request with { Auth = AuthSpec.Inherit } },
@@ -170,9 +160,42 @@ public class WorkspaceTests(RafApp app)
                      login with { Expiry = TokenExpiry.Fixed, ExpiryMinutes = null },
                  })
         {
-            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, current.Version, Login: bad))).StatusCode);
-            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync(b, new CreateAppRequest("Mal", Login: bad))).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync(logins, new CreateLoginRequest("Mal", bad))).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await owner.PutJsonAsync($"{logins}/{draft.Id}", new UpdateLoginRequest("Borrador", bad, draft.Version))).StatusCode);
         }
+
+        // Dos Apps usan el mismo login; uno inexistente se rechaza.
+        var api = await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Api", LoginId: shared.Id));
+        var other = await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Otra", LoginId: shared.Id));
+        Assert.Equal((shared.Id, shared.Id), (api.LoginId, other.LoginId));
+        Assert.Null((await owner.PostOkAsync<AppDto>(b, new CreateAppRequest("Sin login"))).LoginId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync(b, new CreateAppRequest("Mal", LoginId: Guid.NewGuid()))).StatusCode);
+
+        // Renombrar o cambiar solo la auth no quita el login.
+        var url = $"{b}/{api.Id}";
+        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, api.Version, AuthSpec.None))).EnsureStatusAsync(HttpStatusCode.OK);
+        var renamed = await owner.GetOkAsync<AppDto>(url);
+        Assert.Equal(shared.Id, renamed.LoginId);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, renamed.Version, LoginId: Guid.NewGuid()))).StatusCode);
+
+        // En uso no se puede borrar; el error nombra las Apps.
+        var inUse = await owner.DeleteAsync($"{logins}/{shared.Id}");
+        Assert.Equal(HttpStatusCode.Conflict, inUse.StatusCode);
+        Assert.Contains("Api 2", await inUse.Content.ReadAsStringAsync());
+
+        // Guid.Empty lo quita; sin Apps que lo usen, se borra y viaja como borrado en los cambios.
+        await (await owner.PutJsonAsync(url, new UpdateAppRequest("Api 2", 0, renamed.Version, LoginId: Guid.Empty))).EnsureStatusAsync(HttpStatusCode.OK);
+        Assert.Null((await owner.GetOkAsync<AppDto>(url)).LoginId);
+        var otherNow = await owner.GetOkAsync<AppDto>($"{b}/{other.Id}");
+        await (await owner.PutJsonAsync($"{b}/{other.Id}", new UpdateAppRequest("Otra", 0, otherNow.Version, LoginId: Guid.Empty)))
+            .EnsureStatusAsync(HttpStatusCode.OK);
+        await (await owner.DeleteAsync($"{logins}/{shared.Id}")).EnsureStatusAsync(HttpStatusCode.NoContent);
+
+        var changes = await owner.GetOkAsync<ChangesResponse>($"/workspaces/{ws.Id}/changes?since=0");
+        Assert.Contains(changes.Deleted, d => d.Kind == ChangeKind.Login && d.Id == shared.Id);
+        Assert.Equal([draft.Id], changes.Logins!.Select(l => l.Id));
     }
 
     [Fact]

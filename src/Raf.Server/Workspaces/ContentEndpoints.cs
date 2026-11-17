@@ -25,6 +25,7 @@ public static class ContentEndpoints
         MapFolders(ws.MapGroup("/folders").WithTags("Folders"));
         MapRequests(ws.MapGroup("/requests").WithTags("Requests"));
         MapSamples(ws.MapGroup("/samples").WithTags("Samples"));
+        MapLogins(ws.MapGroup("/logins").WithTags("Logins"));
     }
 
     private static IQueryable<T> In<T>(this DbSet<T> set, Guid ws) where T : SyncEntity =>
@@ -70,9 +71,10 @@ public static class ContentEndpoints
         seqs.AddRange(await NextSeqsAsync(db.Folders, ws, from, take, ct));
         seqs.AddRange(await NextSeqsAsync(db.Requests, ws, from, take, ct));
         seqs.AddRange(await NextSeqsAsync(db.Samples, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.Logins, ws, from, take, ct));
 
         if (seqs.Count == 0)
-            return Results.Ok(new ChangesResponse(from, false, role, null, [], [], [], [], [], [], [], []));
+            return Results.Ok(new ChangesResponse(from, false, role, null, [], [], [], [], [], [], [], [], []));
 
         seqs.Sort();
         var cutoff = seqs[Math.Min(take, seqs.Count) - 1];
@@ -85,12 +87,14 @@ public static class ContentEndpoints
         var folders = await SliceAsync(db.Folders, ws, from, cutoff, ct);
         var requests = await SliceAsync(db.Requests, ws, from, cutoff, ct);
         var samples = await SliceAsync(db.Samples, ws, from, cutoff, ct);
+        var logins = await SliceAsync(db.Logins, ws, from, cutoff, ct);
 
         var hasMore =
             await HasLaterAsync(db.Workspaces, ws, cutoff, ct) || await HasLaterAsync(db.WorkspaceMembers, ws, cutoff, ct) ||
             await HasLaterAsync(db.Environments, ws, cutoff, ct) || await HasLaterAsync(db.Variables, ws, cutoff, ct) ||
             await HasLaterAsync(db.Apps, ws, cutoff, ct) || await HasLaterAsync(db.Folders, ws, cutoff, ct) ||
-            await HasLaterAsync(db.Requests, ws, cutoff, ct) || await HasLaterAsync(db.Samples, ws, cutoff, ct);
+            await HasLaterAsync(db.Requests, ws, cutoff, ct) || await HasLaterAsync(db.Samples, ws, cutoff, ct) ||
+            await HasLaterAsync(db.Logins, ws, cutoff, ct);
 
         var userIds = members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
         var users = await db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
@@ -107,6 +111,7 @@ public static class ContentEndpoints
         Tombstones(ChangeKind.Folder, folders);
         Tombstones(ChangeKind.Request, requests);
         Tombstones(ChangeKind.Sample, samples);
+        Tombstones(ChangeKind.Login, logins);
 
         var canSee = role >= WorkspaceRole.Editor;
         var variableDtos = new List<VariableDto>();
@@ -123,7 +128,8 @@ public static class ContentEndpoints
             folders.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
             requests.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
             samples.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
-            deleted));
+            deleted,
+            logins.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList()));
     }
 
     private static Task<List<long>> NextSeqsAsync<T>(DbSet<T> set, Guid ws, long since, int take, CancellationToken ct) where T : SyncEntity =>
@@ -277,24 +283,16 @@ public static class ContentEndpoints
 
     // ---------- Apps ----------
 
-    private static AppDto ToDto(this App a) => new(a.Id, a.Name, a.Order, a.Version, a.ChangeSeq, a.Auth, a.Login);
+    private static AppDto ToDto(this App a) => new(a.Id, a.Name, a.Order, a.Version, a.ChangeSeq, a.Auth, a.LoginId);
 
-    private static IResult? ValidateAppAuth(AuthSpec? auth, AppLogin? login)
-    {
-        if (auth is { Type: AuthType.Inherit }) return Problems.BadRequest("Una app no puede heredar la autenticación.");
-        var problem = login?.Problem() ?? AppLoginProblem.None;
-        return problem == AppLoginProblem.None ? null : Problems.BadRequest(problem switch
-        {
-            AppLoginProblem.Incomplete => "'login' incompleto: el request necesita headers, queryParams, body y auth.",
-            AppLoginProblem.InheritAuth => "El login de la app no puede heredar la autenticación.",
-            AppLoginProblem.InvalidMethod => "El login de la app tiene un método inválido.",
-            AppLoginProblem.MissingUrl => "El login de la app no tiene URL.",
-            AppLoginProblem.MissingTokenPath => "El login de la app no indica dónde está el token.",
-            AppLoginProblem.InvalidVariable => "El nombre de la variable del token no es válido.",
-            AppLoginProblem.MissingExpiryPath => "El login de la app no indica el campo del vencimiento.",
-            _ => "Los minutos de vencimiento del token tienen que ser mayores que cero.",
-        });
-    }
+    private static IResult? ValidateAppAuth(AuthSpec? auth) =>
+        auth is { Type: AuthType.Inherit } ? Problems.BadRequest("Una app no puede heredar la autenticación.") : null;
+
+    /// <summary>El login elegido tiene que existir en el workspace; <see cref="Guid.Empty"/> lo quita.</summary>
+    private static async Task<IResult?> ValidateLoginRefAsync(RafDbContext db, Guid ws, Guid? loginId, CancellationToken ct) =>
+        loginId is { } id && id != Guid.Empty && !await db.Logins.In(ws).AnyAsync(l => l.Id == id, ct)
+            ? Problems.BadRequest("El login no existe.")
+            : null;
 
     private static void MapApps(RouteGroupBuilder g)
     {
@@ -307,13 +305,14 @@ public static class ContentEndpoints
         g.MapPost("/", async (Guid ws, CreateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
-            if (ValidateAppAuth(req.Auth, req.Login) is { } badAuth) return badAuth;
+            if (ValidateAppAuth(req.Auth) is { } badAuth) return badAuth;
+            if (await ValidateLoginRefAsync(db, ws, req.LoginId, ct) is { } badLogin) return badLogin;
             if (await RetriedCreateAsync(db.Apps, ws, req.Id, "apps", x => x.ToDto(), ct) is { } retried) return retried;
 
             var a = new App
             {
                 Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Order = req.Order,
-                Auth = req.Auth ?? AuthSpec.None, Login = req.Login,
+                Auth = req.Auth ?? AuthSpec.None, LoginId = req.LoginId == Guid.Empty ? null : req.LoginId,
             };
             db.Apps.Add(a);
             await db.SaveChangesAsync(ct);
@@ -323,7 +322,8 @@ public static class ContentEndpoints
         g.MapPut("/{id:guid}", async (Guid ws, Guid id, UpdateAppRequest req, RafDbContext db, CancellationToken ct) =>
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
-            if (ValidateAppAuth(req.Auth, req.Login) is { } badAuth) return badAuth;
+            if (ValidateAppAuth(req.Auth) is { } badAuth) return badAuth;
+            if (await ValidateLoginRefAsync(db, ws, req.LoginId, ct) is { } badLogin) return badLogin;
             var a = await db.Apps.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
             if (a is null) return Problems.NotFound("App");
             if (a.Version != req.Version) return Problems.VersionConflict(a);
@@ -331,7 +331,7 @@ public static class ContentEndpoints
             a.Name = req.Name.Trim();
             a.Order = req.Order;
             if (req.Auth is not null) a.Auth = req.Auth;
-            if (req.Login is not null) a.Login = req.Login;
+            if (req.LoginId is { } loginId) a.LoginId = loginId == Guid.Empty ? null : loginId;
             await db.SaveChangesAsync(ct);
             return Results.Ok(a.ToDto());
         }).RequireWorkspaceRole(WorkspaceRole.Editor);
@@ -580,5 +580,71 @@ public static class ContentEndpoints
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         }).RequireWorkspaceRole(WorkspaceRole.Editor);
+    }
+
+    // ---------- Logins compartidos ----------
+
+    private static LoginDto ToDto(this Login l) => new(l.Id, l.Name, l.Config, l.Version, l.ChangeSeq);
+
+    private static IResult? ValidateLogin(string? name, AppLogin? config)
+    {
+        if (Problems.ValidateName(name) is { } invalid) return invalid;
+        if (config is null) return Problems.BadRequest("'config' es obligatorio.");
+        var problem = config.Problem();
+        return problem == AppLoginProblem.None ? null : Problems.BadRequest(problem switch
+        {
+            AppLoginProblem.Incomplete => "'config' incompleto: el request necesita headers, queryParams, body y auth.",
+            AppLoginProblem.InheritAuth => "El login no puede heredar la autenticación.",
+            AppLoginProblem.InvalidMethod => "El login tiene un método inválido.",
+            AppLoginProblem.MissingUrl => "El login no tiene URL.",
+            AppLoginProblem.MissingTokenPath => "El login no indica dónde está el token.",
+            AppLoginProblem.InvalidVariable => "El nombre de la variable del token no es válido.",
+            AppLoginProblem.MissingExpiryPath => "El login no indica el campo del vencimiento.",
+            _ => "Los minutos de vencimiento del token tienen que ser mayores que cero.",
+        });
+    }
+
+    private static void MapLogins(RouteGroupBuilder g)
+    {
+        g.MapGet("/", async (Guid ws, RafDbContext db, CancellationToken ct) =>
+            (await db.Logins.In(ws).OrderBy(l => l.Name).ToListAsync(ct)).Select(l => l.ToDto()));
+
+        g.MapPost("/", async (Guid ws, CreateLoginRequest req, RafDbContext db, CancellationToken ct) =>
+        {
+            if (ValidateLogin(req.Name, req.Config) is { } invalid) return invalid;
+            if (await RetriedCreateAsync(db.Logins, ws, req.Id, "logins", x => x.ToDto(), ct) is { } retried) return retried;
+
+            var l = new Login { Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Config = req.Config };
+            db.Logins.Add(l);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/workspaces/{ws}/logins/{l.Id}", l.ToDto());
+        }).RequireWorkspaceRole(WorkspaceRole.Editor);
+
+        g.MapPut("/{id:guid}", async (Guid ws, Guid id, UpdateLoginRequest req, RafDbContext db, CancellationToken ct) =>
+        {
+            if (ValidateLogin(req.Name, req.Config) is { } invalid) return invalid;
+            var l = await db.Logins.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
+            if (l is null) return Problems.NotFound("Login");
+            if (l.Version != req.Version) return Problems.VersionConflict(l);
+
+            l.Name = req.Name.Trim();
+            l.Config = req.Config;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(l.ToDto());
+        }).RequireWorkspaceRole(WorkspaceRole.Editor);
+
+        g.MapDelete("/{id:guid}", async (Guid ws, Guid id, RafDbContext db, CancellationToken ct) =>
+        {
+            var l = await db.Logins.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
+            if (l is null) return Problems.NotFound("Login");
+            var users = await db.Apps.In(ws).Where(a => a.LoginId == id).OrderBy(a => a.Name).Select(a => a.Name).ToListAsync(ct);
+            if (users.Count > 0)
+                return Problems.Conflict($"El login está en uso por: {string.Join(", ", users)}. Primero hay que quitárselo a esas apps.");
+
+            l.IsDeleted = true;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        }).RequireWorkspaceRole(WorkspaceRole.Editor)
+          .WithSummary("Elimina el login. Se rechaza si alguna app lo usa.");
     }
 }

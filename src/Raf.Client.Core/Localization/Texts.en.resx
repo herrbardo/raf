@@ -188,6 +188,22 @@
   <data name="AppLogin_ExpiryField" xml:space="preserve"><value>Response field</value></data>
   <data name="AppLogin_ExpiryFixed" xml:space="preserve"><value>Fixed time</value></data>
   <data name="AppLogin_ExpiryNone" xml:space="preserve"><value>No expiration (only on a 401)</value></data>
+  <data name="AppLogin_None" xml:space="preserve"><value>None</value></data>
+  <data name="AppLogin_ChooseHint" xml:space="preserve"><value>Workspace login that gets the token for this App's requests with Inherit auth. Logins are created and edited in the Logins window, and several Apps can use the same one.</value></data>
+  <data name="AppLogin_Summary" xml:space="preserve"><value>{0} {1} · token in {{{{{2}}}}}</value></data>
+  <data name="AppLogin_IsOff" xml:space="preserve"><value>This login is turned off: until it is turned on in the Logins window, no token is obtained.</value></data>
+  <data name="LoginsW_Title" xml:space="preserve"><value>Automatic logins</value></data>
+  <data name="LoginsW_Button" xml:space="preserve"><value>Logins</value></data>
+  <data name="LoginsW_List" xml:space="preserve"><value>LOGINS</value></data>
+  <data name="LoginsW_Empty" xml:space="preserve"><value>There are no logins yet. Create one and choose it in the Apps' authentication.</value></data>
+  <data name="LoginsW_NewTitle" xml:space="preserve"><value>New login</value></data>
+  <data name="LoginsW_RenameTitle" xml:space="preserve"><value>Rename login</value></data>
+  <data name="LoginsW_DeleteMessage" xml:space="preserve"><value>Delete the login "{0}"?</value></data>
+  <data name="LoginsW_InUse" xml:space="preserve"><value>"{0}" cannot be deleted: it is used by {1}. Remove it from those Apps first.</value></data>
+  <data name="LoginsW_UsedBy" xml:space="preserve"><value>Used by: {0}</value></data>
+  <data name="LoginsW_Unused" xml:space="preserve"><value>No App uses it yet.</value></data>
+  <data name="LoginsW_Incomplete" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="LoginsW_CloseUnsaved" xml:space="preserve"><value>Close and discard the changes to the logins?</value></data>
   <data name="Session_ExpiresAt" xml:space="preserve"><value>Expires: {0}</value></data>
   <data name="Session_Expired" xml:space="preserve"><value>Expired: {0}</value></data>
   <data name="MainV_Session" xml:space="preserve"><value>Session</value></data>

@@ -61,6 +61,7 @@
   <data name="Sync_KindFolder" xml:space="preserve"><value>carpeta</value></data>
   <data name="Sync_KindRequest" xml:space="preserve"><value>request</value></data>
   <data name="Sync_KindSample" xml:space="preserve"><value>sample</value></data>
+  <data name="Sync_KindLogin" xml:space="preserve"><value>login</value></data>
   <data name="Realtime_Lost" xml:space="preserve"><value>Se cortó la conexión en tiempo real{0}. Mientras tanto se consulta al servidor cada {1}.</value></data>
   <data name="Realtime_Recovered" xml:space="preserve"><value>Se recuperó la conexión en tiempo real.</value></data>
   <data name="Realtime_Closed" xml:space="preserve"><value>El servidor cerró la conexión en tiempo real{0}. Se vuelve a conectar.</value></data>
@@ -93,6 +94,8 @@
   <data name="Completion_Environment" xml:space="preserve"><value>Environment activo</value></data>
   <data name="Completion_Session" xml:space="preserve"><value>Sesión</value></data>
   <data name="Store_AppCannotInherit" xml:space="preserve"><value>Una App no puede heredar la autenticación.</value></data>
+  <data name="Store_LoginGone" xml:space="preserve"><value>El login elegido ya no existe.</value></data>
+  <data name="Store_LoginInUse" xml:space="preserve"><value>El login está en uso por: {0}. Primero hay que quitárselo a esas Apps.</value></data>
   <data name="Trace_AuthInherited" xml:space="preserve"><value>Autenticación heredada de la App: {0}</value></data>
   <data name="Trace_AuthInheritedNone" xml:space="preserve"><value>El request hereda la autenticación de la App, pero la App no tiene: se envía sin autenticación</value></data>
   <data name="Trace_Extracted" xml:space="preserve"><value>Variable de sesión '{0}' guardada</value></data>

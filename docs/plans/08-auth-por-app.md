@@ -1,6 +1,6 @@
 # Plan 08 — Autenticación por App
 
-Estado: **implementado y probado**: etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025 (el usuario probó el login automático en la app). Las variables por App son del Ticket-018.
+Estado: **implementado y probado**: etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025 (el usuario probó el login automático en la app). Etapa 4 (logins compartidos) implementada en el Ticket-029, sin prueba en la app. Las variables por App son del Ticket-018.
 
 ## Objetivo
 
@@ -59,3 +59,27 @@ Si todos los requests de una App se autentican igual, configurarlo una sola vez 
 - La pestaña "Sesión" muestra cuándo vence cada token.
 
 **Compatibilidad:** la columna `Login` es nueva (migración `AppLogin`) y opcional; un cliente anterior ignora el campo. Un cliente anterior que renombra la App no lo borra, porque `UpdateAppRequest` sin `Login` no lo cambia.
+
+## Etapa 4 — Logins compartidos (Ticket-029)
+
+El login automático deja de vivir dentro de cada App: se define una vez en el workspace y lo usan varias Apps.
+
+**Decisiones (acordadas con el usuario el 17/11/2026)**
+
+| Tema | Decisión |
+|---|---|
+| Dónde vive | Entidad nueva del workspace, **Login**, sincronizada como los environments. La editan Editor y Owner; el Viewer la ve |
+| Dónde se edita | Ventana propia **"Logins"**, con botón en la barra superior junto a "Variables": la lista a la izquierda y el editor del login a la derecha |
+| Cómo se elige | En la ventana de autenticación de la App, la pestaña "Login automático" pasa a ser un combo: "Ninguno" o uno de los logins del workspace |
+| Logins propios existentes | Una migración crea un Login por cada App que tenía uno, con el nombre de la App, y la deja apuntando a él. La App ya no guarda un login propio |
+| Borrar uno en uso | No se puede: el servidor (y la caché local, sin conexión) lo rechaza nombrando las Apps que lo usan |
+
+**Detalles**
+
+- `Login` tiene `Name` y `Config` (el mismo `AppLogin` de la etapa 3, con `Enabled`): apagarlo lo apaga en todas las Apps que lo usan, sin perder la configuración. Así la migración respeta las Apps que tenían el login apagado.
+- `App.Login` se reemplaza por `App.LoginId`. En `UpdateAppRequest`, `LoginId` null no lo cambia (así renombrar no lo borra) y `Guid.Empty` quita el login.
+- Asignar un login que no existe se rechaza. Como la App depende del login, la sincronización lo envía antes y, si otro usuario lo borró, el conflicto permite recrearlo.
+- El token es una variable de sesión por workspace y environment, así que las Apps que usan el mismo login comparten el token: un solo login sirve para todas.
+- La migración numera los cambios (`ChangeSeq`) como cualquier edición, para que los clientes reciban los logins nuevos y las Apps actualizadas en la próxima sincronización.
+
+**Compatibilidad:** un cliente anterior no conoce el tipo de cambio `Login` ni `LoginId`: al publicar hay que subir `Clients:MinVersion` y desplegar primero el servidor.

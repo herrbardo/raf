@@ -43,6 +43,13 @@ public interface IWorkspaceStore
     Task<SampleDto> CreateSampleAsync(Guid ws, CreateSampleRequest req, CancellationToken ct = default);
     Task<SampleDto> UpdateSampleAsync(Guid ws, Guid id, UpdateSampleRequest req, CancellationToken ct = default);
     Task DeleteSampleAsync(Guid ws, Guid id, CancellationToken ct = default);
+
+    Task<IReadOnlyList<LoginDto>> GetLoginsAsync(Guid ws, CancellationToken ct = default);
+    Task<LoginDto> CreateLoginAsync(Guid ws, CreateLoginRequest req, CancellationToken ct = default);
+    Task<LoginDto> UpdateLoginAsync(Guid ws, Guid id, UpdateLoginRequest req, CancellationToken ct = default);
+
+    /// <summary>Se rechaza si alguna App lo usa.</summary>
+    Task DeleteLoginAsync(Guid ws, Guid id, CancellationToken ct = default);
 }
 
 public sealed class ApiWorkspaceStore(RafApiClient api) : IWorkspaceStore
@@ -138,4 +145,15 @@ public sealed class ApiWorkspaceStore(RafApiClient api) : IWorkspaceStore
         api.PutAsync<SampleDto>(P(ws, "samples", id), req, ct);
 
     public Task DeleteSampleAsync(Guid ws, Guid id, CancellationToken ct = default) => api.DeleteAsync(P(ws, "samples", id), ct);
+
+    public Task<IReadOnlyList<LoginDto>> GetLoginsAsync(Guid ws, CancellationToken ct = default) =>
+        ListAsync<LoginDto>(ws, "logins", ct);
+
+    public Task<LoginDto> CreateLoginAsync(Guid ws, CreateLoginRequest req, CancellationToken ct = default) =>
+        api.PostAsync<LoginDto>(P(ws, "logins"), req with { Id = req.Id ?? Guid.CreateVersion7() }, ct);
+
+    public Task<LoginDto> UpdateLoginAsync(Guid ws, Guid id, UpdateLoginRequest req, CancellationToken ct = default) =>
+        api.PutAsync<LoginDto>(P(ws, "logins", id), req, ct);
+
+    public Task DeleteLoginAsync(Guid ws, Guid id, CancellationToken ct = default) => api.DeleteAsync(P(ws, "logins", id), ct);
 }

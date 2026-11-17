@@ -213,10 +213,14 @@ public sealed partial class MainViewModel : ObservableObject
         _sessionVariables.Set(WorkspaceId, SelectedEnvironment?.Id, token.Variable, token.Value, token.ExpiresAt);
     }
 
+    /// <summary>Los logins compartidos del workspace, por id.</summary>
+    private Dictionary<Guid, LoginDto> _logins = [];
+
     /// <summary>El login automático de la App con el vencimiento del token guardado; null si no tiene o está apagado.</summary>
     public AppLoginState? AppLoginOf(Guid appId)
     {
-        if (Roots.FirstOrDefault(n => n.Id == appId)?.Dto is not AppDto { Login: { Enabled: true } login } || SelectedWorkspace is null)
+        if (Roots.FirstOrDefault(n => n.Id == appId)?.Dto is not AppDto { LoginId: { } loginId } || SelectedWorkspace is null ||
+            !_logins.TryGetValue(loginId, out var shared) || shared.Config is not { Enabled: true } login)
             return null;
         return new AppLoginState(login, _sessionVariables.ExpiresAt(WorkspaceId, SelectedEnvironment?.Id, login.Variable));
     }
@@ -240,11 +244,11 @@ public sealed partial class MainViewModel : ObservableObject
     public Task EditAppAuthAsync(TreeNodeViewModel node) => GuardAsync(async () =>
     {
         if (ShowAppAuth is null || node.Dto is not AppDto app) return;
-        var vm = new AppAuthViewModel(app, CanEdit, VariableLookup);
+        var vm = new AppAuthViewModel(app, await Services.Store.GetLoginsAsync(WorkspaceId), CanEdit, VariableLookup);
         await ShowAppAuth(vm);
         if (vm.Result is not { } auth || node.Dto is not AppDto current) return;
         node.Dto = await Services.Store.UpdateAppAsync(
-            WorkspaceId, current.Id, new UpdateAppRequest(current.Name, current.Order, current.Version, auth, vm.LoginResult));
+            WorkspaceId, current.Id, new UpdateAppRequest(current.Name, current.Order, current.Version, auth, vm.LoginIdResult));
         foreach (var tab in Tabs) tab.OnAppChanged();
         ReportStatus(string.Format(Texts.AppAuth_Saved, current.Name));
     });
@@ -502,7 +506,10 @@ public sealed partial class MainViewModel : ObservableObject
             var folders = await Services.Store.GetFoldersAsync(ws);
             var requests = await Services.Store.GetRequestsAsync(ws);
             var samples = await Services.Store.GetSamplesAsync(ws);
+            var logins = await Services.Store.GetLoginsAsync(ws);
             if (ws != WorkspaceId) return;
+
+            _logins = logins.ToDictionary(l => l.Id);
 
             var expanded = Roots.SelectMany(r => r.SelfAndDescendants()).Where(n => n.IsExpanded).Select(n => n.Id).ToHashSet();
             var nodes = BuildTree(apps, folders, requests, samples);
@@ -839,6 +846,21 @@ public sealed partial class MainViewModel : ObservableObject
         await vm.LoadAsync();
         await ShowEnvironments(vm);
         await ReloadVariablesAsync();
+    });
+
+    /// <summary>Lo implementa la vista, que abre la ventana de logins compartidos.</summary>
+    public Func<LoginsViewModel, Task>? ShowLogins { get; set; }
+
+    [RelayCommand]
+    private Task EditLoginsAsync() => GuardAsync(async () =>
+    {
+        if (SelectedWorkspace is null || ShowLogins is null) return;
+        var vm = new LoginsViewModel(Services, WorkspaceId, CanEdit, VariableLookup);
+        await vm.LoadAsync();
+        await ShowLogins(vm);
+        if (!vm.Changed) return;
+        _logins = (await Services.Store.GetLoginsAsync(WorkspaceId)).ToDictionary(l => l.Id);
+        foreach (var tab in Tabs) tab.OnAppChanged();
     });
 
     // ---------- Gestión del workspace y del servidor ----------
