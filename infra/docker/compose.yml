@@ -1,0 +1,50 @@
+# Servidor de RAF con la imagen publicada en Docker Hub y su base Postgres. Ver infra/docker/README.md.
+# Los valores salen de un .env junto a este archivo (fuera del repo):
+#   docker compose --env-file .env up -d
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: raf
+      POSTGRES_USER: raf
+      POSTGRES_PASSWORD: ${RAF_DB_PASSWORD:?Falta RAF_DB_PASSWORD}
+    volumes:
+      - raf-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raf -d raf"]
+      interval: 5s
+      retries: 10
+
+  # Paso previo a cada versión: migra la base, cifra los secretos heredados y crea el admin, y termina. El servidor
+  # arranca recién cuando terminó bien.
+  migrate:
+    image: ${RAF_IMAGE:?Falta RAF_IMAGE, por ejemplo <usuario>/raf-server:0.3.0}
+    command: ["--migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &server-env
+      ConnectionStrings__Raf: "Host=db;Port=5432;Database=raf;Username=raf;Password=${RAF_DB_PASSWORD}"
+      Database__MigrateOnStartup: "false"
+      Jwt__SigningKey: ${RAF_JWT_SIGNING_KEY:?Falta RAF_JWT_SIGNING_KEY}
+      Bootstrap__AdminEmail: ${RAF_ADMIN_EMAIL:?Falta RAF_ADMIN_EMAIL}
+      Bootstrap__AdminPassword: ${RAF_ADMIN_PASSWORD:?Falta RAF_ADMIN_PASSWORD}
+      Confidential__Provider: local
+      Confidential__AllowLocalKeyInProduction: "true"
+      Confidential__LocalKey: ${RAF_CONFIDENTIAL_KEY:?Falta RAF_CONFIDENTIAL_KEY}
+      Clients__MinVersion: ${RAF_MIN_CLIENT_VERSION:-0.0.0}
+      Cors__AllowedOrigins: ${RAF_WEB_ORIGINS:-}
+
+  server:
+    image: ${RAF_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment: *server-env
+    ports:
+      - "${RAF_PORT:-8080}:8080"
+
+volumes:
+  raf-db:
