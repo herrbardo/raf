@@ -44,6 +44,8 @@ git push origin v0.3.0
 
 El workflow [release.yml](.github/workflows/release.yml) compila, empaqueta con Velopack y publica en GitHub Releases. Las apps instaladas encuentran la versión nueva al arrancar, la descargan en segundo plano y ofrecen reiniciar.
 
+El mismo tag publica la imagen del servidor en Docker Hub ([server-image.yml](.github/workflows/server-image.yml)), para amd64 y arm64. Cómo configurarlo y cómo levantar un servidor con esa imagen: [infra/docker/README.md](infra/docker/README.md).
+
 Para obligar a los clientes viejos a actualizarse, se sube `MinClientVersion` en el stack (`Clients:MinVersion` en el servidor) **después** de publicar la versión nueva: los clientes anteriores reciben 426 y muestran la pantalla de actualización.
 
 Firma: macOS se publica firmado y notarizado. Windows se publica sin firmar por decisión (D8), así que SmartScreen advierte al instalar. Los secretos que activan cada firma están en [docs/plans/06-distribucion.md](docs/plans/06-distribucion.md#secretos-del-repositorio).

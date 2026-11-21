@@ -1,0 +1,92 @@
+name: Imagen del servidor
+
+# Al pushear un tag v1.2.3 (el mismo que publica el cliente): construye src/Raf.Server/Dockerfile para amd64 y arm64
+# y la publica en Docker Hub. También se puede correr a mano eligiendo un tag en "Use workflow from", por ejemplo
+# para publicar una versión que ya existía. Se activa solo cuando están cargados el repositorio y las credenciales
+# (ver infra/docker/README.md).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  habilitado:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
+          USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            echo "::error::La imagen se publica desde un tag v1.2.3 (en 'Use workflow from' elegir el tag)."
+            exit 1
+          fi
+          if [ -n "$REPOSITORY" ] && [ -n "$USERNAME" ] && [ -n "$TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Faltan DOCKERHUB_REPOSITORY, DOCKERHUB_USERNAME o DOCKERHUB_TOKEN: la imagen no se publica."
+          fi
+
+  publicar:
+    needs: habilitado
+    if: needs.habilitado.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versión
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::El tag $GITHUB_REF_NAME no es una versión semántica (v1.2.3)."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Tags: 1.2.3 siempre; 1.2 y latest solo en versiones estables (una 1.2.3-beta.1 publica únicamente su tag).
+      - name: Tags y etiquetas
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ vars.DOCKERHUB_REPOSITORY }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          flavor: |
+            latest=auto
+          labels: |
+            org.opencontainers.image.title=RAF Server
+            org.opencontainers.image.description=Servidor de RAF (Requests and Friends)
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Construir y publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/Raf.Server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ steps.version.outputs.version }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
