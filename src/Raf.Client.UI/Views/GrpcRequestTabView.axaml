@@ -12,14 +12,24 @@
       <ctl:TextField Grid.Column="1" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
         <Panel>
-          <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
-                  IsEnabled="{Binding IsAvailable}" ToolTip.Tip="{x:Static l:Texts.V_SendTip}">
-            <StackPanel Orientation="Horizontal" Spacing="7">
-              <ctl:Icon Data="{StaticResource IconSend}" />
-              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
+          <!-- Una unaria se envía y se puede cancelar mientras espera; un streaming se abre y se corta. -->
+          <Panel IsVisible="{Binding IsStreamIdle}">
+            <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
+                    IsEnabled="{Binding IsAvailable}" ToolTip.Tip="{x:Static l:Texts.V_SendTip}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <ctl:Icon Data="{StaticResource IconSend}" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <ctl:Icon Data="{StaticResource IconClose}" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Cancel}" />
+              </StackPanel>
+            </Button>
+          </Panel>
+          <Button Classes="primary-action" Command="{Binding CancelStreamCommand}" IsVisible="{Binding IsStreamOpen}"
+                  ToolTip.Tip="{x:Static l:Texts.GrpcV_CancelStreamTip}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <ctl:Icon Data="{StaticResource IconClose}" />
               <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Cancel}" />
@@ -60,7 +70,6 @@
 
     <StackPanel Grid.Row="2" Margin="14,6,14,0" Spacing="4">
       <TextBlock Classes="warning" TextWrapping="Wrap" Text="{x:Static l:CoreTexts.Run_GrpcUnavailable}" IsVisible="{Binding !IsAvailable}" />
-      <TextBlock Classes="warning" TextWrapping="Wrap" Text="{x:Static l:Texts.GrpcV_StreamingNotYet}" IsVisible="{Binding IsStreaming}" />
       <TextBlock Classes="warning" TextWrapping="Wrap" Text="{Binding MethodsError}"
                  IsVisible="{Binding MethodsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
       <TextBlock Classes="warning" Text="{Binding Warning}"
@@ -68,15 +77,20 @@
     </StackPanel>
 
     <TabControl Grid.Row="3" Classes="section" Margin="14,6,14,0" Padding="0,6,0,8">
-      <TabItem Header="{x:Static l:Texts.GrpcV_Message}">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding CanEdit}">
-            <Button Classes="link" Content="{x:Static l:Texts.GrpcV_Template}" Command="{Binding UseTemplateCommand}"
-                    IsEnabled="{Binding SelectedMethod, Converter={x:Static ObjectConverters.IsNotNull}}"
-                    ToolTip.Tip="{x:Static l:Texts.GrpcV_TemplateTip}" />
-          </StackPanel>
-          <ctl:TextField BoundText="{Binding Message}" Multiline="True" Syntax="Json" IsReadOnly="{Binding IsReadOnly}" />
-        </DockPanel>
+      <!-- Unaria y server streaming: un mensaje. Client streaming y bidireccional: mensajes preparados. -->
+      <TabItem Header="{Binding MessageTabHeader}">
+        <Panel>
+          <DockPanel IsVisible="{Binding !IsClientStreaming}">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding CanEdit}">
+              <Button Classes="link" Content="{x:Static l:Texts.GrpcV_Template}" Command="{Binding UseTemplateCommand}"
+                      IsEnabled="{Binding SelectedMethod, Converter={x:Static ObjectConverters.IsNotNull}}"
+                      ToolTip.Tip="{x:Static l:Texts.GrpcV_TemplateTip}" />
+            </StackPanel>
+            <ctl:TextField BoundText="{Binding Message}" Multiline="True" Syntax="Json" IsReadOnly="{Binding IsReadOnly}" />
+          </DockPanel>
+          <ContentControl Content="{Binding Prepared}" IsVisible="{Binding IsClientStreaming}"
+                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Panel>
       </TabItem>
       <TabItem Header="Metadata"><ContentControl Content="{Binding Headers}" /></TabItem>
       <TabItem Header="Auth"><ContentControl Content="{Binding Auth}" /></TabItem>
@@ -95,7 +109,32 @@
 
     <GridSplitter Grid.Row="4" ResizeDirection="Rows" />
     <Border Grid.Row="5" Classes="panel">
-      <ContentControl Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+      <Panel>
+        <ContentControl Content="{Binding Response}" IsVisible="{Binding !IsStreaming}"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        <!-- Streaming: la conversación, como en un WebSocket -->
+        <DockPanel Margin="14,10,14,10" IsVisible="{Binding IsStreaming}">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
+            <Border Classes="chip" Classes.success="{Binding IsStreamOpen}" VerticalAlignment="Center">
+              <TextBlock Text="{Binding StreamStateText}" />
+            </Border>
+            <Button Content="{x:Static l:Texts.GrpcV_CompleteSending}" Command="{Binding CompleteSendingCommand}"
+                    IsVisible="{Binding IsClientStreaming}" IsEnabled="{Binding CanSendToStream}"
+                    ToolTip.Tip="{x:Static l:Texts.GrpcV_CompleteSendingTip}" />
+          </StackPanel>
+          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding IsClientStreaming}">
+            <ctl:TextField BoundText="{Binding Conversation.Composer}" Multiline="True" Syntax="Json" MaxHeight="120" MinHeight="44" />
+            <Button Grid.Column="1" Classes="accent" VerticalAlignment="Bottom" Command="{Binding SendComposerCommand}"
+                    IsEnabled="{Binding CanSendToStream}" ToolTip.Tip="{x:Static l:Texts.WsV_SendTip}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <ctl:Icon Data="{StaticResource IconSend}" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
+              </StackPanel>
+            </Button>
+          </Grid>
+          <ContentControl Content="{Binding Conversation}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </DockPanel>
+      </Panel>
     </Border>
   </Grid>
 </UserControl>

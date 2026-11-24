@@ -12,24 +12,6 @@ using Raf.Domain.Requests;
 
 namespace Raf.Client.ViewModels;
 
-/// <summary>Un mensaje preparado del WebSocket, editable en la pestaña.</summary>
-public sealed partial class PreparedMessageViewModel(WebSocketTabViewModel owner, string name, string content) : ObservableObject
-{
-    [ObservableProperty] private string _name = name;
-    [ObservableProperty] private string _content = content;
-
-    public WebSocketTabViewModel Owner => owner;
-
-    public WebSocketMessage ToMessage() => new(Name, Content);
-
-    partial void OnNameChanged(string value) => owner.OnMessagesChanged();
-
-    partial void OnContentChanged(string value) => owner.OnMessagesChanged();
-
-    [RelayCommand]
-    private Task SendAsync() => owner.SendTextAsync(Content);
-}
-
 /// <summary>
 /// Pestaña de un WebSocket (Ticket-036): la URL, query, headers y auth del handshake, los mensajes preparados y,
 /// mientras está conectado, la conversación. Solo la app de escritorio conecta.
@@ -40,14 +22,9 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
     private CancellationTokenSource? _connecting;
     private VariableContext _sessionVariables = VariableContext.Empty;
     private long _connectedAt;
-    private bool _loadingMessages;
 
     [ObservableProperty] private string? _url;
     [ObservableProperty] private string? _subprotocols;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelectedMessage))]
-    private PreparedMessageViewModel? _selectedMessage;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDisconnected), nameof(StateText))]
@@ -62,6 +39,7 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         Headers = new KeyValueListViewModel(CanEdit);
         Query = new KeyValueListViewModel(CanEdit);
         Auth = new AuthEditorViewModel(CanEdit);
+        Prepared = new PreparedMessagesViewModel(CanEdit, SendTextAsync, OnContentChanged, () => "");
         foreach (var part in new EditorPart[] { Headers, Query, Auth }) part.Changed += OnContentChanged;
         LoadFrom(node.Request.Spec);
     }
@@ -69,15 +47,13 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
     public KeyValueListViewModel Headers { get; }
     public KeyValueListViewModel Query { get; }
     public AuthEditorViewModel Auth { get; }
-    public ObservableCollection<PreparedMessageViewModel> Messages { get; } = [];
+    public PreparedMessagesViewModel Prepared { get; }
     public ConversationViewModel Conversation { get; } = new();
 
     /// <summary>En el cliente web no se conecta: el navegador no manda headers propios en el handshake.</summary>
     public bool IsAvailable => ClientHost.Current.SupportsWebSockets;
 
     public bool IsDisconnected => !IsConnected && !IsConnecting;
-
-    public bool HasSelectedMessage => SelectedMessage is not null;
 
     public string StateText => IsConnecting ? Texts.WsV_Connecting : IsConnected ? Texts.WsV_Connected : Texts.WsV_Disconnected;
 
@@ -89,12 +65,7 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         Query.Load(spec.QueryParams);
         Auth.Load(spec.Auth);
         Subprotocols = string.Join(", ", spec.WebSocket?.Subprotocols ?? []);
-        var selected = SelectedMessage is { } current ? Messages.IndexOf(current) : 0;
-        _loadingMessages = true;
-        Messages.Clear();
-        foreach (var m in spec.WebSocket?.Messages ?? []) Messages.Add(new PreparedMessageViewModel(this, m.Name, m.Content));
-        _loadingMessages = false;
-        SelectedMessage = Messages.ElementAtOrDefault(Math.Max(0, selected)) ?? Messages.FirstOrDefault();
+        Prepared.Load(spec.WebSocket?.Messages);
         EndLoad();
     }
 
@@ -107,9 +78,7 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         Headers = Headers.ToItems(),
         QueryParams = Query.ToItems(),
         Auth = Auth.ToSpec(),
-        WebSocket = new WebSocketSpec(
-            Messages.Select(m => m.ToMessage()).ToList(),
-            ParsedSubprotocols.Count == 0 ? null : ParsedSubprotocols),
+        WebSocket = new WebSocketSpec(Prepared.ToList(), ParsedSubprotocols.Count == 0 ? null : ParsedSubprotocols),
     };
 
     protected override object Snapshot() => ToSpec();
@@ -132,40 +101,21 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         Owner.NotifyRequestChanged(Node);
     }
 
-    internal void OnMessagesChanged()
-    {
-        if (!_loadingMessages) OnContentChanged();
-    }
-
     partial void OnUrlChanged(string? value) => OnContentChanged();
 
     partial void OnSubprotocolsChanged(string? value) => OnContentChanged();
 
-    // ---------- Mensajes preparados ----------
-
-    [RelayCommand]
-    private void AddMessage()
-    {
-        var message = new PreparedMessageViewModel(this, string.Format(Texts.WsV_MessageName, Messages.Count + 1), "");
-        Messages.Add(message);
-        SelectedMessage = message;
-        OnContentChanged();
-    }
-
-    [RelayCommand]
-    private void RemoveMessage()
-    {
-        if (SelectedMessage is not { } message) return;
-        var index = Messages.IndexOf(message);
-        Messages.Remove(message);
-        SelectedMessage = Messages.ElementAtOrDefault(Math.Min(index, Messages.Count - 1));
-        OnContentChanged();
-    }
+    partial void OnIsConnectedChanged(bool value) => Prepared.CanSend = value;
 
     // ---------- Conexión ----------
 
     /// <summary>"Enviar" y Ctrl+Enter: conectan si no hay conexión; si la hay, mandan lo escrito.</summary>
-    protected override Func<Task>? CustomSend => IsConnected ? SendComposerAsync : ConnectAsync;
+    protected override async Task<bool> TrySendCustomAsync()
+    {
+        if (IsConnected) await SendComposerAsync();
+        else await ConnectAsync();
+        return true;
+    }
 
     [RelayCommand]
     private async Task ConnectAsync()
@@ -313,9 +263,6 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         if (string.IsNullOrEmpty(Conversation.Composer)) return;
         await SendTextAsync(Conversation.Composer);
     }
-
-    [RelayCommand]
-    private Task SendSelectedAsync() => SelectedMessage is { } message ? SendTextAsync(message.Content) : Task.CompletedTask;
 
     public override bool IsLive => IsConnected || IsConnecting;
 

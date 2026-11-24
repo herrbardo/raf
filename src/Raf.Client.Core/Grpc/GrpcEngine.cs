@@ -55,4 +55,44 @@ public interface IGrpcEngine
     /// Lanza <see cref="GrpcEngineException"/> si no se pudo armar la llamada.
     /// </summary>
     Task<GrpcCallResult> CallUnaryAsync(GrpcCall call, CancellationToken ct = default);
+
+    /// <summary>
+    /// Abre una llamada con streaming (Plan 10, etapa 3). En server streaming, <see cref="GrpcCall.MessageJson"/> es el
+    /// mensaje que se manda al abrir; en client streaming y bidireccional se ignora y los mensajes van con
+    /// <see cref="IGrpcStream.SendAsync"/>. <paramref name="ct"/> cubre solo la apertura (pedir los descriptores):
+    /// la llamada abierta se corta con <see cref="IGrpcStream.Cancel"/>.
+    /// </summary>
+    Task<IGrpcStream> StartStreamAsync(GrpcCall call, CancellationToken ct = default);
+}
+
+/// <summary>Un mensaje recibido en una llamada con streaming, en JSON; <see cref="Error"/> si no se pudo leer.</summary>
+public sealed record GrpcStreamMessage(DateTimeOffset At, string? Json, long Size, string? Error = null);
+
+/// <summary>
+/// Una llamada gRPC con streaming abierta. Los eventos llegan desde otro hilo. <see cref="Completed"/> se dispara una
+/// sola vez, con el estado, la metadata de respuesta y los trailers (sin mensaje: los mensajes llegan por
+/// <see cref="Received"/>).
+/// </summary>
+public interface IGrpcStream : IAsyncDisposable
+{
+    GrpcMethodKind Kind { get; }
+
+    /// <summary>Se pueden mandar mensajes: client streaming o bidireccional, y todavía no se terminó de enviar.</summary>
+    bool CanSend { get; }
+
+    event Action<GrpcStreamMessage>? Received;
+
+    event Action<GrpcCallResult>? Completed;
+
+    /// <summary>Empieza a leer. Se llama después de suscribirse a los eventos, para no perder nada.</summary>
+    void Start();
+
+    /// <summary>Manda un mensaje y devuelve su tamaño en bytes. Lanza <see cref="GrpcEngineException"/> si el JSON no sirve.</summary>
+    Task<long> SendAsync(string json, CancellationToken ct = default);
+
+    /// <summary>Avisa al servidor que no se mandan más mensajes; la respuesta sigue llegando.</summary>
+    Task CompleteSendingAsync();
+
+    /// <summary>Corta la llamada: termina con estado CANCELLED.</summary>
+    void Cancel();
 }

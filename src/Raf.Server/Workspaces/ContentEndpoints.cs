@@ -457,13 +457,20 @@ public static class ContentEndpoints
         null => null,
         _ when spec.Method != WebSocketSpec.MethodLabel => Problems.BadRequest($"Un WebSocket lleva 'method' {WebSocketSpec.MethodLabel}."),
         { Messages: null } => Problems.BadRequest("'webSocket' incompleto: messages es obligatorio."),
-        { Messages.Count: > WebSocketSpec.MaxMessages } => Problems.BadRequest($"'webSocket': como máximo {WebSocketSpec.MaxMessages} mensajes."),
-        var ws when ws.Messages.Any(m => m is null || m.Name is null || m.Content is null || m.Name.Length > 200)
-            => Problems.BadRequest("'webSocket': cada mensaje lleva name (hasta 200 caracteres) y content."),
-        var ws when ws.Messages.Any(m => m.Content.Length > WebSocketSpec.MaxMessageLength)
-            => Problems.BadRequest("'webSocket': un mensaje supera 1 MB."),
         { Subprotocols: { } protocols } when protocols.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 100)
             => Problems.BadRequest("'webSocket': subprotocolo inválido."),
+        var ws => ValidateMessages("webSocket", ws.Messages),
+    };
+
+    /// <summary>Mensajes preparados (de un WebSocket o de un gRPC con streaming del cliente).</summary>
+    private static IResult? ValidateMessages(string owner, IReadOnlyList<PreparedMessage>? messages) => messages switch
+    {
+        null => null,
+        { Count: > WebSocketSpec.MaxMessages } => Problems.BadRequest($"'{owner}': como máximo {WebSocketSpec.MaxMessages} mensajes."),
+        _ when messages.Any(m => m is null || m.Name is null || m.Content is null || m.Name.Length > 200)
+            => Problems.BadRequest($"'{owner}': cada mensaje lleva name (hasta 200 caracteres) y content."),
+        _ when messages.Any(m => m.Content.Length > WebSocketSpec.MaxMessageLength)
+            => Problems.BadRequest($"'{owner}': un mensaje supera 1 MB."),
         _ => null,
     };
 
@@ -476,7 +483,7 @@ public static class ContentEndpoints
         { Service: null } or { Method: null } => Problems.BadRequest("'grpc' incompleto: service y method son obligatorios."),
         { Service.Length: > 500 } or { Method.Length: > 200 } => Problems.BadRequest("'grpc': service o method demasiado largo."),
         { Source: GrpcDescriptorSource.ProtoSet, ProtoSetId: null } => Problems.BadRequest("'grpc': falta el conjunto de .proto."),
-        _ => null,
+        var grpc => ValidateMessages("grpc", grpc.Messages),
     };
 
     private static async Task<bool> FolderBelongsToAppAsync(RafDbContext db, Guid ws, Guid? folderId, Guid appId, CancellationToken ct) =>

@@ -239,7 +239,7 @@ public class WorkspaceTests(RafApp app)
                      spec with { Method = "GET" },
                      RequestSpec.Empty with { Method = WebSocketSpec.MethodLabel },
                      spec with { Grpc = GrpcSpec.Empty },
-                     spec with { WebSocket = new WebSocketSpec(Enumerable.Range(0, 201).Select(i => new WebSocketMessage($"m{i}", "")).ToList()) },
+                     spec with { WebSocket = new WebSocketSpec(Enumerable.Range(0, 201).Select(i => new PreparedMessage($"m{i}", "")).ToList()) },
                      spec with { WebSocket = new WebSocketSpec([new("Grande", new string('x', WebSocketSpec.MaxMessageLength + 1))]) },
                      spec with { WebSocket = new WebSocketSpec([], [" "]) },
                  })
@@ -257,16 +257,20 @@ public class WorkspaceTests(RafApp app)
 
         var created = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Echo", spec));
         var empty = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Nuevo", RequestSpec.EmptyGrpc));
+        var chat = spec with { Grpc = new GrpcSpec("raf.test.Echo", "Chat", Messages: [new("Uno", """{ "name": "uno" }""")]) };
+        var chatCreated = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Chat", chat));
         var read = await owner.GetOkAsync<RequestDto>($"{b}/requests/{created.Id}");
 
         Assert.Equal(spec.Grpc, read.Spec.Grpc);
         Assert.Equal(GrpcSpec.Empty, empty.Spec.Grpc);
+        Assert.Equal(chat.Grpc!.Messages, chatCreated.Spec.Grpc!.Messages);
         foreach (var bad in new[]
                  {
                      spec with { Method = "POST" },
                      RequestSpec.Empty with { Method = GrpcSpec.MethodLabel },
                      spec with { Grpc = spec.Grpc! with { Source = GrpcDescriptorSource.ProtoSet } },
                      spec with { Grpc = spec.Grpc! with { Service = new string('s', 501) } },
+                     spec with { Grpc = spec.Grpc! with { Messages = [new("Grande", new string('x', WebSocketSpec.MaxMessageLength + 1))] } },
                  })
             Assert.Equal(HttpStatusCode.BadRequest,
                 (await owner.PostJsonAsync($"{b}/requests", new CreateRequestRequest(appDto.Id, "Mal", bad))).StatusCode);

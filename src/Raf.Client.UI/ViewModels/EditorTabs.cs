@@ -134,10 +134,10 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     private bool CanSend => !IsRunning;
 
     /// <summary>
-    /// Lo que hace "Enviar" (y Ctrl+Enter) si no es un envío HTTP: un WebSocket conecta o manda el mensaje escrito.
-    /// Null usa el envío común.
+    /// Lo que hace "Enviar" (y Ctrl+Enter) si no es el envío común: un WebSocket o un gRPC con streaming conectan o
+    /// mandan el mensaje escrito. Devuelve false para usar el envío común.
     /// </summary>
-    protected virtual Func<Task>? CustomSend => null;
+    protected virtual Task<bool> TrySendCustomAsync() => Task.FromResult(false);
 
     /// <summary>Si el request usa secretos que el rol no puede leer, pregunta si enviarlo igual.</summary>
     protected async Task<bool> ConfirmUnreadableSecretsAsync(RequestSpec request, SampleOverrides? sample)
@@ -155,11 +155,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanSend))]
     private async Task SendAsync()
     {
-        if (CustomSend is { } custom)
-        {
-            await custom();
-            return;
-        }
+        if (await TrySendCustomAsync()) return;
 
         var (request, sample) = RunTarget();
         var variables = Owner.Variables;

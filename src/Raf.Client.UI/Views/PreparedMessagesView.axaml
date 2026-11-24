@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.PreparedMessagesView"
+             x:DataType="vm:PreparedMessagesViewModel">
+  <!-- Mensajes preparados: la lista a la izquierda, el elegido a la derecha con su botón de enviar. -->
+  <Grid ColumnDefinitions="200,*" ColumnSpacing="12">
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding CanEdit}">
+        <Button Classes="link" Command="{Binding AddCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Add}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="link" Content="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveCommand}" IsEnabled="{Binding HasSelection}" />
+      </StackPanel>
+      <Grid>
+        <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.WsV_NoMessages}"
+                   IsVisible="{Binding !Items.Count}" />
+        <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:PreparedMessageViewModel">
+              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </DockPanel>
+    <DockPanel Grid.Column="1" IsVisible="{Binding HasSelection}">
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,6">
+        <TextBox Text="{Binding Selected.Name}" IsReadOnly="{Binding IsReadOnly}" Watermark="{x:Static l:Texts.V_Name}" />
+        <Button Grid.Column="1" Classes="accent" Command="{Binding SendSelectedCommand}" IsEnabled="{Binding CanSend}"
+                ToolTip.Tip="{x:Static l:Texts.WsV_SendPreparedTip}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ctl:Icon Data="{StaticResource IconSend}" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+      <ctl:TextField BoundText="{Binding Selected.Content}" Multiline="True" Syntax="Json" IsReadOnly="{Binding IsReadOnly}" />
+    </DockPanel>
+  </Grid>
+</UserControl>
