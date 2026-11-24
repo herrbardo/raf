@@ -35,7 +35,8 @@
       <Border Classes="sidebar" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0">
         <DockPanel Margin="10,14,8,10">
           <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="{x:Static l:Texts.LoginsW_List}" />
-          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="2" Margin="0,8,0,0" IsVisible="{Binding CanEdit}">
+          <!-- Con cuatro acciones no entran en una línea, menos en inglés: pasan a la siguiente. -->
+          <WrapPanel DockPanel.Dock="Bottom" ItemSpacing="2" LineSpacing="2" Margin="0,8,0,0" IsVisible="{Binding CanEdit}">
             <Button Classes="link" Command="{Binding AddCommand}">
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
@@ -43,12 +44,21 @@
               </StackPanel>
             </Button>
             <Button Classes="link" Content="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" />
+            <Button Classes="link" Content="{x:Static l:Texts.V_Duplicate}" Command="{Binding DuplicateCommand}" />
             <Button Classes="link" Content="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" />
-          </StackPanel>
+          </WrapPanel>
           <Grid>
             <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.LoginsW_Empty}"
                        IsVisible="{Binding !Items.Count}" />
+            <!-- El clic derecho selecciona la fila, así que el menú actúa sobre el login seleccionado. -->
             <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+              <ListBox.ContextMenu>
+                <ContextMenu Opening="OnListMenuOpening">
+                  <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" />
+                  <MenuItem Header="{x:Static l:Texts.V_Duplicate}" Command="{Binding DuplicateCommand}" />
+                  <MenuItem Header="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" />
+                </ContextMenu>
+              </ListBox.ContextMenu>
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:LoginItemViewModel">
                   <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />

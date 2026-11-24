@@ -93,6 +93,7 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     [RelayCommand] private Task NewSample() => _owner.NewSampleAsync(this);
     [RelayCommand] private Task Rename() => _owner.RenameAsync(this);
     [RelayCommand] private Task EditAuth() => _owner.EditAppAuthAsync(this);
+    [RelayCommand] private Task Duplicate() => _owner.DuplicateAsync(this);
     [RelayCommand] private Task Delete() => _owner.DeleteAsync(this);
     [RelayCommand] private Task MoveUp() => _owner.MoveAsync(this, -1);
     [RelayCommand] private Task MoveDown() => _owner.MoveAsync(this, 1);
@@ -817,6 +818,39 @@ public sealed partial class MainViewModel : ObservableObject
                 await UpdateNodeAsync(siblings[i], siblings[i].Name, i);
 
         list.Move(list.IndexOf(node), listTarget);
+    });
+
+    /// <summary>
+    /// Copia el nodo con todo su contenido, lo guardado y no lo que esté sin guardar en una pestaña. La copia se llama
+    /// "nombre (n)" y queda justo debajo del original; un request o sample copiado se abre.
+    /// </summary>
+    public Task DuplicateAsync(TreeNodeViewModel node) => GuardAsync(async () =>
+    {
+        var list = node.Parent?.Children ?? Roots;
+        var siblings = list.Where(n => n.Kind == node.Kind).ToList();
+        var index = siblings.IndexOf(node);
+        var name = DuplicateName.Next(node.Name, list.Select(n => n.Name));
+        var duplicator = new WorkspaceDuplicator(Services.Store, WorkspaceId);
+        var copyId = node.Dto switch
+        {
+            AppDto a => (await duplicator.DuplicateAppAsync(a, name, index + 1)).Id,
+            FolderDto f => (await duplicator.DuplicateFolderAsync(f, name, index + 1)).Id,
+            RequestDto r => (await duplicator.DuplicateRequestAsync(r, name, index + 1)).Id,
+            SampleDto s => (await duplicator.DuplicateSampleAsync(s, name, index + 1)).Id,
+            _ => Guid.Empty,
+        };
+
+        // Los que siguen al original bajan un lugar; de paso, el orden de los hermanos queda correlativo.
+        for (var i = 0; i < siblings.Count; i++)
+        {
+            var order = i <= index ? i : i + 1;
+            if (siblings[i].Order != order) await UpdateNodeAsync(siblings[i], siblings[i].Name, order);
+        }
+
+        if (node.Parent is { } parent) parent.IsExpanded = true;
+        await ReloadAsync();
+        var copy = Roots.SelectMany(r => r.SelfAndDescendants()).FirstOrDefault(n => n.Id == copyId);
+        if (copy is { Kind: NodeKind.Request or NodeKind.Sample }) Open(copy);
     });
 
     // ---------- Sesión y variables ----------

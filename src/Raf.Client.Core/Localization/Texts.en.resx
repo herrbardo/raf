@@ -256,6 +256,7 @@
   <data name="V_Save" xml:space="preserve"><value>Save</value></data>
   <data name="V_Rename" xml:space="preserve"><value>Rename</value></data>
   <data name="V_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="V_Duplicate" xml:space="preserve"><value>Duplicate</value></data>
   <data name="V_Remove" xml:space="preserve"><value>Remove</value></data>
   <data name="V_Add" xml:space="preserve"><value>Add</value></data>
   <data name="V_Refresh" xml:space="preserve"><value>Refresh</value></data>
