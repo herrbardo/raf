@@ -339,12 +339,22 @@
   <data name="LoginV_Title" xml:space="preserve"><value>Iniciar sesión</value></data>
   <data name="LoginV_EmailHint" xml:space="preserve"><value>nombre@empresa.com</value></data>
   <data name="LoginV_Enter" xml:space="preserve"><value>Entrar</value></data>
-  <data name="ConnV_Title" xml:space="preserve"><value>Conectar con el servidor</value></data>
-  <data name="ConnV_Intro" xml:space="preserve"><value>Indicá la URL del servidor RAF de tu equipo, incluido el subpath si lo tiene.</value></data>
-  <data name="ConnV_UrlLabel" xml:space="preserve"><value>URL del servidor</value></data>
+  <data name="ConnV_Title" xml:space="preserve"><value>Servidores</value></data>
+  <data name="ConnV_Intro" xml:space="preserve"><value>Elegí el servidor RAF de tu equipo, o agregalo si todavía no está en la lista.</value></data>
+  <data name="ConnV_NameLabel" xml:space="preserve"><value>Nombre (opcional)</value></data>
+  <data name="ConnV_NameHint" xml:space="preserve"><value>Producción</value></data>
+  <data name="ConnV_UrlLabel" xml:space="preserve"><value>URL del servidor, incluido el subpath si lo tiene</value></data>
   <data name="ConnV_UrlHint" xml:space="preserve"><value>https://dominio/raf</value></data>
   <data name="ConnV_Insecure" xml:space="preserve"><value>Esta URL no usa https: tu contraseña y tus tokens viajarían sin cifrar.</value></data>
-  <data name="ConnV_Continue" xml:space="preserve"><value>Continuar</value></data>
+  <data name="ConnV_Connect" xml:space="preserve"><value>Conectar</value></data>
+  <data name="ConnV_Add" xml:space="preserve"><value>Agregar servidor</value></data>
+  <data name="ConnV_AddTitle" xml:space="preserve"><value>Nuevo servidor</value></data>
+  <data name="ConnV_EditTitle" xml:space="preserve"><value>Editar servidor</value></data>
+  <data name="ConnV_Edit" xml:space="preserve"><value>Editar</value></data>
+  <data name="ConnV_SaveAndConnect" xml:space="preserve"><value>Guardar y conectar</value></data>
+  <data name="ConnV_Duplicate" xml:space="preserve"><value>Ya hay un servidor guardado con esa URL.</value></data>
+  <data name="ConnV_DeleteTitle" xml:space="preserve"><value>Eliminar servidor</value></data>
+  <data name="ConnV_DeleteMessage" xml:space="preserve"><value>¿Eliminar {0} de la lista? En el servidor no se borra nada: lo podés volver a agregar cuando quieras.</value></data>
   <data name="Kv_Include" xml:space="preserve"><value>Incluir al enviar</value></data>
   <data name="Kv_AddOwn" xml:space="preserve"><value>Agregar propio</value></data>
   <data name="UpdV_Title" xml:space="preserve"><value>Hay que actualizar RAF</value></data>
