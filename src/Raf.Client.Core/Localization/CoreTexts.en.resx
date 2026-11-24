@@ -190,4 +190,8 @@
   <data name="LoginProblem_MissingExpiryPath" xml:space="preserve"><value>Indicate the expiration field.</value></data>
   <data name="LoginProblem_InvalidExpiryMinutes" xml:space="preserve"><value>The expiration minutes must be a number greater than zero.</value></data>
   <data name="Grpc_StreamingNotYet" xml:space="preserve"><value>{0} is a streaming method: for now RAF only sends unary calls.</value></data>
+  <data name="Ws_InvalidUrl" xml:space="preserve"><value>The WebSocket URL must start with wss:// (with TLS) or ws:// (without TLS).</value></data>
+  <data name="Ws_InvalidHeader" xml:space="preserve"><value>Header {0} can't be sent on a WebSocket: {1}</value></data>
+  <data name="Ws_Rejected" xml:space="preserve"><value>The server answered {0} instead of accepting the WebSocket.</value></data>
+  <data name="Ws_UseConnect" xml:space="preserve"><value>A WebSocket isn't sent: it's opened with Connect.</value></data>
 </root>

@@ -20,6 +20,8 @@ public sealed class BrowserHost : ClientHost
 {
     public override bool EncryptCache => false;
 
+    public override bool SupportsWebSockets => false;
+
     public override SettingsStore CreateSettings() => new(new BrowserStorage(BrowserStorage.Local), "settings");
 
     public override void AddServices(IServiceCollection services)

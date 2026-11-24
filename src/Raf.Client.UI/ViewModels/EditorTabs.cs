@@ -133,22 +133,41 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
 
     private bool CanSend => !IsRunning;
 
+    /// <summary>
+    /// Lo que hace "Enviar" (y Ctrl+Enter) si no es un envío HTTP: un WebSocket conecta o manda el mensaje escrito.
+    /// Null usa el envío común.
+    /// </summary>
+    protected virtual Func<Task>? CustomSend => null;
+
+    /// <summary>Si el request usa secretos que el rol no puede leer, pregunta si enviarlo igual.</summary>
+    protected async Task<bool> ConfirmUnreadableSecretsAsync(RequestSpec request, SampleOverrides? sample)
+    {
+        var check = Preflight(request, sample, Owner.Variables, AppAuth);
+        return check.UnreadableSecrets.Count == 0 || await Owner.Services.Dialogs.ConfirmAsync(
+            Texts.Tab_SecretsTitle,
+            string.Format(Texts.Tab_SecretsMessage, string.Join(", ", check.UnreadableSecrets)),
+            Texts.Tab_RunAnyway);
+    }
+
+    /// <summary>El timeout de este request: el propio, o el de las preferencias.</summary>
+    protected TimeSpan Timeout => TimeSpan.FromSeconds(ParsedTimeout ?? Settings.Current.DefaultTimeoutSeconds);
+
     [RelayCommand(CanExecute = nameof(CanSend))]
     private async Task SendAsync()
     {
+        if (CustomSend is { } custom)
+        {
+            await custom();
+            return;
+        }
+
         var (request, sample) = RunTarget();
         var variables = Owner.Variables;
         var appAuth = AppAuth;
-        var check = Preflight(request, sample, variables, appAuth);
-        if (check.UnreadableSecrets.Count > 0 && !await Owner.Services.Dialogs.ConfirmAsync(
-                Texts.Tab_SecretsTitle,
-                string.Format(Texts.Tab_SecretsMessage, string.Join(", ", check.UnreadableSecrets)),
-                Texts.Tab_RunAnyway))
-            return;
+        if (!await ConfirmUnreadableSecretsAsync(request, sample)) return;
 
-        var timeout = TimeSpan.FromSeconds(ParsedTimeout ?? Settings.Current.DefaultTimeoutSeconds);
         var input = new RunInput(
-            request, sample, variables, new RunOptions(timeout, AcceptInvalidCertificates), appAuth, Owner.AppLoginOf(AppId));
+            request, sample, variables, new RunOptions(Timeout, AcceptInvalidCertificates), appAuth, Owner.AppLoginOf(AppId));
 
         using var cts = new CancellationTokenSource();
         _run = cts;
@@ -214,9 +233,18 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     {
     }
 
+    /// <summary>Tiene algo en curso que no se puede rehacer (una conexión abierta): al recargar el árbol se conserva.</summary>
+    public virtual bool IsLive => false;
+
+    /// <summary>La pestaña se cierra o se reemplaza: lo que tenga abierto (una conexión, por ejemplo) se cierra.</summary>
+    public virtual void OnClosing()
+    {
+    }
+
     public void Dispose()
     {
         _run?.Cancel();
+        OnClosing();
         Response.Dispose();
     }
 }

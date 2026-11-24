@@ -27,6 +27,12 @@ public abstract class ClientHost
     /// </summary>
     public virtual bool EncryptCache => true;
 
+    /// <summary>
+    /// Puede abrir WebSockets (Ticket-036). En web, por ahora no: el navegador no deja mandar headers propios en el
+    /// handshake, así que la auth no viajaría.
+    /// </summary>
+    public virtual bool SupportsWebSockets => true;
+
     public abstract SettingsStore CreateSettings();
 
     /// <summary>

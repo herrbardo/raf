@@ -448,7 +448,24 @@ public static class ContentEndpoints
         : string.IsNullOrWhiteSpace(spec.Method) || spec.Method.Length > 20 ? Problems.BadRequest("'method' inválido.")
         : spec.Headers is null || spec.QueryParams is null || spec.Body is null || spec.Auth is null
             ? Problems.BadRequest("'spec' incompleto: headers, queryParams, body y auth son obligatorios.")
-        : ValidateGrpc(spec);
+        : spec is { Grpc: not null, WebSocket: not null } ? Problems.BadRequest("Un request no puede ser gRPC y WebSocket a la vez.")
+        : ValidateGrpc(spec) ?? ValidateWebSocket(spec);
+
+    private static IResult? ValidateWebSocket(RequestSpec spec) => spec.WebSocket switch
+    {
+        null when spec.Method == WebSocketSpec.MethodLabel => Problems.BadRequest($"'method' {WebSocketSpec.MethodLabel} es solo para WebSockets."),
+        null => null,
+        _ when spec.Method != WebSocketSpec.MethodLabel => Problems.BadRequest($"Un WebSocket lleva 'method' {WebSocketSpec.MethodLabel}."),
+        { Messages: null } => Problems.BadRequest("'webSocket' incompleto: messages es obligatorio."),
+        { Messages.Count: > WebSocketSpec.MaxMessages } => Problems.BadRequest($"'webSocket': como máximo {WebSocketSpec.MaxMessages} mensajes."),
+        var ws when ws.Messages.Any(m => m is null || m.Name is null || m.Content is null || m.Name.Length > 200)
+            => Problems.BadRequest("'webSocket': cada mensaje lleva name (hasta 200 caracteres) y content."),
+        var ws when ws.Messages.Any(m => m.Content.Length > WebSocketSpec.MaxMessageLength)
+            => Problems.BadRequest("'webSocket': un mensaje supera 1 MB."),
+        { Subprotocols: { } protocols } when protocols.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 100)
+            => Problems.BadRequest("'webSocket': subprotocolo inválido."),
+        _ => null,
+    };
 
     /// <summary>Un request gRPC puede guardarse sin método elegido todavía, pero no con datos inconsistentes.</summary>
     private static IResult? ValidateGrpc(RequestSpec spec) => spec.Grpc switch

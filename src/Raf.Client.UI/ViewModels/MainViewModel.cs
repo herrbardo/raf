@@ -83,7 +83,8 @@ public sealed partial class TreeNodeViewModel : ObservableObject
 
     public bool CanEdit => _owner.CanEdit;
     public bool CanAddContainer => CanEdit && Kind is NodeKind.App or NodeKind.Folder;
-    public bool CanAddSample => CanEdit && Kind == NodeKind.Request;
+    /// <summary>Los samples son de HTTP por ahora: los de gRPC llegan en la etapa 4 del Plan 10 y un WebSocket no los usa.</summary>
+    public bool CanAddSample => CanEdit && Kind == NodeKind.Request && Request.Spec is { IsGrpc: false, IsWebSocket: false };
 
     public IEnumerable<TreeNodeViewModel> SelfAndDescendants() =>
         Children.SelectMany(c => c.SelfAndDescendants()).Prepend(this);
@@ -91,6 +92,7 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     [RelayCommand] private Task NewFolder() => _owner.NewFolderAsync(this);
     [RelayCommand] private Task NewRequest() => _owner.NewRequestAsync(this);
     [RelayCommand] private Task NewGrpcRequest() => _owner.NewGrpcRequestAsync(this);
+    [RelayCommand] private Task NewWebSocket() => _owner.NewWebSocketAsync(this);
     [RelayCommand] private Task NewSample() => _owner.NewSampleAsync(this);
     [RelayCommand] private Task Rename() => _owner.RenameAsync(this);
     [RelayCommand] private Task EditAuth() => _owner.EditAppAuthAsync(this);
@@ -571,7 +573,8 @@ public sealed partial class MainViewModel : ObservableObject
             }
 
             // Con cambios sin guardar conserva la versión que tenía: al guardar, el conflicto se detecta y se resuelve.
-            if (tab.IsDirty) continue;
+            // Con una conexión abierta también: recrearla la cortaría.
+            if (tab.IsDirty || tab.IsLive) continue;
 
             if (!recreate && SyncContent.Same(tab.Node.Dto, fresh.Dto))
             {
@@ -627,6 +630,7 @@ public sealed partial class MainViewModel : ObservableObject
     private EditorTabViewModel CreateTab(TreeNodeViewModel node) => node.Kind switch
     {
         NodeKind.Request when node.Request.Spec.IsGrpc => new GrpcRequestTabViewModel(this, node),
+        NodeKind.Request when node.Request.Spec.IsWebSocket => new WebSocketTabViewModel(this, node),
         NodeKind.Request => new RequestTabViewModel(this, node),
         _ => new SampleTabViewModel(this, node),
     };
@@ -738,6 +742,10 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Un request gRPC (Plan 10): nace sin método elegido y con la auth de su App.</summary>
     public Task NewGrpcRequestAsync(TreeNodeViewModel parent) =>
         CreateRequestAsync(parent, Texts.Main_NewGrpcRequest, RequestSpec.EmptyGrpc);
+
+    /// <summary>Un WebSocket (Ticket-036): sin mensajes preparados y con la auth de su App.</summary>
+    public Task NewWebSocketAsync(TreeNodeViewModel parent) =>
+        CreateRequestAsync(parent, Texts.Main_NewWebSocket, RequestSpec.EmptyWebSocket);
 
     private Task CreateRequestAsync(TreeNodeViewModel parent, string title, RequestSpec spec) => GuardAsync(async () =>
     {

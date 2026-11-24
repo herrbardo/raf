@@ -76,6 +76,7 @@
       <SolidColorBrush x:Key="RafMethodOptionsBrush" Color="#E36FB8" />
       <SolidColorBrush x:Key="RafMethodOtherBrush" Color="#A1A8B5" />
       <SolidColorBrush x:Key="RafMethodGrpcBrush" Color="#E0C341" />
+      <SolidColorBrush x:Key="RafMethodWsBrush" Color="#7FB3E0" />
 
       <!-- Resaltado de sintaxis (JSON y XML) -->
       <SolidColorBrush x:Key="RafSyntaxPropertyBrush" Color="#8FB8FF" />
@@ -134,6 +135,7 @@
       <SolidColorBrush x:Key="RafMethodOptionsBrush" Color="#B0377F" />
       <SolidColorBrush x:Key="RafMethodOtherBrush" Color="#565E6B" />
       <SolidColorBrush x:Key="RafMethodGrpcBrush" Color="#8C6D00" />
+      <SolidColorBrush x:Key="RafMethodWsBrush" Color="#2F5F8A" />
 
       <SolidColorBrush x:Key="RafSyntaxPropertyBrush" Color="#1F5FB8" />
       <SolidColorBrush x:Key="RafSyntaxStringBrush" Color="#1A7F4B" />

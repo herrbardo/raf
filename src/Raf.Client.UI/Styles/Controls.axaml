@@ -367,6 +367,7 @@
   <Style Selector="ctl|MethodBadge:options"><Setter Property="Foreground" Value="{DynamicResource RafMethodOptionsBrush}" /></Style>
   <Style Selector="ctl|MethodBadge:other"><Setter Property="Foreground" Value="{DynamicResource RafMethodOtherBrush}" /></Style>
   <Style Selector="ctl|MethodBadge:grpc"><Setter Property="Foreground" Value="{DynamicResource RafMethodGrpcBrush}" /></Style>
+  <Style Selector="ctl|MethodBadge:ws"><Setter Property="Foreground" Value="{DynamicResource RafMethodWsBrush}" /></Style>
 
   <!-- ===== Chips de estado ===== -->
   <Style Selector="Border.chip">

@@ -58,6 +58,26 @@ public sealed partial class RequestRunner
         return result.With(events, token);
     }
 
+    /// <summary>
+    /// Solo el login automático, para lo que no es un request HTTP (un WebSocket, por ejemplo): si hace falta, se
+    /// ejecuta y devuelve las variables con el token nuevo; si falla, el error y la consola del login.
+    /// </summary>
+    public async Task<PreparedLogin> PrepareLoginAsync(RunInput input, CancellationToken ct = default)
+    {
+        if (input.Login is not { Config.Enabled: true } login || !InheritsAuth(input.Request, input.Sample)
+            || TokenNeeded(login, input.Variables) is not { } reason)
+            return new PreparedLogin(input.Variables, null, [], null);
+
+        var events = new List<RunEvent>();
+        var outcome = await LoginAsync(login.Config, input, input.Variables, reason, Stopwatch.GetTimestamp(), events, ct);
+        if (outcome.Failure is { } failure)
+        {
+            using (failure) return new PreparedLogin(input.Variables, null, failure.Events, failure.Error);
+        }
+        var token = outcome.Token!;
+        return new PreparedLogin(input.Variables.WithSession(token.Variable, token.Value), token, events, null);
+    }
+
     /// <summary>Por qué hace falta el login, o null si el token guardado sirve.</summary>
     private string? TokenNeeded(AppLoginState login, VariableContext variables)
     {

@@ -437,4 +437,35 @@
   <data name="GrpcV_Template" xml:space="preserve"><value>Usar plantilla</value></data>
   <data name="GrpcV_TemplateTip" xml:space="preserve"><value>Reemplaza el mensaje por uno con todos los campos del método elegido</value></data>
   <data name="GrpcV_StreamingNotYet" xml:space="preserve"><value>Este método es de streaming: por ahora RAF solo envía llamadas unarias.</value></data>
+  <data name="Main_NewWebSocket" xml:space="preserve"><value>Nuevo WebSocket</value></data>
+  <data name="MainV_NewWebSocket" xml:space="preserve"><value>Nuevo WebSocket</value></data>
+  <data name="WsV_Connecting" xml:space="preserve"><value>Conectando…</value></data>
+  <data name="WsV_Connected" xml:space="preserve"><value>Conectado</value></data>
+  <data name="WsV_Disconnected" xml:space="preserve"><value>Desconectado</value></data>
+  <data name="WsV_MessageName" xml:space="preserve"><value>Mensaje {0}</value></data>
+  <data name="WsV_ConnectingTo" xml:space="preserve"><value>Conectando a {0}</value></data>
+  <data name="WsV_ConnectedWith" xml:space="preserve"><value>Conectado, con el subprotocolo {0}</value></data>
+  <data name="WsV_ConnectedNow" xml:space="preserve"><value>Conectado</value></data>
+  <data name="WsV_ConnectCancelled" xml:space="preserve"><value>Se canceló la conexión.</value></data>
+  <data name="WsV_Truncated" xml:space="preserve"><value>… (el mensaje mide {0}: se muestra solo el comienzo)</value></data>
+  <data name="WsV_Binary" xml:space="preserve"><value>(binario, en base64) {0}</value></data>
+  <data name="WsV_Summary" xml:space="preserve"><value>Se mandaron {0} mensajes y se recibieron {1} en {2}.</value></data>
+  <data name="WsV_Lost" xml:space="preserve"><value>Se cortó la conexión: {0}</value></data>
+  <data name="WsV_ClosedByServer" xml:space="preserve"><value>El servidor cerró la conexión: {0}</value></data>
+  <data name="WsV_ClosedByYou" xml:space="preserve"><value>Desconectado.</value></data>
+  <data name="WsV_Conversation" xml:space="preserve"><value>Conversación</value></data>
+  <data name="WsV_Clear" xml:space="preserve"><value>Limpiar</value></data>
+  <data name="WsV_Empty" xml:space="preserve"><value>Conectá para ver acá lo que se manda y se recibe.</value></data>
+  <data name="WsV_UrlTip" xml:space="preserve"><value>URL del WebSocket: wss:// con TLS o ws:// sin TLS</value></data>
+  <data name="WsV_ConnectTip" xml:space="preserve"><value>Conectar (Ctrl+Enter)</value></data>
+  <data name="WsV_Connect" xml:space="preserve"><value>Conectar</value></data>
+  <data name="WsV_Disconnect" xml:space="preserve"><value>Desconectar</value></data>
+  <data name="WsV_DesktopOnly" xml:space="preserve"><value>Los WebSockets solo se pueden abrir desde la app de escritorio.</value></data>
+  <data name="WsV_Messages" xml:space="preserve"><value>Mensajes</value></data>
+  <data name="WsV_NoMessages" xml:space="preserve"><value>Sin mensajes preparados: agregá los que mandás seguido para mandarlos con un clic.</value></data>
+  <data name="WsV_SendPreparedTip" xml:space="preserve"><value>Mandar este mensaje por la conexión abierta</value></data>
+  <data name="WsV_Subprotocols" xml:space="preserve"><value>Subprotocolos</value></data>
+  <data name="WsV_SubprotocolsHint" xml:space="preserve"><value>Separados por coma. Se ofrecen en el handshake y el servidor elige uno.</value></data>
+  <data name="WsV_ConnectTimeout" xml:space="preserve"><value>Timeout de conexión (segundos)</value></data>
+  <data name="WsV_SendTip" xml:space="preserve"><value>Mandar (Ctrl+Enter)</value></data>
 </root>
