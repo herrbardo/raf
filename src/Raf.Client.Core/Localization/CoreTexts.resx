@@ -190,4 +190,8 @@
   <data name="LoginProblem_MissingExpiryPath" xml:space="preserve"><value>Falta indicar el campo del vencimiento.</value></data>
   <data name="LoginProblem_InvalidExpiryMinutes" xml:space="preserve"><value>Los minutos de vencimiento tienen que ser un número mayor que cero.</value></data>
   <data name="Grpc_StreamingNotYet" xml:space="preserve"><value>{0} es un método de streaming: por ahora RAF solo envía llamadas unarias.</value></data>
+  <data name="Ws_InvalidUrl" xml:space="preserve"><value>La URL del WebSocket tiene que empezar con wss:// (con TLS) o ws:// (sin TLS).</value></data>
+  <data name="Ws_InvalidHeader" xml:space="preserve"><value>El header {0} no se puede enviar en un WebSocket: {1}</value></data>
+  <data name="Ws_Rejected" xml:space="preserve"><value>El servidor respondió {0} en lugar de aceptar el WebSocket.</value></data>
+  <data name="Ws_UseConnect" xml:space="preserve"><value>Un WebSocket no se envía: se abre con Conectar.</value></data>
 </root>

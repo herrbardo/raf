@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.ConversationView"
+             x:DataType="vm:ConversationViewModel">
+  <!-- Lo enviado y recibido en una conexión abierta: la lista a la izquierda, el mensaje elegido a la derecha. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.glyph">
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Width" Value="12" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource RafMethodOtherBrush}" />
+    </Style>
+    <Style Selector="TextBlock.glyph.sent"><Setter Property="Foreground" Value="{DynamicResource RafMethodPutBrush}" /></Style>
+    <Style Selector="TextBlock.glyph.received"><Setter Property="Foreground" Value="{DynamicResource RafMethodGetBrush}" /></Style>
+    <Style Selector="TextBlock.glyph.failed"><Setter Property="Foreground" Value="{DynamicResource RafMethodDeleteBrush}" /></Style>
+  </UserControl.Styles>
+  <Grid ColumnDefinitions="2*,5,3*">
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+        <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.WsV_Conversation}" />
+        <Button Classes="link" Content="{x:Static l:Texts.WsV_Clear}" Command="{Binding ClearCommand}" IsVisible="{Binding !!Entries.Count}" />
+      </StackPanel>
+      <Grid>
+        <StackPanel Classes="empty" IsVisible="{Binding !Entries.Count}">
+          <TextBlock Classes="caption" TextWrapping="Wrap" TextAlignment="Center" Text="{x:Static l:Texts.WsV_Empty}" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}" x:Name="EntriesList"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ConversationEntry">
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                <TextBlock Classes="caption mono" VerticalAlignment="Center" Text="{Binding TimeText}" />
+                <TextBlock Grid.Column="1" Classes="glyph" Classes.sent="{Binding IsSent}" Classes.received="{Binding IsReceived}"
+                           Classes.failed="{Binding IsError}" VerticalAlignment="Center" Text="{Binding Glyph}" />
+                <TextBlock Grid.Column="2" Classes.mono="{Binding !IsInfo}" Classes.caption="{Binding IsInfo}" Classes.error="{Binding IsError}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
+                <TextBlock Grid.Column="3" Classes="caption" VerticalAlignment="Center" Text="{Binding SizeText}" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </DockPanel>
+    <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+    <ctl:TextField Grid.Column="2" Multiline="True" IsReadOnly="True" HighlightVariables="False"
+                   BoundText="{Binding DetailText, Mode=OneWay}" Syntax="{Binding DetailSyntax}" />
+  </Grid>
+</UserControl>

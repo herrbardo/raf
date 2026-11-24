@@ -144,6 +144,7 @@
                             <MenuItem Header="{x:Static l:Texts.MainV_NewFolder}" Command="{Binding NewFolderCommand}" IsVisible="{Binding CanAddContainer}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_NewRequest}" Command="{Binding NewRequestCommand}" IsVisible="{Binding CanAddContainer}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_NewGrpcRequest}" Command="{Binding NewGrpcRequestCommand}" IsVisible="{Binding CanAddContainer}" />
+                            <MenuItem Header="{x:Static l:Texts.MainV_NewWebSocket}" Command="{Binding NewWebSocketCommand}" IsVisible="{Binding CanAddContainer}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_NewSample}" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_AppAuth}" Command="{Binding EditAuthCommand}" IsVisible="{Binding IsApp}" />
                             <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />

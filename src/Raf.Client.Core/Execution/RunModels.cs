@@ -19,6 +19,12 @@ public sealed record AppLoginState(AppLogin Config, DateTimeOffset? ExpiresAt);
 /// <summary>Token que obtuvo el login de la App durante una ejecución, para guardarlo en la variable de sesión.</summary>
 public sealed record ObtainedToken(string Variable, string Value, DateTimeOffset? ExpiresAt);
 
+/// <summary>
+/// El resultado de <see cref="RequestRunner.PrepareLoginAsync"/>: las variables a usar (con el token, si se obtuvo
+/// uno), los eventos del login para la consola y, si falló, el motivo.
+/// </summary>
+public sealed record PreparedLogin(VariableContext Variables, ObtainedToken? Token, IReadOnlyList<RunEvent> Events, string? Error);
+
 /// <summary>Variables que el request usa y no se pueden resolver.</summary>
 public sealed record RunPreflight(IReadOnlyList<string> Missing, IReadOnlyList<string> UnreadableSecrets);
 

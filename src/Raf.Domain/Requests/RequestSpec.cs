@@ -40,6 +40,8 @@ public sealed record ResponseExtraction(string Variable, ExtractionSource Source
 /// Todo lo necesario para ejecutar una llamada HTTP o, si <see cref="Grpc"/> no es null, una llamada gRPC (Plan 10).
 /// En gRPC se reusan los campos de HTTP: <see cref="Url"/> es la dirección del servidor, <see cref="Headers"/> la
 /// metadata, <see cref="Body"/> el mensaje en JSON y <see cref="Auth"/> viaja como metadata; los query params no se usan.
+/// Si <see cref="WebSocket"/> no es null es una conexión WebSocket (Ticket-036): <see cref="Url"/>, query, headers y
+/// auth arman el handshake, y el body no se usa.
 /// </summary>
 public sealed record RequestSpec(
     string Method,
@@ -49,7 +51,8 @@ public sealed record RequestSpec(
     BodySpec Body,
     AuthSpec Auth,
     IReadOnlyList<ResponseExtraction>? Extractions = null,
-    GrpcSpec? Grpc = null)
+    GrpcSpec? Grpc = null,
+    WebSocketSpec? WebSocket = null)
 {
     public static RequestSpec Empty { get; } = new("GET", "", [], [], BodySpec.None, AuthSpec.None);
 
@@ -57,8 +60,32 @@ public sealed record RequestSpec(
     public static RequestSpec EmptyGrpc { get; } = new(
         GrpcSpec.MethodLabel, "", [], [], new BodySpec(BodyType.Json, "{}"), AuthSpec.Inherit, Grpc: GrpcSpec.Empty);
 
+    /// <summary>Un WebSocket nuevo: sin mensajes preparados y con la auth de la App.</summary>
+    public static RequestSpec EmptyWebSocket { get; } = new(
+        WebSocketSpec.MethodLabel, "", [], [], BodySpec.None, AuthSpec.Inherit, WebSocket: WebSocketSpec.Empty);
+
     public bool IsGrpc => Grpc is not null;
+
+    public bool IsWebSocket => WebSocket is not null;
 }
+
+/// <summary>
+/// Una conexión WebSocket guardada: los mensajes preparados para mandar con un clic y los subprotocolos que se ofrecen
+/// en el handshake. Lo que se manda y recibe en cada sesión no se guarda.
+/// </summary>
+public sealed record WebSocketSpec(IReadOnlyList<WebSocketMessage> Messages, IReadOnlyList<string>? Subprotocols = null)
+{
+    /// <summary>Lo que va en <see cref="RequestSpec.Method"/>: el árbol y el historial lo muestran.</summary>
+    public const string MethodLabel = "WS";
+
+    public const int MaxMessages = 200;
+    public const int MaxMessageLength = 1024 * 1024;
+
+    public static WebSocketSpec Empty { get; } = new([]);
+}
+
+/// <summary>Un mensaje de texto preparado; puede tener <c>{{variables}}</c>, que se resuelven al mandarlo.</summary>
+public sealed record WebSocketMessage(string Name, string Content);
 
 /// <summary>De dónde salen los servicios y mensajes: el server reflection del servidor o un conjunto de .proto.</summary>
 public enum GrpcDescriptorSource { Reflection, ProtoSet }

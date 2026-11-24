@@ -218,6 +218,36 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
+    public async Task WebSockets_keep_their_messages_and_reject_inconsistent_data()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var b = $"/workspaces/{ws.Id}";
+        var appDto = await owner.PostOkAsync<AppDto>($"{b}/apps", new CreateAppRequest("Api"));
+        var spec = RequestSpec.EmptyWebSocket with
+        {
+            Url = "wss://ws.example.com/chat",
+            WebSocket = new WebSocketSpec([new("Hola", """{ "type": "hello" }"""), new("Vacío", "")], ["v1.chat"]),
+        };
+
+        var created = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Chat", spec));
+        var read = await owner.GetOkAsync<RequestDto>($"{b}/requests/{created.Id}");
+
+        Assert.Equal(spec.WebSocket!.Messages, read.Spec.WebSocket!.Messages);
+        Assert.Equal(spec.WebSocket.Subprotocols, read.Spec.WebSocket.Subprotocols);
+        foreach (var bad in new[]
+                 {
+                     spec with { Method = "GET" },
+                     RequestSpec.Empty with { Method = WebSocketSpec.MethodLabel },
+                     spec with { Grpc = GrpcSpec.Empty },
+                     spec with { WebSocket = new WebSocketSpec(Enumerable.Range(0, 201).Select(i => new WebSocketMessage($"m{i}", "")).ToList()) },
+                     spec with { WebSocket = new WebSocketSpec([new("Grande", new string('x', WebSocketSpec.MaxMessageLength + 1))]) },
+                     spec with { WebSocket = new WebSocketSpec([], [" "]) },
+                 })
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await owner.PostJsonAsync($"{b}/requests", new CreateRequestRequest(appDto.Id, "Mal", bad))).StatusCode);
+    }
+
+    [Fact]
     public async Task Grpc_requests_keep_their_method_and_reject_inconsistent_data()
     {
         var (owner, ws) = await NewWorkspaceAsync();

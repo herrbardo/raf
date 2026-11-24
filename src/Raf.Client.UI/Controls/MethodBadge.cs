@@ -40,11 +40,13 @@ public sealed class MethodBadge : TextBlock
     {
         var method = Method?.Trim().ToUpperInvariant() ?? "";
         var grpc = method == GrpcSpec.MethodLabel;
+        var ws = method == WebSocketSpec.MethodLabel;
         Text = grpc ? "gRPC" : method;
         ToolTip.SetTip(this, method.Length > 7 ? method : null);
         var known = Array.IndexOf(Known, method) >= 0;
         foreach (var m in Known) PseudoClasses.Set(":" + m.ToLowerInvariant(), m == method);
         PseudoClasses.Set(":grpc", grpc);
-        PseudoClasses.Set(":other", !known && !grpc);
+        PseudoClasses.Set(":ws", ws);
+        PseudoClasses.Set(":other", !known && !grpc && !ws);
     }
 }

@@ -111,6 +111,7 @@ public sealed partial class RequestRunner(
                     : string.Format(CoreTexts.Trace_AuthInherited, spec.Auth.Type));
 
             if (spec.IsGrpc) return await RunGrpcAsync(input, spec, trace, stopwatch, timeout.Token);
+            if (spec.IsWebSocket) throw new RequestBuildException(CoreTexts.Ws_UseConnect);
 
             var message = BuildMessage(spec);
             messages.Add(message);
