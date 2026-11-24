@@ -2,7 +2,9 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Raf.Client.Core.Api;
+using Url = Raf.Client.Core.Session.ServerUrl;
 
 namespace Raf.Client.Core.Local;
 
@@ -167,32 +169,94 @@ public static class SecureStores
     }
 }
 
+/// <summary>Un servidor RAF guardado en este equipo. La URL está normalizada (ver <see cref="Url"/>).</summary>
+public sealed record SavedServer(string Url, string? Name = null)
+{
+    /// <summary>El nombre, o la URL si no tiene.</summary>
+    [JsonIgnore]
+    public string Title => Name ?? Url;
+}
+
+public enum ServerSaveError { None, InvalidUrl, Duplicate }
+
+public readonly record struct ServerSaveResult(SavedServer? Server, ServerSaveError Error);
+
 /// <summary>Opciones de ejecución de un request, propias de este equipo. No se sincronizan.</summary>
 public sealed record RequestLocalOptions(int? TimeoutSeconds = null, bool AcceptInvalidCertificates = false);
 
 public sealed class LocalSettings
 {
-    public const int MaxRecentServers = 10;
-
+    /// <summary>Servidor elegido la última vez: con él arranca la app. Null muestra la pantalla de servidores.</summary>
     public string? ServerUrl { get; set; }
 
-    /// <summary>Servidores a los que se conectó este equipo, del más reciente al más viejo. Alimentan el autocompletar.</summary>
-    public List<string> RecentServers { get; set; } = new();
+    /// <summary>Servidores guardados en este equipo, en el orden en que se agregaron.</summary>
+    public List<SavedServer> Servers { get; set; } = new();
+
+    /// <summary>Recientes de versiones anteriores (hasta la 0.3); <see cref="MigrateServers"/> los pasa a <see cref="Servers"/>.</summary>
+    public List<string>? RecentServers { get; set; }
 
     public string? LastEmail { get; set; }
 
     /// <summary>Idioma de la interfaz ("es", "en"); null sigue al sistema. Se aplica al reiniciar.</summary>
     public string? Language { get; set; }
 
-    /// <summary>Elige el servidor y lo pone primero en los recientes, sin repetirlo.</summary>
-    public void RememberServer(string url)
+    /// <summary>
+    /// Pasa los recientes de versiones anteriores a la lista de servidores guardados y se asegura de que el
+    /// servidor elegido esté en ella. Las URLs inválidas o repetidas se descartan.
+    /// </summary>
+    public void MigrateServers()
     {
-        ServerUrl = url;
-        RecentServers.RemoveAll(u => string.Equals(u, url, StringComparison.OrdinalIgnoreCase));
-        RecentServers.Insert(0, url);
-        if (RecentServers.Count > MaxRecentServers)
-            RecentServers.RemoveRange(MaxRecentServers, RecentServers.Count - MaxRecentServers);
+        var urls = new List<string>(RecentServers ?? []);
+        if (ServerUrl is { } current) urls.Add(current);
+        RecentServers = null;
+
+        foreach (var text in urls)
+        {
+            if (Url.Normalize(text) is not { } uri) continue;
+            if (FindServer(uri.ToString()) is null) Servers.Add(new SavedServer(uri.ToString()));
+        }
+
+        if (ServerUrl is not null)
+            ServerUrl = Url.Normalize(ServerUrl)?.ToString();
     }
+
+    /// <summary>
+    /// Agrega un servidor (<paramref name="original"/> null) o reemplaza uno guardado. Si se edita el servidor
+    /// elegido, la elección sigue a la URL nueva.
+    /// </summary>
+    public ServerSaveResult SaveServer(SavedServer? original, string? name, string? url)
+    {
+        if (Url.Normalize(url) is not { } uri) return new(null, ServerSaveError.InvalidUrl);
+        var text = uri.ToString();
+        var index = original is null ? -1 : Servers.IndexOf(original);
+        var existing = FindServer(text);
+        if (existing is not null && Servers.IndexOf(existing) != index) return new(null, ServerSaveError.Duplicate);
+
+        var saved = new SavedServer(text, string.IsNullOrWhiteSpace(name) ? null : name.Trim());
+        if (index < 0)
+        {
+            Servers.Add(saved);
+        }
+        else
+        {
+            Servers[index] = saved;
+            if (SameUrl(ServerUrl, original!.Url)) ServerUrl = text;
+        }
+
+        return new(saved, ServerSaveError.None);
+    }
+
+    /// <summary>Borra un servidor guardado; si era el elegido, la app vuelve a arrancar en la pantalla de servidores.</summary>
+    public void RemoveServer(SavedServer server)
+    {
+        Servers.Remove(server);
+        if (SameUrl(ServerUrl, server.Url)) ServerUrl = null;
+    }
+
+    private SavedServer? FindServer(string url) => Servers.FirstOrDefault(s => SameUrl(s.Url, url));
+
+    private static bool SameUrl(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
     public Guid? LastWorkspaceId { get; set; }
     public int DefaultTimeoutSeconds { get; set; } = 30;
 
@@ -228,7 +292,9 @@ public sealed class SettingsStore
     {
         try
         {
-            return load() is { } json ? JsonSerializer.Deserialize<LocalSettings>(json, ClientJson.Options) ?? new() : new();
+            var settings = load() is { } json ? JsonSerializer.Deserialize<LocalSettings>(json, ClientJson.Options) ?? new() : new();
+            settings.MigrateServers();
+            return settings;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {

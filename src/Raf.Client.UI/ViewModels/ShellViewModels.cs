@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -182,40 +183,143 @@ public sealed partial class ShellViewModel : ObservableObject
     partial void OnPageChanged(object? value) => OnPropertyChanged(nameof(Main));
 }
 
-public sealed partial class ConnectViewModel(ClientServices services, ShellViewModel shell) : PageViewModel
+/// <summary>Servidores guardados en este equipo: se agregan, editan, eliminan y se elige con cuál conectarse.</summary>
+public sealed partial class ConnectViewModel : PageViewModel
 {
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(InsecureWarning))]
-    private string? _url = services.Settings.Current.ServerUrl;
+    private readonly ClientServices _services;
+    private readonly ShellViewModel _shell;
+    private SavedServer? _editing;
 
-    /// <summary>Servidores usados antes en este equipo; si no hay lista todavía, al menos el último.</summary>
-    public IReadOnlyList<string> RecentServers { get; } =
-        services.Settings.Current.RecentServers is { Count: > 0 } recent ? recent.ToList()
-        : services.Settings.Current.ServerUrl is { } last ? [last]
-        : [];
+    public ConnectViewModel(ClientServices services, ShellViewModel shell)
+    {
+        _services = services;
+        _shell = shell;
+        Reload();
+        if (Servers.Count == 0) Add(); // la primera vez no hay nada que elegir
+    }
 
     protected override string EventContext => Texts.Page_ContextConnect;
 
-    public ShellViewModel Shell => shell;
+    public ShellViewModel Shell => _shell;
+
+    public ObservableCollection<ServerItemViewModel> Servers { get; } = new();
+
+    public bool HasServers => Servers.Count > 0;
+
+    /// <summary>Formulario de alta o edición abierto, en lugar de la lista.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowList))]
+    private bool _isFormOpen;
+
+    public bool ShowList => !IsFormOpen;
+
+    [ObservableProperty] private string? _formTitle;
+    [ObservableProperty] private string? _formName;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(InsecureWarning))]
+    private string? _formUrl;
+
+    [ObservableProperty] private string? _formError;
 
     public bool InsecureWarning =>
-        ServerUrl.Normalize(Url) is { Scheme: "http", IsLoopback: false };
+        ServerUrl.Normalize(FormUrl) is { Scheme: "http", IsLoopback: false };
+
+    // El error del formulario se refiere a lo que había escrito: al cambiarlo deja de valer.
+    partial void OnFormUrlChanged(string? value) => FormError = null;
+
+    private void Reload()
+    {
+        Servers.Clear();
+        foreach (var server in _services.Settings.Current.Servers) Servers.Add(new ServerItemViewModel(server, this));
+        OnPropertyChanged(nameof(HasServers));
+    }
 
     [RelayCommand]
-    private Task ConnectAsync() => GuardAsync(async () =>
+    private void Add() => OpenForm(null, Texts.ConnV_AddTitle);
+
+    public void Edit(SavedServer server) => OpenForm(server, Texts.ConnV_EditTitle);
+
+    private void OpenForm(SavedServer? server, string title)
     {
-        var server = ServerUrl.Normalize(Url);
-        if (server is null)
+        _editing = server;
+        FormTitle = title;
+        FormName = server?.Name;
+        FormUrl = server?.Url;
+        FormError = null;
+        Error = null;
+        IsFormOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelForm()
+    {
+        IsFormOpen = false;
+        FormError = null;
+    }
+
+    [RelayCommand]
+    private void SaveForm() => Save();
+
+    [RelayCommand]
+    private Task SaveAndConnectAsync() => Save() is { } server ? ConnectAsync(server) : Task.CompletedTask;
+
+    private SavedServer? Save()
+    {
+        var result = default(ServerSaveResult);
+        _services.Settings.Update(s => result = s.SaveServer(_editing, FormName, FormUrl));
+        if (result.Server is null)
         {
-            Error = Texts.Connect_InvalidUrl;
-            return;
+            FormError = result.Error == ServerSaveError.Duplicate ? Texts.ConnV_Duplicate : Texts.Connect_InvalidUrl;
+            return null;
         }
 
-        await services.Api.CheckServerAsync(server);
-        services.Session.SetServer(server);
-        services.Settings.Update(s => s.RememberServer(server.ToString()));
-        shell.ShowLogin();
+        IsFormOpen = false;
+        FormError = null;
+        Reload();
+        return result.Server;
+    }
+
+    public async Task DeleteAsync(SavedServer server)
+    {
+        if (!await _services.Dialogs.ConfirmAsync(Texts.ConnV_DeleteTitle,
+                string.Format(Texts.ConnV_DeleteMessage, server.Title), Texts.V_Delete))
+            return;
+
+        _services.Settings.Update(s => s.RemoveServer(server));
+        Error = null;
+        Reload();
+        if (Servers.Count == 0) Add();
+    }
+
+    public Task ConnectAsync(SavedServer server) => GuardAsync(async () =>
+    {
+        var uri = new Uri(server.Url);
+        await _services.Api.CheckServerAsync(uri);
+        _services.Session.SetServer(uri);
+        _services.Settings.Update(s => s.ServerUrl = server.Url);
+        _shell.ShowLogin();
     });
+}
+
+/// <summary>Una fila de la lista de servidores.</summary>
+public sealed partial class ServerItemViewModel(SavedServer server, ConnectViewModel owner)
+{
+    public ConnectViewModel Owner => owner;
+
+    public string Title => server.Title;
+
+    /// <summary>La URL debajo del nombre; si no tiene nombre, el título ya es la URL.</summary>
+    public string? Subtitle => server.Name is null ? null : server.Url;
+
+    [RelayCommand]
+    private Task ConnectAsync() => owner.ConnectAsync(server);
+
+    [RelayCommand]
+    private void Edit() => owner.Edit(server);
+
+    [RelayCommand]
+    private Task DeleteAsync() => owner.DeleteAsync(server);
 }
 
 public sealed partial class LoginViewModel(ClientServices services, ShellViewModel shell) : PageViewModel

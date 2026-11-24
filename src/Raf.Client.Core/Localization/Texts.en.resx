@@ -339,12 +339,22 @@
   <data name="LoginV_Title" xml:space="preserve"><value>Sign in</value></data>
   <data name="LoginV_EmailHint" xml:space="preserve"><value>name@company.com</value></data>
   <data name="LoginV_Enter" xml:space="preserve"><value>Sign in</value></data>
-  <data name="ConnV_Title" xml:space="preserve"><value>Connect to the server</value></data>
-  <data name="ConnV_Intro" xml:space="preserve"><value>Enter your team's RAF server URL, including its subpath if it has one.</value></data>
-  <data name="ConnV_UrlLabel" xml:space="preserve"><value>Server URL</value></data>
+  <data name="ConnV_Title" xml:space="preserve"><value>Servers</value></data>
+  <data name="ConnV_Intro" xml:space="preserve"><value>Choose your team's RAF server, or add it if it isn't on the list yet.</value></data>
+  <data name="ConnV_NameLabel" xml:space="preserve"><value>Name (optional)</value></data>
+  <data name="ConnV_NameHint" xml:space="preserve"><value>Production</value></data>
+  <data name="ConnV_UrlLabel" xml:space="preserve"><value>Server URL, including its subpath if it has one</value></data>
   <data name="ConnV_UrlHint" xml:space="preserve"><value>https://domain/raf</value></data>
   <data name="ConnV_Insecure" xml:space="preserve"><value>This URL doesn't use https: your password and tokens would travel unencrypted.</value></data>
-  <data name="ConnV_Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="ConnV_Connect" xml:space="preserve"><value>Connect</value></data>
+  <data name="ConnV_Add" xml:space="preserve"><value>Add server</value></data>
+  <data name="ConnV_AddTitle" xml:space="preserve"><value>New server</value></data>
+  <data name="ConnV_EditTitle" xml:space="preserve"><value>Edit server</value></data>
+  <data name="ConnV_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="ConnV_SaveAndConnect" xml:space="preserve"><value>Save and connect</value></data>
+  <data name="ConnV_Duplicate" xml:space="preserve"><value>There's already a saved server with that URL.</value></data>
+  <data name="ConnV_DeleteTitle" xml:space="preserve"><value>Delete server</value></data>
+  <data name="ConnV_DeleteMessage" xml:space="preserve"><value>Delete {0} from the list? Nothing is deleted on the server: you can add it again whenever you want.</value></data>
   <data name="Kv_Include" xml:space="preserve"><value>Include when sending</value></data>
   <data name="Kv_AddOwn" xml:space="preserve"><value>Add own</value></data>
   <data name="UpdV_Title" xml:space="preserve"><value>RAF needs an update</value></data>
