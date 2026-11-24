@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Raf.Client.Controls;
 using Raf.Client.Core.Api;
+using Raf.Client.Core.Workspaces;
 using Raf.Client.Services;
 using Raf.Contracts;
 
@@ -37,7 +38,7 @@ public sealed partial class LoginsViewModel(ClientServices services, Guid worksp
     : ObservableObject
 {
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RenameCommand), nameof(DeleteCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RenameCommand), nameof(DuplicateCommand), nameof(DeleteCommand))]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private LoginItemViewModel? _selected;
 
@@ -115,6 +116,19 @@ public sealed partial class LoginsViewModel(ClientServices services, Guid worksp
         item.Saved = await services.Store.UpdateLoginAsync(
             workspaceId, item.Saved.Id, new UpdateLoginRequest(name, item.Saved.Config, item.Saved.Version));
         item.Name = item.Saved.Name;
+        Changed = true;
+    });
+
+    /// <summary>Copia lo guardado del login, no lo que esté sin guardar en el editor. La copia no la usa ninguna App.</summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private Task DuplicateAsync() => GuardAsync(async () =>
+    {
+        var source = Selected!.Saved;
+        var name = DuplicateName.Next(source.Name, Items.Select(i => i.Name));
+        var dto = await new WorkspaceDuplicator(services.Store, workspaceId).DuplicateLoginAsync(source, name);
+        var item = new LoginItemViewModel(dto, CanEdit, []);
+        Items.Insert(Items.IndexOf(Selected) + 1, item);
+        Selected = item;
         Changed = true;
     });
 

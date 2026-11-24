@@ -146,6 +146,7 @@
                             <MenuItem Header="{x:Static l:Texts.MainV_NewSample}" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_AppAuth}" Command="{Binding EditAuthCommand}" IsVisible="{Binding IsApp}" />
                             <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />
+                            <MenuItem Header="{x:Static l:Texts.V_Duplicate}" Command="{Binding DuplicateCommand}" IsVisible="{Binding CanEdit}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_MoveUp}" Command="{Binding MoveUpCommand}" IsVisible="{Binding CanEdit}" />
                             <MenuItem Header="{x:Static l:Texts.MainV_MoveDown}" Command="{Binding MoveDownCommand}" IsVisible="{Binding CanEdit}" />
                             <MenuItem Header="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" IsVisible="{Binding CanEdit}" />

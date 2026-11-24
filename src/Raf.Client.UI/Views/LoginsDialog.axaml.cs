@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Avalonia.Interactivity;
 using Raf.Client.Services;
 using Raf.Client.ViewModels;
@@ -9,6 +10,10 @@ public partial class LoginsDialog : DialogView
     public LoginsDialog() => InitializeComponent();
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    // Sin permiso de edición no hay nada que ofrecer, ni con una lista vacía.
+    private void OnListMenuOpening(object? sender, CancelEventArgs e) =>
+        e.Cancel = DataContext is not LoginsViewModel { CanEdit: true, HasSelection: true };
 
     public override async Task<bool> CanCloseAsync() =>
         DataContext is not LoginsViewModel { HasChanges: true } vm ||
