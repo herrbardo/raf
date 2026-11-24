@@ -90,6 +90,7 @@ public sealed partial class TreeNodeViewModel : ObservableObject
 
     [RelayCommand] private Task NewFolder() => _owner.NewFolderAsync(this);
     [RelayCommand] private Task NewRequest() => _owner.NewRequestAsync(this);
+    [RelayCommand] private Task NewGrpcRequest() => _owner.NewGrpcRequestAsync(this);
     [RelayCommand] private Task NewSample() => _owner.NewSampleAsync(this);
     [RelayCommand] private Task Rename() => _owner.RenameAsync(this);
     [RelayCommand] private Task EditAuth() => _owner.EditAppAuthAsync(this);
@@ -623,8 +624,12 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var tab in Tabs) tab.RefreshWarning();
     }
 
-    private EditorTabViewModel CreateTab(TreeNodeViewModel node) =>
-        node.Kind == NodeKind.Request ? new RequestTabViewModel(this, node) : new SampleTabViewModel(this, node);
+    private EditorTabViewModel CreateTab(TreeNodeViewModel node) => node.Kind switch
+    {
+        NodeKind.Request when node.Request.Spec.IsGrpc => new GrpcRequestTabViewModel(this, node),
+        NodeKind.Request => new RequestTabViewModel(this, node),
+        _ => new SampleTabViewModel(this, node),
+    };
 
     public void Open(TreeNodeViewModel node)
     {
@@ -726,14 +731,21 @@ public sealed partial class MainViewModel : ObservableObject
         InsertSorted(parent, new TreeNodeViewModel(this, NodeKind.Folder, dto, parent));
     });
 
-    public Task NewRequestAsync(TreeNodeViewModel parent) => GuardAsync(async () =>
+    public Task NewRequestAsync(TreeNodeViewModel parent) =>
+        // Un request nuevo usa la autenticación de su App.
+        CreateRequestAsync(parent, Texts.Main_NewRequest, RequestSpec.Empty with { Auth = AuthSpec.Inherit });
+
+    /// <summary>Un request gRPC (Plan 10): nace sin método elegido y con la auth de su App.</summary>
+    public Task NewGrpcRequestAsync(TreeNodeViewModel parent) =>
+        CreateRequestAsync(parent, Texts.Main_NewGrpcRequest, RequestSpec.EmptyGrpc);
+
+    private Task CreateRequestAsync(TreeNodeViewModel parent, string title, RequestSpec spec) => GuardAsync(async () =>
     {
-        var name = await Services.Dialogs.PromptAsync(Texts.Main_NewRequest, Texts.Main_Name);
+        var name = await Services.Dialogs.PromptAsync(title, Texts.Main_Name);
         if (name is null) return;
         var (appId, folderId) = Container(parent);
-        // Un request nuevo usa la autenticación de su App.
         var dto = await Services.Store.CreateRequestAsync(WorkspaceId, new CreateRequestRequest(
-            appId, name, RequestSpec.Empty with { Auth = AuthSpec.Inherit }, folderId, NextOrder(parent.Children, NodeKind.Request)));
+            appId, name, spec, folderId, NextOrder(parent.Children, NodeKind.Request)));
         var node = new TreeNodeViewModel(this, NodeKind.Request, dto, parent);
         InsertSorted(parent, node);
         Open(node);

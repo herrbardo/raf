@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Raf.Domain.Requests;
 
 namespace Raf.Client.Controls;
 
@@ -38,10 +39,12 @@ public sealed class MethodBadge : TextBlock
     private void Apply()
     {
         var method = Method?.Trim().ToUpperInvariant() ?? "";
-        Text = method;
+        var grpc = method == GrpcSpec.MethodLabel;
+        Text = grpc ? "gRPC" : method;
         ToolTip.SetTip(this, method.Length > 7 ? method : null);
         var known = Array.IndexOf(Known, method) >= 0;
         foreach (var m in Known) PseudoClasses.Set(":" + m.ToLowerInvariant(), m == method);
-        PseudoClasses.Set(":other", !known);
+        PseudoClasses.Set(":grpc", grpc);
+        PseudoClasses.Set(":other", !known && !grpc);
     }
 }

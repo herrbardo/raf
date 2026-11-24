@@ -422,4 +422,19 @@
   <data name="About_Title" xml:space="preserve"><value>Acerca de RAF</value></data>
   <data name="About_Version" xml:space="preserve"><value>VERSIÓN</value></data>
   <data name="About_Developer" xml:space="preserve"><value>DESARROLLADOR</value></data>
+  <data name="Main_NewGrpcRequest" xml:space="preserve"><value>Nuevo request gRPC</value></data>
+  <data name="MainV_NewGrpcRequest" xml:space="preserve"><value>Nuevo request gRPC</value></data>
+  <data name="Grpc_KindUnary" xml:space="preserve"><value>unaria</value></data>
+  <data name="Grpc_KindServerStreaming" xml:space="preserve"><value>streaming del servidor</value></data>
+  <data name="Grpc_KindClientStreaming" xml:space="preserve"><value>streaming del cliente</value></data>
+  <data name="Grpc_KindDuplex" xml:space="preserve"><value>bidireccional</value></data>
+  <data name="Grpc_NoMethod" xml:space="preserve"><value>Sin método elegido</value></data>
+  <data name="Grpc_NoMethods" xml:space="preserve"><value>El servidor no ofrece ningún método.</value></data>
+  <data name="GrpcV_AddressTip" xml:space="preserve"><value>Dirección del servidor gRPC: https://servidor:443 con TLS o http://servidor:50051 sin TLS</value></data>
+  <data name="GrpcV_Method" xml:space="preserve"><value>Método</value></data>
+  <data name="GrpcV_Reload" xml:space="preserve"><value>Pedir los métodos al servidor (server reflection)</value></data>
+  <data name="GrpcV_Message" xml:space="preserve"><value>Mensaje</value></data>
+  <data name="GrpcV_Template" xml:space="preserve"><value>Usar plantilla</value></data>
+  <data name="GrpcV_TemplateTip" xml:space="preserve"><value>Reemplaza el mensaje por uno con todos los campos del método elegido</value></data>
+  <data name="GrpcV_StreamingNotYet" xml:space="preserve"><value>Este método es de streaming: por ahora RAF solo envía llamadas unarias.</value></data>
 </root>

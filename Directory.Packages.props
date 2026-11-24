@@ -25,5 +25,12 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
     <PackageVersion Include="Velopack" Version="1.2.161" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
+    <!-- gRPC (Plan 10): Raf.Client.Grpc y sus tests. -->
+    <PackageVersion Include="Google.Protobuf" Version="3.36.2" />
+    <PackageVersion Include="Grpc.Net.Client" Version="2.85.0" />
+    <PackageVersion Include="Grpc.Reflection" Version="2.85.0" />
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.85.0" />
+    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.85.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.14" />
   </ItemGroup>
 </Project>

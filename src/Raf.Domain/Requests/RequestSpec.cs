@@ -36,7 +36,11 @@ public enum ExtractionSource { Body, Header }
 /// </summary>
 public sealed record ResponseExtraction(string Variable, ExtractionSource Source, string Path, bool Enabled = true);
 
-/// <summary>Todo lo necesario para ejecutar una llamada HTTP.</summary>
+/// <summary>
+/// Todo lo necesario para ejecutar una llamada HTTP o, si <see cref="Grpc"/> no es null, una llamada gRPC (Plan 10).
+/// En gRPC se reusan los campos de HTTP: <see cref="Url"/> es la dirección del servidor, <see cref="Headers"/> la
+/// metadata, <see cref="Body"/> el mensaje en JSON y <see cref="Auth"/> viaja como metadata; los query params no se usan.
+/// </summary>
 public sealed record RequestSpec(
     string Method,
     string Url,
@@ -44,9 +48,40 @@ public sealed record RequestSpec(
     IReadOnlyList<KeyValueItem> QueryParams,
     BodySpec Body,
     AuthSpec Auth,
-    IReadOnlyList<ResponseExtraction>? Extractions = null)
+    IReadOnlyList<ResponseExtraction>? Extractions = null,
+    GrpcSpec? Grpc = null)
 {
     public static RequestSpec Empty { get; } = new("GET", "", [], [], BodySpec.None, AuthSpec.None);
+
+    /// <summary>Un request gRPC nuevo: sin método elegido, con mensaje vacío y la auth de la App.</summary>
+    public static RequestSpec EmptyGrpc { get; } = new(
+        GrpcSpec.MethodLabel, "", [], [], new BodySpec(BodyType.Json, "{}"), AuthSpec.Inherit, Grpc: GrpcSpec.Empty);
+
+    public bool IsGrpc => Grpc is not null;
+}
+
+/// <summary>De dónde salen los servicios y mensajes: el server reflection del servidor o un conjunto de .proto.</summary>
+public enum GrpcDescriptorSource { Reflection, ProtoSet }
+
+/// <summary>
+/// Qué método gRPC se llama. <see cref="Service"/> es el nombre completo (<c>paquete.Servicio</c>);
+/// <see cref="ProtoSetId"/> se usa solo con <see cref="GrpcDescriptorSource.ProtoSet"/>.
+/// </summary>
+public sealed record GrpcSpec(
+    string Service,
+    string Method,
+    GrpcDescriptorSource Source = GrpcDescriptorSource.Reflection,
+    Guid? ProtoSetId = null)
+{
+    /// <summary>Lo que va en <see cref="RequestSpec.Method"/> de un request gRPC: el árbol y el historial lo muestran.</summary>
+    public const string MethodLabel = "GRPC";
+
+    public static GrpcSpec Empty { get; } = new("", "");
+
+    /// <summary>La ruta de la llamada: <c>/paquete.Servicio/Metodo</c>.</summary>
+    public string Path => $"/{Service}/{Method}";
+
+    public bool IsComplete => !string.IsNullOrWhiteSpace(Service) && !string.IsNullOrWhiteSpace(Method);
 }
 
 /// <summary>

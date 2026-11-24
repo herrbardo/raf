@@ -168,6 +168,42 @@ internal sealed class RunTrace(VariableContext variables, RunOptions options)
     public void Warn(RunEventKind kind, string title, string? detail = null) =>
         Add(Stopwatch.GetTimestamp(), null, kind, RunEventLevel.Warning, title, detail);
 
+    /// <summary>Una llamada gRPC: la ruta, la dirección, la metadata (con Basic enmascarado) y el mensaje.</summary>
+    public void GrpcCall(Uri address, string path, IReadOnlyList<KeyValuePair<string, string>> metadata, string message)
+    {
+        var text = new StringBuilder();
+        text.Append("POST ").Append(path).AppendLine(" HTTP/2");
+        text.Append("Host: ").AppendLine(address.Authority);
+        foreach (var (name, value) in metadata)
+            text.Append(name).Append(": ").AppendLine(IsBasic(name, value) ? MaskBasic(value) : value);
+        text.AppendLine();
+        text.Append(message.Length <= BodyPreviewChars
+            ? message
+            : message[..BodyPreviewChars] + Environment.NewLine + string.Format(CoreTexts.Trace_BodyPreview, BodyPreviewChars / 1024));
+        _headersAt = Stopwatch.GetTimestamp();
+        Add(_headersAt, null, RunEventKind.Request, RunEventLevel.Info,
+            string.Format(CoreTexts.Trace_GrpcCall, path, address.GetLeftPart(UriPartial.Authority)), text.ToString().TrimEnd());
+    }
+
+    /// <summary>El estado gRPC con la metadata de respuesta y los trailers; un estado distinto de OK es una advertencia.</summary>
+    public void GrpcStatus(int code, string name, string? detail,
+        IReadOnlyList<KeyValuePair<string, string>> headers, IReadOnlyList<KeyValuePair<string, string>> trailers)
+    {
+        var now = Stopwatch.GetTimestamp();
+        var wait = Stopwatch.GetElapsedTime(_headersAt, now);
+        _wait += wait;
+        var text = new StringBuilder();
+        if (!string.IsNullOrEmpty(detail)) text.AppendLine(detail).AppendLine();
+        foreach (var (key, value) in headers) text.Append(key).Append(": ").AppendLine(value);
+        if (trailers.Count > 0)
+        {
+            text.AppendLine().AppendLine(CoreTexts.Trace_GrpcTrailers);
+            foreach (var (key, value) in trailers) text.Append(key).Append(": ").AppendLine(value);
+        }
+        Add(now, wait, RunEventKind.Response, code == 0 ? RunEventLevel.Info : RunEventLevel.Warning,
+            string.Format(CoreTexts.Trace_GrpcStatus, name, code), text.Length == 0 ? null : text.ToString().TrimEnd());
+    }
+
     public void BeginBody() => _readingBody = true;
 
     public void BodyRead(ResponseBody body)

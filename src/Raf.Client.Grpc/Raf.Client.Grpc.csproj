@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- gRPC del cliente de escritorio (Plan 10). Aparte de Raf.Client.Core para que el build web no cargue estas librerías. -->
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="Grpc.Reflection" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Raf.Client.Grpc.Tests" />
+    <Using Include="Raf.Client.Core.Localization" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raf.Client.Core\Raf.Client.Core.csproj" />
+  </ItemGroup>
+</Project>

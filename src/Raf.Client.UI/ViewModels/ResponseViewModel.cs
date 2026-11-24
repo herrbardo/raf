@@ -118,10 +118,22 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
         HasResult = true;
         ErrorText = result.Error;
         TimeText = FormatTime(result.Elapsed);
-        StatusText = result.StatusCode is { } code ? $"{code} {result.ReasonPhrase}".TrimEnd() : OutcomeText(result.Outcome);
-        IsSuccess = result.StatusCode is >= 200 and < 400;
-        IsHttpError = result.StatusCode is { } status && status is < 200 or >= 400;
-        IsNoResponse = result.StatusCode is null;
+        if (result.GrpcStatus is { } grpc)
+        {
+            // gRPC: el estado es el de la llamada, con su código; el detalle del servidor va como error.
+            StatusText = $"{grpc.Name} ({grpc.Code})";
+            IsSuccess = grpc.IsOk;
+            IsHttpError = !grpc.IsOk;
+            IsNoResponse = false;
+            if (!grpc.IsOk && grpc.Detail is { } detail) ErrorText = detail;
+        }
+        else
+        {
+            StatusText = result.StatusCode is { } code ? $"{code} {result.ReasonPhrase}".TrimEnd() : OutcomeText(result.Outcome);
+            IsSuccess = result.StatusCode is >= 200 and < 400;
+            IsHttpError = result.StatusCode is { } status && status is < 200 or >= 400;
+            IsNoResponse = result.StatusCode is null;
+        }
         SizeText = result.Body is { } b ? FormatSize(b.Length) : null;
         Headers = result.Headers.Select(h => new ResponseHeaderRow(h.Key, h.Value, this)).ToList();
         Events = result.Events.Select(e => new RunEventRow(e)).ToList();

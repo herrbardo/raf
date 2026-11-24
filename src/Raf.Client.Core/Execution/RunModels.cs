@@ -24,6 +24,12 @@ public sealed record RunPreflight(IReadOnlyList<string> Missing, IReadOnlyList<s
 
 public enum RunOutcome { Completed, Cancelled, TimedOut, Failed }
 
+/// <summary>Cómo terminó una llamada gRPC: código (0 = OK), nombre (<c>NOT_FOUND</c>) y el detalle del servidor.</summary>
+public sealed record GrpcStatusInfo(int Code, string Name, string? Detail)
+{
+    public bool IsOk => Code == 0;
+}
+
 /// <summary>
 /// Cuerpo de una respuesta. En memoria se conserva solo el inicio; si no entra, el contenido completo queda en
 /// un archivo temporal que el sistema elimina al cerrarse, aun si la app termina de forma inesperada.
@@ -72,6 +78,9 @@ public sealed class RunResult : IDisposable
     public string? Error { get; init; }
     public int? StatusCode { get; init; }
     public string? ReasonPhrase { get; init; }
+
+    /// <summary>El estado de una llamada gRPC; null en HTTP, donde vale <see cref="StatusCode"/>.</summary>
+    public GrpcStatusInfo? GrpcStatus { get; init; }
     public IReadOnlyList<KeyValuePair<string, string>> Headers { get; init; } = [];
     public ResponseBody? Body { get; init; }
 
@@ -87,7 +96,7 @@ public sealed class RunResult : IDisposable
     /// <summary>El mismo resultado con otros eventos y token; el body pasa al nuevo.</summary>
     internal RunResult With(IReadOnlyList<RunEvent> events, ObtainedToken? token) => new()
     {
-        Outcome = Outcome, Elapsed = Elapsed, Error = Error, StatusCode = StatusCode, ReasonPhrase = ReasonPhrase,
+        Outcome = Outcome, Elapsed = Elapsed, Error = Error, StatusCode = StatusCode, ReasonPhrase = ReasonPhrase, GrpcStatus = GrpcStatus,
         Headers = Headers, Body = Body, Events = events, Extracted = Extracted, Token = token,
     };
 

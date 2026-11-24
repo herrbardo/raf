@@ -218,6 +218,31 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
+    public async Task Grpc_requests_keep_their_method_and_reject_inconsistent_data()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var b = $"/workspaces/{ws.Id}";
+        var appDto = await owner.PostOkAsync<AppDto>($"{b}/apps", new CreateAppRequest("Api"));
+        var spec = RequestSpec.EmptyGrpc with { Url = "https://grpc.example.com", Grpc = new GrpcSpec("raf.test.Echo", "Echo") };
+
+        var created = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Echo", spec));
+        var empty = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(appDto.Id, "Nuevo", RequestSpec.EmptyGrpc));
+        var read = await owner.GetOkAsync<RequestDto>($"{b}/requests/{created.Id}");
+
+        Assert.Equal(spec.Grpc, read.Spec.Grpc);
+        Assert.Equal(GrpcSpec.Empty, empty.Spec.Grpc);
+        foreach (var bad in new[]
+                 {
+                     spec with { Method = "POST" },
+                     RequestSpec.Empty with { Method = GrpcSpec.MethodLabel },
+                     spec with { Grpc = spec.Grpc! with { Source = GrpcDescriptorSource.ProtoSet } },
+                     spec with { Grpc = spec.Grpc! with { Service = new string('s', 501) } },
+                 })
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await owner.PostJsonAsync($"{b}/requests", new CreateRequestRequest(appDto.Id, "Mal", bad))).StatusCode);
+    }
+
+    [Fact]
     public async Task Change_seq_is_unique_and_increasing_even_with_concurrent_writes()
     {
         var (owner, ws) = await NewWorkspaceAsync();
