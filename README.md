@@ -1,6 +1,6 @@
 # RAF — Requests and Friends
 
-Cliente colaborativo para enviar requests HTTP a distintas APIs y trabajar en equipo (similar a Postman), de escritorio y web.
+Cliente colaborativo para enviar requests HTTP a distintas APIs y trabajar en equipo (similar a Postman), de escritorio y web. La app de escritorio habla también gRPC (unario y los tres tipos de streaming, con server reflection o archivos .proto; ver [plan 10](docs/plans/10-grpc.md)) y WebSocket.
 
 - Cliente: Avalonia (.NET 10), para Windows y macOS, y la misma interfaz en el navegador con WebAssembly (ver [plan 09](docs/plans/09-cliente-web.md))
 - Backend: ASP.NET Core 10 + PostgreSQL, desplegado en AWS (ALB existente → ECS Fargate, ver [infra/](infra/README.md)) o en Railway (ver [infra/railway/](infra/railway/README.md))
@@ -58,7 +58,8 @@ Firma: macOS se publica firmado y notarizado. Windows se publica sin firmar por 
 | `src/Raf.Contracts` | DTOs compartidos entre cliente y servidor |
 | `src/Raf.Server.Data` | EF Core, Identity, migraciones, sellado de `Version`/`ChangeSeq` |
 | `src/Raf.Server` | API (Minimal APIs), auth JWT, permisos |
-| `src/Raf.Client.Core` | Lógica del cliente sin UI: sesión, API, caché local, sincronización y ejecución de requests (directa o por el relay) |
+| `src/Raf.Client.Core` | Lógica del cliente sin UI: sesión, API, caché local, sincronización y ejecución de requests (directa o por el relay) y WebSockets |
+| `src/Raf.Client.Grpc` | gRPC de la app de escritorio: JSON ↔ protobuf, server reflection, compilación de .proto y llamadas. El cliente web no lo incluye |
 | `src/Raf.Client.UI` | Interfaz compartida (Avalonia): vistas, ViewModels, estilos y diálogos |
 | `src/Raf.Client` | App de escritorio y actualizaciones (Velopack) |
 | `src/Raf.Client.Browser` | Cliente web (WebAssembly), servido con Caddy. Fuera de `Raf.slnx`: necesita `wasm-tools` |

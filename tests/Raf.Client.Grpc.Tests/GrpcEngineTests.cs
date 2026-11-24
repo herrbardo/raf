@@ -137,6 +137,30 @@ public class GrpcEngineTests
     }
 
     [Fact]
+    public async Task A_sample_overrides_the_message_and_the_metadata()
+    {
+        await using var server = await TestGrpcServer.StartAsync();
+        using var runner = new RequestRunner(grpc: new GrpcEngine(_ => server.CreateHandler()));
+        var echo = RequestSpec.EmptyGrpc with
+        {
+            Url = "http://localhost",
+            Body = new BodySpec(BodyType.Json, """{ "s": "del request" }"""),
+            Auth = AuthSpec.None,
+            Grpc = new GrpcSpec("raf.test.Echo", "Echo"),
+        };
+        var whoami = echo with { Body = new BodySpec(BodyType.Json, "{}"), Grpc = new GrpcSpec("raf.test.Echo", "Whoami") };
+        var options = new RunOptions(TimeSpan.FromSeconds(10));
+
+        using var message = await runner.RunAsync(new RunInput(echo,
+            SampleOverrides.Empty with { Body = new BodySpec(BodyType.Json, """{ "s": "del sample" }""") }, VariableContext.Empty, options));
+        using var metadata = await runner.RunAsync(new RunInput(whoami,
+            SampleOverrides.Empty with { Headers = [new KeyValueOverride("authorization", "Bearer del-sample")] }, VariableContext.Empty, options));
+
+        Assert.Contains("del sample", message.Body!.GetPreviewText());
+        Assert.Equal("\"Bearer del-sample\"", metadata.Body!.GetPreviewText());
+    }
+
+    [Fact]
     public async Task The_runner_explains_what_is_missing()
     {
         using var runner = new RequestRunner();

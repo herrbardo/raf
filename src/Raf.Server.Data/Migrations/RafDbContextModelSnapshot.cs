@@ -342,6 +342,47 @@ namespace Raf.Server.Data.Migrations
                     b.ToTable("Logins");
                 });
 
+            modelBuilder.Entity("Raf.Domain.Entities.ProtoSet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ChangeSeq")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Files")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "ChangeSeq");
+
+                    b.ToTable("ProtoSets");
+                });
+
             modelBuilder.Entity("Raf.Domain.Entities.Sample", b =>
                 {
                     b.Property<Guid>("Id")

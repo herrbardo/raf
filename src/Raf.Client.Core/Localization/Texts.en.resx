@@ -474,4 +474,29 @@
   <data name="GrpcV_CompleteSendingTip" xml:space="preserve"><value>Tells the server no more messages are coming</value></data>
   <data name="GrpcV_Messages" xml:space="preserve"><value>Messages</value></data>
   <data name="GrpcV_CancelStreamTip" xml:space="preserve"><value>Cuts the call (it ends with CANCELLED)</value></data>
+  <data name="ProtoW_Title" xml:space="preserve"><value>.proto files</value></data>
+  <data name="ProtoW_Button" xml:space="preserve"><value>.proto</value></data>
+  <data name="ProtoW_Sets" xml:space="preserve"><value>Sets</value></data>
+  <data name="ProtoW_Files" xml:space="preserve"><value>Files</value></data>
+  <data name="ProtoW_Empty" xml:space="preserve"><value>No sets. A set gathers the .proto files of a gRPC server that has no server reflection.</value></data>
+  <data name="ProtoW_NoFiles" xml:space="preserve"><value>No files: add the .proto files or the folder that has them.</value></data>
+  <data name="ProtoW_AddFiles" xml:space="preserve"><value>Add files…</value></data>
+  <data name="ProtoW_AddFolder" xml:space="preserve"><value>Add folder…</value></data>
+  <data name="ProtoW_AddFolderTip" xml:space="preserve"><value>Adds every .proto in the folder and its subfolders, with the paths the imports use</value></data>
+  <data name="ProtoW_NoProtoInFolder" xml:space="preserve"><value>The folder has no .proto files.</value></data>
+  <data name="ProtoW_Compile" xml:space="preserve"><value>Compile</value></data>
+  <data name="ProtoW_CompileTip" xml:space="preserve"><value>Compiles the set as it is, without saving it, to see whether it has errors</value></data>
+  <data name="ProtoW_CompileDesktopOnly" xml:space="preserve"><value>Compilation is shown in the desktop app.</value></data>
+  <data name="ProtoW_Compiled" xml:space="preserve"><value>Compiles: defines {0} methods.</value></data>
+  <data name="ProtoW_PathHint" xml:space="preserve"><value>File path: the one the other files' imports use (for example acme/common/v1/page.proto).</value></data>
+  <data name="ProtoW_NewTitle" xml:space="preserve"><value>New .proto set</value></data>
+  <data name="ProtoW_RenameTitle" xml:space="preserve"><value>Rename set</value></data>
+  <data name="ProtoW_DeleteMessage" xml:space="preserve"><value>Delete set {0} with all its files?</value></data>
+  <data name="ProtoW_Invalid" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="ProtoW_CloseUnsaved" xml:space="preserve"><value>There are unsaved .proto files. Close and discard them?</value></data>
+  <data name="Dialog_FileTooBig" xml:space="preserve"><value>{0} is larger than 4 MB.</value></data>
+  <data name="GrpcV_Source" xml:space="preserve"><value>Services</value></data>
+  <data name="GrpcV_Reflection" xml:space="preserve"><value>Server reflection</value></data>
+  <data name="GrpcV_ProtoSet" xml:space="preserve"><value>.proto files: {0}</value></data>
+  <data name="GrpcV_SourceTip" xml:space="preserve"><value>Where the services come from: the server's reflection or a set of .proto files</value></data>
 </root>

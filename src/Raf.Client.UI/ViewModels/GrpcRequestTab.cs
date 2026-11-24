@@ -11,6 +11,9 @@ using Raf.Domain.Requests;
 
 namespace Raf.Client.ViewModels;
 
+/// <summary>Una opción del selector de origen: el server reflection (Id null) o un conjunto de .proto.</summary>
+public sealed record GrpcSourceChoice(Guid? Id, string Title);
+
 /// <summary>Un método del selector, con su tipo de llamada.</summary>
 public sealed record GrpcMethodChoice(GrpcMethodInfo Info)
 {
@@ -68,7 +71,63 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         foreach (var part in new EditorPart[] { Headers, Auth, Extractions }) part.Changed += OnContentChanged;
         _grpc = node.Request.Spec.Grpc ?? GrpcSpec.Empty;
         LoadFrom(node.Request.Spec);
-        if (Engine is not null && !string.IsNullOrWhiteSpace(Url)) _ = LoadMethodsAsync(refresh: false);
+        if (Engine is not null && (!string.IsNullOrWhiteSpace(Url) || UsesProtoSet)) _ = LoadMethodsAsync(refresh: false);
+    }
+
+    // ---------- Origen de los servicios (Plan 10, etapa 2) ----------
+
+    public ObservableCollection<GrpcSourceChoice> Sources { get; } = [];
+
+    [ObservableProperty] private GrpcSourceChoice? _selectedSource;
+
+    private bool _loadingSources;
+
+    private bool UsesProtoSet => _grpc.Source == GrpcDescriptorSource.ProtoSet;
+
+    private void RefreshSources()
+    {
+        _loadingSources = true;
+        Sources.Clear();
+        Sources.Add(new GrpcSourceChoice(null, Texts.GrpcV_Reflection));
+        foreach (var set in Owner.ProtoSets) Sources.Add(new GrpcSourceChoice(set.Id, string.Format(Texts.GrpcV_ProtoSet, set.Name)));
+        SelectedSource = UsesProtoSet ? Sources.FirstOrDefault(s => s.Id == _grpc.ProtoSetId) : Sources[0];
+        _loadingSources = false;
+    }
+
+    partial void OnSelectedSourceChanged(GrpcSourceChoice? value)
+    {
+        if (_loadingSources || value is null) return;
+        var chosen = value.Id is { } id
+            ? _grpc with { Source = GrpcDescriptorSource.ProtoSet, ProtoSetId = id }
+            : _grpc with { Source = GrpcDescriptorSource.Reflection, ProtoSetId = null };
+        if (chosen == _grpc) return;
+        _grpc = chosen;
+        GrpcMethods.Clear();
+        OnContentChanged();
+        if (Engine is not null) _ = LoadMethodsAsync(refresh: false);
+    }
+
+    /// <summary>Cambiaron las Apps o los conjuntos de .proto: se actualiza el selector y, si cambió el conjunto, los métodos.</summary>
+    public override void OnAppChanged()
+    {
+        base.OnAppChanged();
+        RefreshSources();
+        if (UsesProtoSet && Engine is not null) _ = LoadMethodsAsync(refresh: false);
+    }
+
+    protected override GrpcProtoSource? RunProtos => UsesProtoSet ? Owner.ProtoSourceOf(_grpc.ProtoSetId) : null;
+
+    /// <summary>
+    /// A dónde y con qué llamar. Con un conjunto de .proto, para conocer los métodos no hace falta la dirección
+    /// (<paramref name="descriptorsOnly"/>); para llamar, sí. Si el conjunto ya no existe, lo explica.
+    /// </summary>
+    private GrpcTarget TargetFor(RequestSpec spec, TimeSpan timeout, bool descriptorsOnly)
+    {
+        var protos = RequestRunner.ProtosFor(_grpc, Owner.ProtoSourceOf(_grpc.ProtoSetId));
+        var address = descriptorsOnly && protos is not null && string.IsNullOrWhiteSpace(spec.Url)
+            ? new Uri("http://localhost/")
+            : RequestRunner.GrpcAddress(spec.Url);
+        return new GrpcTarget(address, AcceptInvalidCertificates, RequestRunner.GrpcMetadata(spec), timeout, protos);
     }
 
     private IGrpcEngine? Engine => Owner.Services.Runner.Grpc;
@@ -113,6 +172,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         Auth.Load(spec.Auth);
         Extractions.Load(spec.Extractions);
         Prepared.Load(_grpc.Messages);
+        RefreshSources();
         SelectedMethod = GrpcMethods.FirstOrDefault(m => m.Info.Service == _grpc.Service && m.Info.Method == _grpc.Method);
         OnPropertyChanged(nameof(MethodText));
         EndLoad();
@@ -153,7 +213,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
 
     /// <summary>
     /// Pide los métodos con la dirección, la metadata y la auth del request (algunos servidores piden autenticarse
-    /// también para el reflection), con las variables resueltas.
+    /// también para el reflection), con las variables resueltas. Con un conjunto de .proto no se conecta a nada.
     /// </summary>
     private async Task LoadMethodsAsync(bool refresh)
     {
@@ -163,9 +223,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         try
         {
             var spec = Owner.Variables.CreateResolver().Resolve(RequestRunner.Effective(ToSpec(), null, AppAuth));
-            var target = new GrpcTarget(RequestRunner.GrpcAddress(spec.Url), AcceptInvalidCertificates,
-                RequestRunner.GrpcMetadata(spec), TimeSpan.FromSeconds(30));
-            var methods = await engine.GetMethodsAsync(target, refresh);
+            var methods = await engine.GetMethodsAsync(TargetFor(spec, TimeSpan.FromSeconds(30), descriptorsOnly: true), refresh);
 
             var keep = _grpc;
             GrpcMethods.Clear();
@@ -260,7 +318,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
             if (resolver.Missing.Count > 0)
                 Conversation.Add(new ConversationEntry(ConversationEntryKind.Info, DateTimeOffset.Now,
                     string.Format(Texts.Tab_NoValue, string.Join(", ", resolver.Missing.Order(StringComparer.Ordinal)))));
-            var target = new GrpcTarget(RequestRunner.GrpcAddress(spec.Url), AcceptInvalidCertificates, RequestRunner.GrpcMetadata(spec), Timeout);
+            var target = TargetFor(spec, Timeout, descriptorsOnly: false);
             address = target.Address.GetLeftPart(UriPartial.Authority);
             var first = method.Info.Kind == GrpcMethodKind.ServerStreaming ? spec.Body.Content ?? "{}" : "";
             Conversation.Add(new ConversationEntry(ConversationEntryKind.Info, DateTimeOffset.Now,

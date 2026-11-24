@@ -14,7 +14,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 07 | [Embellecer la aplicación](07-embellecer-ui.md) | ✅ Implementado | — |
 | 08 | [Autenticación por App](08-auth-por-app.md) | ✅ Implementado (etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025, etapa 4 en el Ticket-029) | — |
 | 09 | [Cliente web](09-cliente-web.md) | ✅ Implementado | — |
-| 10 | [gRPC](10-grpc.md) | 🚧 Aprobado; etapas 1 y 3 implementadas (Ticket-035) | Probar cada etapa en la app de escritorio contra un servidor gRPC real |
+| 10 | [gRPC](10-grpc.md) | ✅ Implementado (Ticket-035), sin probar en la app de escritorio | Probar en la app de escritorio contra un servidor gRPC real; al publicar, servidor primero y después `Clients:MinVersion` |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
@@ -23,6 +23,8 @@ Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 **v0.2.0** suma lo hecho desde la v0.1.0: consola por request, autocompletar de variables, formato del body, menú contextual en la respuesta, interfaz en inglés y español, autenticación por App con variables de sesión y login automático (plan 08). Como un cliente anterior no entiende la auth `Inherit`, hay que desplegar primero el servidor y después subir `Clients:MinVersion` a `0.2.0`.
 
 **v0.3.0** suma lo hecho desde la v0.2.0: cliente web (plan 09), renovación automática del token con el login de la App (Ticket-025), logins automáticos compartidos entre Apps (Ticket-029), tooltip con el valor de las variables (Ticket-030) y mejoras en la ventana de environments: buscador, columna de la clave más ancha, foco en la variable nueva y el environment activo seleccionado al abrir (Tickets 026, 027, 028 y 031). La migración `SharedLogins` pasa el login de cada App a un login compartido y un cliente anterior no conoce ese tipo de cambio: hay que desplegar primero el servidor y después subir `Clients:MinVersion` a `0.3.0`.
+
+**Próxima versión** (sin publicar): pantalla de servidores guardados (Ticket-033), duplicar (Ticket-034), gRPC (plan 10, Ticket-035) y WebSocket (Ticket-036). La migración `ProtoSets` y los tipos nuevos (`grpc` y `webSocket` en el spec, el cambio `ProtoSet`) no los entiende un cliente anterior: hay que desplegar primero el servidor y después subir `Clients:MinVersion` a la versión nueva.
 
 ## Decisiones pendientes
 

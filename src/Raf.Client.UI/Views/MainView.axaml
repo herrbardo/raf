@@ -86,6 +86,12 @@
               <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.LoginsW_Button}" />
             </StackPanel>
           </Button>
+          <Button Classes="ghost" ToolTip.Tip="{x:Static l:Texts.ProtoW_Title}" Command="{Binding EditProtoSetsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ctl:Icon Data="{StaticResource IconLayers}" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.ProtoW_Button}" />
+            </StackPanel>
+          </Button>
         </StackPanel>
       </DockPanel>
     </Border>

@@ -106,6 +106,15 @@ public sealed record CreateLoginRequest(string Name, AppLogin Config, Guid? Id =
 
 public sealed record UpdateLoginRequest(string Name, AppLogin Config, long Version);
 
+// ---------- Conjuntos de .proto (Plan 10, etapa 2) ----------
+
+/// <summary>Archivos .proto del workspace; los requests gRPC lo eligen por su id.</summary>
+public sealed record ProtoSetDto(Guid Id, string Name, IReadOnlyList<ProtoFile> Files, long Version, long ChangeSeq);
+
+public sealed record CreateProtoSetRequest(string Name, IReadOnlyList<ProtoFile> Files, Guid? Id = null);
+
+public sealed record UpdateProtoSetRequest(string Name, IReadOnlyList<ProtoFile> Files, long Version);
+
 public sealed record FolderDto(
     Guid Id, Guid AppId, Guid? ParentFolderId, string Name, int Order, long Version, long ChangeSeq);
 
@@ -132,7 +141,7 @@ public sealed record UpdateSampleRequest(string Name, int Order, SampleOverrides
 
 // ---------- Sincronización ----------
 
-public enum ChangeKind { Workspace, Member, Environment, Variable, App, Folder, Request, Sample, Login }
+public enum ChangeKind { Workspace, Member, Environment, Variable, App, Folder, Request, Sample, Login, ProtoSet }
 
 /// <summary>Elemento borrado. En miembros, <see cref="Id"/> es el id del usuario.</summary>
 public sealed record DeletedItem(ChangeKind Kind, Guid Id, long ChangeSeq);
@@ -154,4 +163,5 @@ public sealed record ChangesResponse(
     IReadOnlyList<RequestDto> Requests,
     IReadOnlyList<SampleDto> Samples,
     IReadOnlyList<DeletedItem> Deleted,
-    IReadOnlyList<LoginDto>? Logins = null);
+    IReadOnlyList<LoginDto>? Logins = null,
+    IReadOnlyList<ProtoSetDto>? ProtoSets = null);

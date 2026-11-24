@@ -165,5 +165,9 @@ public class DuplicationTests
         public Task DeleteSampleAsync(Guid ws, Guid id, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<LoginDto> UpdateLoginAsync(Guid ws, Guid id, UpdateLoginRequest req, CancellationToken ct = default) => throw new NotSupportedException();
         public Task DeleteLoginAsync(Guid ws, Guid id, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<ProtoSetDto>> GetProtoSetsAsync(Guid ws, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<ProtoSetDto> CreateProtoSetAsync(Guid ws, CreateProtoSetRequest req, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<ProtoSetDto> UpdateProtoSetAsync(Guid ws, Guid id, UpdateProtoSetRequest req, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task DeleteProtoSetAsync(Guid ws, Guid id, CancellationToken ct = default) => throw new NotSupportedException();
     }
 }

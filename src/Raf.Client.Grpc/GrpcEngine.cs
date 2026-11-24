@@ -23,8 +23,25 @@ public sealed partial class GrpcEngine(Func<bool, HttpMessageHandler>? handlers 
     public async Task<IReadOnlyList<GrpcMethodInfo>> GetMethodsAsync(GrpcTarget target, bool refresh = false, CancellationToken ct = default) =>
         (await DescriptorsAsync(target, refresh, ct)).Methods;
 
+    public GrpcProtoCheck CheckProtos(IReadOnlyList<Raf.Domain.Requests.ProtoFile> files)
+    {
+        var (set, errors) = ProtoCompiler.Compile(files);
+        return new GrpcProtoCheck(errors, set?.Methods ?? []);
+    }
+
     private async Task<DescriptorSet> DescriptorsAsync(GrpcTarget target, bool refresh, CancellationToken ct)
     {
+        // Con un conjunto de .proto no hace falta el servidor: se compila una vez por versión del conjunto.
+        if (target.Protos is { } protos)
+        {
+            var protoKey = $"proto:{protos.Id}:{protos.Version}";
+            if (_descriptors.TryGetValue(protoKey, out var compiled)) return compiled;
+            var (set, errors) = ProtoCompiler.Compile(protos.Files);
+            if (set is null) throw new GrpcEngineException(string.Format(CoreTexts.Grpc_ProtoErrors, string.Join(Environment.NewLine, errors)));
+            _descriptors[protoKey] = set;
+            return set;
+        }
+
         var key = target.Address.GetLeftPart(UriPartial.Authority);
         if (!refresh && _descriptors.TryGetValue(key, out var cached)) return cached;
 

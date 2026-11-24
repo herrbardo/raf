@@ -20,6 +20,7 @@ public partial class MainView : UserControl
             vm.ShowAdmin = a => windows.ShowDialogAsync(new AdminDialog { DataContext = a });
             vm.ShowAppAuth = app => windows.ShowDialogAsync(new AppAuthDialog { DataContext = app });
             vm.ShowLogins = l => windows.ShowDialogAsync(new LoginsDialog { DataContext = l });
+            vm.ShowProtoSets = p => windows.ShowDialogAsync(new ProtoSetsDialog { DataContext = p });
             vm.CopyToClipboard = text => TopLevel.GetTopLevel(this)?.Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
         };
     }

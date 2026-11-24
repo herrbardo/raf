@@ -1,0 +1,110 @@
+<svc:DialogView xmlns:svc="using:Raf.Client.Services" xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Raf.Client.Core.Localization"
+        xmlns:vm="using:Raf.Client.ViewModels"
+        xmlns:ctl="using:Raf.Client.Controls"
+        x:Class="Raf.Client.Views.ProtoSetsDialog"
+        x:DataType="vm:ProtoSetsViewModel"
+        Title="{x:Static l:Texts.ProtoW_Title}"
+        DialogWidth="1040" DialogHeight="680" DialogMinWidth="780" DialogMinHeight="460">
+  <svc:DialogView.KeyBindings>
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+  </svc:DialogView.KeyBindings>
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="accent" Content="{x:Static l:Texts.V_Save}" Command="{Binding SaveCommand}" IsVisible="{Binding CanEdit}" IsEnabled="{Binding !IsBusy}"
+                  ToolTip.Tip="{x:Static l:Texts.V_SaveTip}" />
+          <Button Content="{x:Static l:Texts.V_Close}" Click="OnCloseClick" />
+        </StackPanel>
+        <TextBlock Classes="error" VerticalAlignment="Center" Margin="0,0,12,0" TextWrapping="Wrap" Text="{Binding Error}"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <Border Classes="chip success" HorizontalAlignment="Left" Margin="0,0,12,0"
+                IsVisible="{Binding SavedMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ctl:Icon Width="12" Height="12" Data="{StaticResource IconCheck}" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding SavedMessage}" />
+          </StackPanel>
+        </Border>
+      </DockPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="200,220,*">
+      <!-- Conjuntos -->
+      <Border Classes="sidebar" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="10,14,8,10">
+          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="{x:Static l:Texts.ProtoW_Sets}" />
+          <WrapPanel DockPanel.Dock="Bottom" ItemSpacing="2" LineSpacing="2" Margin="0,8,0,0" IsVisible="{Binding CanEdit}">
+            <Button Classes="link" Command="{Binding AddCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <ctl:Icon Width="12" Height="12" Data="{StaticResource IconPlus}" />
+                <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.EnvW_New}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="link" Content="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" />
+            <Button Classes="link" Content="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" />
+          </WrapPanel>
+          <Grid>
+            <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.ProtoW_Empty}" IsVisible="{Binding !Items.Count}" />
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProtoSetItemViewModel">
+                  <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <!-- Archivos del conjunto elegido -->
+      <Border Grid.Column="1" BorderBrush="{DynamicResource RafBorderBrush}" BorderThickness="0,0,1,0" IsVisible="{Binding HasSelection}">
+        <DockPanel Margin="10,14,8,10">
+          <TextBlock DockPanel.Dock="Top" Classes="label" Margin="6,0,0,8" Text="{x:Static l:Texts.ProtoW_Files}" />
+          <WrapPanel DockPanel.Dock="Bottom" ItemSpacing="2" LineSpacing="2" Margin="0,8,0,0" IsVisible="{Binding CanEdit}">
+            <Button Classes="link" Content="{x:Static l:Texts.ProtoW_AddFiles}" Command="{Binding AddFilesCommand}" />
+            <Button Classes="link" Content="{x:Static l:Texts.ProtoW_AddFolder}" Command="{Binding AddFolderCommand}"
+                    ToolTip.Tip="{x:Static l:Texts.ProtoW_AddFolderTip}" />
+            <Button Classes="link" Content="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveFileCommand}"
+                    IsEnabled="{Binding Selected.HasFile, FallbackValue=False}" />
+          </WrapPanel>
+          <Grid>
+            <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.ProtoW_NoFiles}"
+                       IsVisible="{Binding !Selected.Files.Count, FallbackValue=False}" />
+            <ListBox ItemsSource="{Binding Selected.Files}" SelectedItem="{Binding Selected.SelectedFile}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProtoFileViewModel">
+                  <TextBlock Classes="mono" Text="{Binding Path}" TextTrimming="LeadingCharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <!-- El archivo elegido y cómo compila el conjunto -->
+      <DockPanel Grid.Column="2" Margin="16,14,16,10" IsVisible="{Binding HasSelection}">
+        <Border DockPanel.Dock="Bottom" Margin="0,10,0,0" Padding="10,8" Classes="callout"
+                IsVisible="{Binding Selected.CheckText, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}">
+          <ScrollViewer MaxHeight="140">
+            <TextBlock TextWrapping="Wrap" Classes.error="{Binding Selected.CheckFailed, FallbackValue=False}"
+                       Classes.mono="{Binding Selected.CheckFailed, FallbackValue=False}" Text="{Binding Selected.CheckText}" />
+          </ScrollViewer>
+        </Border>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+          <Button Content="{x:Static l:Texts.ProtoW_Compile}" Command="{Binding CompileCommand}" IsVisible="{Binding CanCompile}"
+                  ToolTip.Tip="{x:Static l:Texts.ProtoW_CompileTip}" />
+          <TextBlock Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap" Text="{x:Static l:Texts.ProtoW_CompileDesktopOnly}"
+                     IsVisible="{Binding !CanCompile}" />
+        </StackPanel>
+        <Grid IsVisible="{Binding Selected.HasFile, FallbackValue=False}" RowDefinitions="Auto,Auto,*">
+          <TextBlock Classes="caption" Margin="0,0,0,4" TextWrapping="Wrap" Text="{x:Static l:Texts.ProtoW_PathHint}" />
+          <TextBox Grid.Row="1" Classes="mono" Margin="0,0,0,8" Text="{Binding Selected.SelectedFile.Path}" IsReadOnly="{Binding IsReadOnly}" />
+          <ctl:TextField Grid.Row="2" BoundText="{Binding Selected.SelectedFile.Content}" Multiline="True" HighlightVariables="False"
+                         IsReadOnly="{Binding IsReadOnly}" />
+        </Grid>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</svc:DialogView>

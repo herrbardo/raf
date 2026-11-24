@@ -191,6 +191,9 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     public async Task<IReadOnlyList<LoginDto>> GetLoginsAsync(Guid ws, CancellationToken ct = default) =>
         (await ListAsync<LoginDto>(ws, ChangeKind.Login, ct)).OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
 
+    public async Task<IReadOnlyList<ProtoSetDto>> GetProtoSetsAsync(Guid ws, CancellationToken ct = default) =>
+        (await ListAsync<ProtoSetDto>(ws, ChangeKind.ProtoSet, ct)).OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+
     public async Task<IReadOnlyList<FolderDto>> GetFoldersAsync(Guid ws, CancellationToken ct = default) =>
         (await ListAsync<FolderDto>(ws, ChangeKind.Folder, ct)).OrderBy(x => x.Order).ThenBy(x => x.Name).ToList();
 
@@ -437,6 +440,46 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
         await DeleteAsync(ws, ChangeKind.Login, id, ct);
     }
 
+    // ---------- Conjuntos de .proto (Plan 10, etapa 2) ----------
+
+    private static void ValidateProtoSet(string? name, IReadOnlyList<Raf.Domain.Requests.ProtoFile>? files)
+    {
+        ValidateName(name);
+        if (Raf.Domain.Requests.ProtoFile.Problem(files) is { } problem) throw new ApiException(HttpStatusCode.BadRequest, problem);
+    }
+
+    public Task<ProtoSetDto> CreateProtoSetAsync(Guid ws, CreateProtoSetRequest req, CancellationToken ct = default)
+    {
+        ValidateProtoSet(req.Name, req.Files);
+        return CreateAsync(ws, ChangeKind.ProtoSet, new ProtoSetDto(req.Id ?? Guid.CreateVersion7(), req.Name.Trim(), req.Files.ToList(), 0, 0), ct);
+    }
+
+    public Task<ProtoSetDto> UpdateProtoSetAsync(Guid ws, Guid id, UpdateProtoSetRequest req, CancellationToken ct = default)
+    {
+        ValidateProtoSet(req.Name, req.Files);
+        return UpdateAsync<ProtoSetDto>(ws, ChangeKind.ProtoSet, id, req.Version, x => x with { Name = req.Name.Trim(), Files = req.Files.ToList() }, ct);
+    }
+
+    public async Task DeleteProtoSetAsync(Guid ws, Guid id, CancellationToken ct = default)
+    {
+        var users = (await GetRequestsAsync(ws, ct))
+            .Where(r => r.Spec.Grpc is { Source: Raf.Domain.Requests.GrpcDescriptorSource.ProtoSet } grpc && grpc.ProtoSetId == id)
+            .Select(r => r.Name).ToList();
+        if (users.Count > 0)
+            throw new ApiException(HttpStatusCode.Conflict, string.Format(CoreTexts.Store_ProtoSetInUse, string.Join(", ", users)));
+        await DeleteAsync(ws, ChangeKind.ProtoSet, id, ct);
+    }
+
+    /// <summary>Un request gRPC que usa un conjunto de .proto tiene que apuntar a uno que exista.</summary>
+    private Task EnsureProtoSetExistsAsync(Guid ws, Raf.Domain.Requests.RequestSpec? spec, CancellationToken ct) =>
+        spec?.Grpc is not { Source: Raf.Domain.Requests.GrpcDescriptorSource.ProtoSet, ProtoSetId: { } id }
+            ? Task.CompletedTask
+            : RunAsync(async db =>
+            {
+                if (!await db.Items.AnyAsync(x => x.WorkspaceId == ws && x.Kind == ChangeKind.ProtoSet && x.Id == id && !x.IsDeleted, ct))
+                    throw new ApiException(HttpStatusCode.BadRequest, CoreTexts.Store_ProtoSetGone);
+            }, ct);
+
     public Task DeleteAppAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.App, id, ct);
 
     public Task<FolderDto> CreateFolderAsync(Guid ws, CreateFolderRequest req, CancellationToken ct = default)
@@ -455,18 +498,20 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
 
     public Task DeleteFolderAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.Folder, id, ct);
 
-    public Task<RequestDto> CreateRequestAsync(Guid ws, CreateRequestRequest req, CancellationToken ct = default)
+    public async Task<RequestDto> CreateRequestAsync(Guid ws, CreateRequestRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        return CreateAsync(ws, ChangeKind.Request, new RequestDto(
+        await EnsureProtoSetExistsAsync(ws, req.Spec, ct);
+        return await CreateAsync(ws, ChangeKind.Request, new RequestDto(
             req.Id ?? Guid.CreateVersion7(), req.AppId, req.FolderId, req.Name.Trim(), req.Order,
             req.Spec ?? Raf.Domain.Requests.RequestSpec.Empty, 0, 0), ct);
     }
 
-    public Task<RequestDto> UpdateRequestAsync(Guid ws, Guid id, UpdateRequestRequest req, CancellationToken ct = default)
+    public async Task<RequestDto> UpdateRequestAsync(Guid ws, Guid id, UpdateRequestRequest req, CancellationToken ct = default)
     {
         ValidateName(req.Name);
-        return UpdateAsync<RequestDto>(ws, ChangeKind.Request, id, req.Version,
+        await EnsureProtoSetExistsAsync(ws, req.Spec, ct);
+        return await UpdateAsync<RequestDto>(ws, ChangeKind.Request, id, req.Version,
             x => x with { Name = req.Name.Trim(), FolderId = req.FolderId, Order = req.Order, Spec = req.Spec }, ct);
     }
 
@@ -799,6 +844,7 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
             Upsert(ChangeKind.Request, page.Requests);
             Upsert(ChangeKind.Sample, page.Samples);
             Upsert(ChangeKind.Login, page.Logins ?? []);
+            Upsert(ChangeKind.ProtoSet, page.ProtoSets ?? []);
 
             foreach (var gone in page.Deleted)
             {

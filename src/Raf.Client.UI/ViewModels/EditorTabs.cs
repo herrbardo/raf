@@ -149,6 +149,9 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
             Texts.Tab_RunAnyway);
     }
 
+    /// <summary>El conjunto de .proto que usa el request (solo gRPC), para el envío común.</summary>
+    protected virtual Raf.Client.Core.Grpc.GrpcProtoSource? RunProtos => null;
+
     /// <summary>El timeout de este request: el propio, o el de las preferencias.</summary>
     protected TimeSpan Timeout => TimeSpan.FromSeconds(ParsedTimeout ?? Settings.Current.DefaultTimeoutSeconds);
 
@@ -163,7 +166,8 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         if (!await ConfirmUnreadableSecretsAsync(request, sample)) return;
 
         var input = new RunInput(
-            request, sample, variables, new RunOptions(Timeout, AcceptInvalidCertificates), appAuth, Owner.AppLoginOf(AppId));
+            request, sample, variables, new RunOptions(Timeout, AcceptInvalidCertificates), appAuth, Owner.AppLoginOf(AppId),
+            RunProtos);
 
         using var cts = new CancellationTokenSource();
         _run = cts;
@@ -350,6 +354,23 @@ public sealed partial class SampleTabViewModel : EditorTabViewModel
 
     private RequestSpec Parent => Node.Parent!.Request.Spec;
 
+    /// <summary>
+    /// Sample de un request gRPC (Plan 10, etapa 4, G1): sobreescribe el mensaje y la metadata (y, si hace falta, la
+    /// dirección y la auth); el servicio, el método y el conjunto de .proto son los del request.
+    /// </summary>
+    public bool IsGrpc => Parent.IsGrpc;
+
+    public bool IsHttp => !IsGrpc;
+
+    public string HeadersHeader => IsGrpc ? "Metadata" : "Headers";
+
+    public string BodyHeader => IsGrpc ? Texts.GrpcV_Message : "Body";
+
+    public string GrpcMethodText => Parent.Grpc is { IsComplete: true } g ? $"{g.Service} / {g.Method}" : Texts.Grpc_NoMethod;
+
+    protected override Raf.Client.Core.Grpc.GrpcProtoSource? RunProtos =>
+        Parent.Grpc is { Source: GrpcDescriptorSource.ProtoSet } grpc ? Owner.ProtoSourceOf(grpc.ProtoSetId) : null;
+
     public bool MethodInherited => !MethodOverridden;
     public bool UrlInherited => !UrlOverridden;
     public bool BodyInherited => !BodyOverridden;
@@ -402,6 +423,7 @@ public sealed partial class SampleTabViewModel : EditorTabViewModel
 
     private void NotifyInherited()
     {
+        OnPropertyChanged(nameof(GrpcMethodText));
         OnPropertyChanged(nameof(InheritedMethod));
         OnPropertyChanged(nameof(InheritedUrl));
         OnPropertyChanged(nameof(InheritedBody));

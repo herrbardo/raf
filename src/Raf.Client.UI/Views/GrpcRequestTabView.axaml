@@ -46,9 +46,19 @@
     </Grid>
 
     <!-- Método: se elige entre los que informa el server reflection -->
-    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,8,14,0">
-      <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.GrpcV_Method}" />
-      <Panel Grid.Column="1">
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8" Margin="14,8,14,0">
+      <!-- De dónde salen los servicios: el server reflection o un conjunto de .proto (etapa 2) -->
+      <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.GrpcV_Source}" />
+      <ComboBox Grid.Column="1" Width="260" ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}"
+                IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.GrpcV_SourceTip}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:GrpcSourceChoice">
+            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBlock Grid.Column="2" Classes="label" VerticalAlignment="Center" Margin="8,0,0,0" Text="{x:Static l:Texts.GrpcV_Method}" />
+      <Panel Grid.Column="3">
         <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GrpcMethods}" SelectedItem="{Binding SelectedMethod}"
                   IsEnabled="{Binding CanEdit}" PlaceholderText="{Binding MethodText}" IsVisible="{Binding !!GrpcMethods.Count}">
           <ComboBox.ItemTemplate>
@@ -62,7 +72,7 @@
         </ComboBox>
         <TextBlock Classes="mono" VerticalAlignment="Center" Text="{Binding MethodText}" IsVisible="{Binding !GrpcMethods.Count}" />
       </Panel>
-      <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{x:Static l:Texts.GrpcV_Reload}" Command="{Binding ReloadMethodsCommand}"
+      <Button Grid.Column="4" Classes="icon" ToolTip.Tip="{x:Static l:Texts.GrpcV_Reload}" Command="{Binding ReloadMethodsCommand}"
               IsEnabled="{Binding !IsLoadingMethods}" IsVisible="{Binding IsAvailable}">
         <ctl:Icon Data="{StaticResource IconRefresh}" />
       </Button>

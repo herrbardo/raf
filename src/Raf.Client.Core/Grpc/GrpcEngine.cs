@@ -13,9 +13,22 @@ public sealed record GrpcMethodInfo(
     public string FullName => $"{Service}/{Method}";
 }
 
-/// <summary>Dónde y cómo conectarse. La metadata ya tiene las variables resueltas y la autenticación aplicada.</summary>
+/// <summary>
+/// Dónde y cómo conectarse. La metadata ya tiene las variables resueltas y la autenticación aplicada. Con
+/// <see cref="Protos"/>, los servicios salen de ese conjunto de .proto en lugar del server reflection.
+/// </summary>
 public sealed record GrpcTarget(
-    Uri Address, bool AcceptInvalidCertificates, IReadOnlyList<KeyValuePair<string, string>> Metadata, TimeSpan Timeout);
+    Uri Address, bool AcceptInvalidCertificates, IReadOnlyList<KeyValuePair<string, string>> Metadata, TimeSpan Timeout,
+    GrpcProtoSource? Protos = null);
+
+/// <summary>Un conjunto de .proto con su versión: la versión sirve para no recompilar si no cambió.</summary>
+public sealed record GrpcProtoSource(Guid Id, long Version, IReadOnlyList<Raf.Domain.Requests.ProtoFile> Files);
+
+/// <summary>Cómo compila un conjunto de .proto: los errores (con archivo y línea) o los métodos que define.</summary>
+public sealed record GrpcProtoCheck(IReadOnlyList<string> Errors, IReadOnlyList<GrpcMethodInfo> Methods)
+{
+    public bool IsOk => Errors.Count == 0;
+}
 
 /// <summary>Una llamada unaria: el mensaje va y vuelve en JSON.</summary>
 public sealed record GrpcCall(GrpcTarget Target, string Service, string Method, string MessageJson);
@@ -47,8 +60,14 @@ public sealed class GrpcEngineException(string message, Exception? inner = null)
 /// </summary>
 public interface IGrpcEngine
 {
-    /// <summary>Los métodos que ofrece el servidor, por reflection. Se recuerdan por dirección; <paramref name="refresh"/> los vuelve a pedir.</summary>
+    /// <summary>
+    /// Los métodos que ofrece el servidor, por reflection, o los del conjunto de .proto del target. Se recuerdan por
+    /// dirección (o por conjunto y versión); <paramref name="refresh"/> los vuelve a pedir.
+    /// </summary>
     Task<IReadOnlyList<GrpcMethodInfo>> GetMethodsAsync(GrpcTarget target, bool refresh = false, CancellationToken ct = default);
+
+    /// <summary>Compila un conjunto de .proto sin conectarse a nada, para mostrar si está bien al editarlo.</summary>
+    GrpcProtoCheck CheckProtos(IReadOnlyList<Raf.Domain.Requests.ProtoFile> files);
 
     /// <summary>
     /// Hace una llamada unaria. Un estado distinto de OK no es una excepción: vuelve en el resultado.

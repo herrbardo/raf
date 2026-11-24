@@ -154,6 +154,13 @@ public static class HttpTestExtensions
         return (await res.Content.ReadFromJsonAsync<T>(RafApp.Json))!;
     }
 
+    public static async Task<T> PutOkAsync<T>(this HttpClient c, string url, object body)
+    {
+        var res = await c.PutAsJsonAsync(url, body, RafApp.Json);
+        await res.EnsureStatusAsync(HttpStatusCode.OK);
+        return (await res.Content.ReadFromJsonAsync<T>(RafApp.Json))!;
+    }
+
     public static async Task<T> GetOkAsync<T>(this HttpClient c, string url)
     {
         var res = await c.GetAsync(url);

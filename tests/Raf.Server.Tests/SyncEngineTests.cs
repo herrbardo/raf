@@ -232,6 +232,43 @@ public class SyncEngineTests(RafApp app)
     }
 
     [Fact]
+    public async Task El_conjunto_de_proto_llega_al_otro_cliente_antes_que_el_request_que_lo_usa()
+    {
+        var (a, b, ws) = await TwoDevicesAsync();
+        var app = await a.Store.CreateAppAsync(ws, new CreateAppRequest("Api"));
+        await a.SyncAsync();
+        Raf.Domain.Requests.ProtoFile[] files = [new("acme/users.proto", "syntax = \"proto3\"; package acme;")];
+
+        // Sin conexión: el conjunto y el request que lo usa se crean juntos; al volver, el conjunto va primero.
+        a.GoOffline();
+        var set = await a.Store.CreateProtoSetAsync(ws, new CreateProtoSetRequest("Contratos", files));
+        var spec = Raf.Domain.Requests.RequestSpec.EmptyGrpc with
+        {
+            Grpc = new Raf.Domain.Requests.GrpcSpec("acme.Users", "Get", Raf.Domain.Requests.GrpcDescriptorSource.ProtoSet, set.Id),
+        };
+        await a.Store.CreateRequestAsync(ws, new CreateRequestRequest(app.Id, "Get", spec));
+        a.GoOnline();
+        await a.SyncAsync();
+        await b.SyncAsync();
+        Assert.Equal(files, Assert.Single(await b.Store.GetProtoSetsAsync(ws)).Files);
+        Assert.Equal(set.Id, Assert.Single(await b.Store.GetRequestsAsync(ws)).Spec.Grpc!.ProtoSetId);
+
+        // Una edición llega al otro cliente.
+        var seen = Assert.Single(await b.Store.GetProtoSetsAsync(ws));
+        await b.Store.UpdateProtoSetAsync(ws, set.Id, new UpdateProtoSetRequest("Contratos v2", [.. files, new("acme/extra.proto", "")], seen.Version));
+        await b.SyncAsync();
+        await a.SyncAsync();
+        Assert.Equal(("Contratos v2", 2), Assert.Single(await a.Store.GetProtoSetsAsync(ws)) is var s ? (s.Name, s.Files.Count) : default);
+
+        // Las mismas reglas que el servidor: archivos inválidos, conjunto inexistente y borrar uno en uso.
+        await Assert.ThrowsAsync<ApiException>(() => a.Store.CreateProtoSetAsync(ws, new CreateProtoSetRequest("Mal", [new("../x.proto", "")])));
+        await Assert.ThrowsAsync<ApiException>(() => a.Store.CreateRequestAsync(ws, new CreateRequestRequest(app.Id, "Mal",
+            spec with { Grpc = spec.Grpc! with { ProtoSetId = Guid.NewGuid() } })));
+        var inUse = await Assert.ThrowsAsync<ApiException>(() => a.Store.DeleteProtoSetAsync(ws, set.Id));
+        Assert.Contains("Get", inUse.Message);
+    }
+
+    [Fact]
     public async Task Sin_conexion_se_trabaja_y_al_volver_se_envia_padre_antes_que_hijo()
     {
         var (a, b, ws) = await TwoDevicesAsync();
