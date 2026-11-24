@@ -48,18 +48,9 @@ public sealed partial class GrpcEngine(Func<bool, HttpMessageHandler>? handlers 
 
     public async Task<GrpcCallResult> CallUnaryAsync(GrpcCall call, CancellationToken ct = default)
     {
-        var set = await DescriptorsAsync(call.Target, refresh: false, ct);
-        var method = set.FindMethod(call.Service, call.Method);
-        if (method is null)
-        {
-            // Puede que el servidor haya cambiado desde que se pidieron los descriptores.
-            set = await DescriptorsAsync(call.Target, refresh: true, ct);
-            method = set.FindMethod(call.Service, call.Method)
-                ?? throw new GrpcEngineException(string.Format(CoreTexts.Grpc_UnknownMethod, $"{call.Service}/{call.Method}"));
-        }
-
+        var (set, method) = await FindMethodAsync(call, ct);
         if (method.IsClientStreaming || method.IsServerStreaming)
-            throw new GrpcEngineException(string.Format(CoreTexts.Grpc_StreamingNotYet, $"{call.Service}/{call.Method}"));
+            throw new GrpcEngineException(string.Format(CoreTexts.Grpc_NotUnary, $"{call.Service}/{call.Method}"));
 
         var json = new ProtoJson(set.FindMessage);
         var request = json.Encode(call.MessageJson, method.InputType);
@@ -93,10 +84,49 @@ public sealed partial class GrpcEngine(Func<bool, HttpMessageHandler>? handlers 
         }
     }
 
-    private static GrpcCallResult Result(Status status, Metadata headers, Metadata trailers, string? message) =>
+    private async Task<(DescriptorSet Set, Google.Protobuf.Reflection.MethodDescriptor Method)> FindMethodAsync(GrpcCall call, CancellationToken ct)
+    {
+        var set = await DescriptorsAsync(call.Target, refresh: false, ct);
+        if (set.FindMethod(call.Service, call.Method) is { } method) return (set, method);
+
+        // Puede que el servidor haya cambiado desde que se pidieron los descriptores.
+        set = await DescriptorsAsync(call.Target, refresh: true, ct);
+        return (set, set.FindMethod(call.Service, call.Method)
+            ?? throw new GrpcEngineException(string.Format(CoreTexts.Grpc_UnknownMethod, $"{call.Service}/{call.Method}")));
+    }
+
+    public async Task<IGrpcStream> StartStreamAsync(GrpcCall call, CancellationToken ct = default)
+    {
+        var (set, method) = await FindMethodAsync(call, ct);
+        if (!method.IsClientStreaming && !method.IsServerStreaming)
+            throw new GrpcEngineException(string.Format(CoreTexts.Grpc_NotStreaming, $"{call.Service}/{call.Method}"));
+
+        var json = new ProtoJson(set.FindMessage);
+        var invoker = Channel(call.Target).CreateCallInvoker();
+        var life = new CancellationTokenSource();
+
+        // G4 del plan: el timeout es deadline solo en server streaming; con envío del cliente la llamada dura lo que se quiera.
+        var options = Options(call.Target, life.Token, deadline: !method.IsClientStreaming);
+        if (!method.IsClientStreaming)
+        {
+            var request = json.Encode(call.MessageJson, method.InputType);
+            var definition = new Method<byte[], byte[]>(MethodType.ServerStreaming, call.Service, call.Method, Bytes, Bytes);
+            return new GrpcStream(GrpcMethodKind.ServerStreaming, json, method, life,
+                invoker.AsyncServerStreamingCall(definition, null, options, request), request.Length);
+        }
+        if (!method.IsServerStreaming)
+        {
+            var definition = new Method<byte[], byte[]>(MethodType.ClientStreaming, call.Service, call.Method, Bytes, Bytes);
+            return new GrpcStream(GrpcMethodKind.ClientStreaming, json, method, life, invoker.AsyncClientStreamingCall(definition, null, options));
+        }
+        var duplex = new Method<byte[], byte[]>(MethodType.DuplexStreaming, call.Service, call.Method, Bytes, Bytes);
+        return new GrpcStream(GrpcMethodKind.DuplexStreaming, json, method, life, invoker.AsyncDuplexStreamingCall(duplex, null, options));
+    }
+
+    internal static GrpcCallResult Result(Status status, Metadata headers, Metadata trailers, string? message) =>
         new((int)status.StatusCode, StatusName(status.StatusCode), Detail(status), Pairs(headers), Pairs(trailers), message);
 
-    private static string? Detail(Status status) =>
+    internal static string? Detail(Status status) =>
         status.StatusCode == StatusCode.OK ? null
         : status.DebugException is { } e ? $"{status.Detail} ({e.Message})"
         : string.IsNullOrEmpty(status.Detail) ? null : status.Detail;

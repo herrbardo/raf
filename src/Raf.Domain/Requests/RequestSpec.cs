@@ -73,7 +73,7 @@ public sealed record RequestSpec(
 /// Una conexión WebSocket guardada: los mensajes preparados para mandar con un clic y los subprotocolos que se ofrecen
 /// en el handshake. Lo que se manda y recibe en cada sesión no se guarda.
 /// </summary>
-public sealed record WebSocketSpec(IReadOnlyList<WebSocketMessage> Messages, IReadOnlyList<string>? Subprotocols = null)
+public sealed record WebSocketSpec(IReadOnlyList<PreparedMessage> Messages, IReadOnlyList<string>? Subprotocols = null)
 {
     /// <summary>Lo que va en <see cref="RequestSpec.Method"/>: el árbol y el historial lo muestran.</summary>
     public const string MethodLabel = "WS";
@@ -84,21 +84,26 @@ public sealed record WebSocketSpec(IReadOnlyList<WebSocketMessage> Messages, IRe
     public static WebSocketSpec Empty { get; } = new([]);
 }
 
-/// <summary>Un mensaje de texto preparado; puede tener <c>{{variables}}</c>, que se resuelven al mandarlo.</summary>
-public sealed record WebSocketMessage(string Name, string Content);
+/// <summary>
+/// Un mensaje de texto preparado para mandar con un clic en una conexión abierta (un WebSocket o una llamada gRPC con
+/// streaming del cliente); puede tener <c>{{variables}}</c>, que se resuelven al mandarlo.
+/// </summary>
+public sealed record PreparedMessage(string Name, string Content);
 
 /// <summary>De dónde salen los servicios y mensajes: el server reflection del servidor o un conjunto de .proto.</summary>
 public enum GrpcDescriptorSource { Reflection, ProtoSet }
 
 /// <summary>
 /// Qué método gRPC se llama. <see cref="Service"/> es el nombre completo (<c>paquete.Servicio</c>);
-/// <see cref="ProtoSetId"/> se usa solo con <see cref="GrpcDescriptorSource.ProtoSet"/>.
+/// <see cref="ProtoSetId"/> se usa solo con <see cref="GrpcDescriptorSource.ProtoSet"/>. <see cref="Messages"/> son los
+/// mensajes preparados de un método con streaming del cliente (el de una unaria o server streaming va en el body).
 /// </summary>
 public sealed record GrpcSpec(
     string Service,
     string Method,
     GrpcDescriptorSource Source = GrpcDescriptorSource.Reflection,
-    Guid? ProtoSetId = null)
+    Guid? ProtoSetId = null,
+    IReadOnlyList<PreparedMessage>? Messages = null)
 {
     /// <summary>Lo que va en <see cref="RequestSpec.Method"/> de un request gRPC: el árbol y el historial lo muestran.</summary>
     public const string MethodLabel = "GRPC";

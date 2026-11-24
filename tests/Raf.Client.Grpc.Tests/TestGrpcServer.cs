@@ -69,5 +69,45 @@ public sealed class TestGrpcServer : IAsyncDisposable
 
         public override Task<StringValue> Whoami(Empty request, ServerCallContext context) =>
             Task.FromResult(new StringValue { Value = context.RequestHeaders.GetValue("authorization") ?? "" });
+
+        /// <summary>Un mensaje por cada valor pedido; con "infinito", sigue hasta que lo cancelen. Termina con un trailer.</summary>
+        public override async Task Watch(Inner request, IServerStreamWriter<Inner> responseStream, ServerCallContext context)
+        {
+            if (request.Name == "infinito")
+            {
+                for (var i = 0; !context.CancellationToken.IsCancellationRequested; i++)
+                {
+                    await responseStream.WriteAsync(new Inner { Name = $"vuelta {i}" });
+                    await Task.Delay(20, context.CancellationToken);
+                }
+                return;
+            }
+            foreach (var value in request.Values)
+                await responseStream.WriteAsync(new Inner { Name = $"{request.Name} {value}", Values = { value } });
+            context.ResponseTrailers.Add("x-total", request.Values.Count.ToString());
+        }
+
+        /// <summary>Junta los nombres y suma los valores de todo lo recibido.</summary>
+        public override async Task<Inner> Upload(IAsyncStreamReader<Inner> requestStream, ServerCallContext context)
+        {
+            var names = new List<string>();
+            var sum = 0;
+            await foreach (var item in requestStream.ReadAllAsync())
+            {
+                names.Add(item.Name);
+                sum += item.Values.Sum();
+            }
+            return new Inner { Name = string.Join(",", names), Values = { sum } };
+        }
+
+        /// <summary>Contesta cada mensaje; "chau" lo corta con un error.</summary>
+        public override async Task Chat(IAsyncStreamReader<Inner> requestStream, IServerStreamWriter<Inner> responseStream, ServerCallContext context)
+        {
+            await foreach (var item in requestStream.ReadAllAsync())
+            {
+                if (item.Name == "chau") throw new RpcException(new Status(StatusCode.Aborted, "me fui"));
+                await responseStream.WriteAsync(new Inner { Name = $"eco {item.Name}" });
+            }
+        }
     }
 }

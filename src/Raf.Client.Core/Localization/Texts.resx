@@ -436,7 +436,6 @@
   <data name="GrpcV_Message" xml:space="preserve"><value>Mensaje</value></data>
   <data name="GrpcV_Template" xml:space="preserve"><value>Usar plantilla</value></data>
   <data name="GrpcV_TemplateTip" xml:space="preserve"><value>Reemplaza el mensaje por uno con todos los campos del método elegido</value></data>
-  <data name="GrpcV_StreamingNotYet" xml:space="preserve"><value>Este método es de streaming: por ahora RAF solo envía llamadas unarias.</value></data>
   <data name="Main_NewWebSocket" xml:space="preserve"><value>Nuevo WebSocket</value></data>
   <data name="MainV_NewWebSocket" xml:space="preserve"><value>Nuevo WebSocket</value></data>
   <data name="WsV_Connecting" xml:space="preserve"><value>Conectando…</value></data>
@@ -468,4 +467,11 @@
   <data name="WsV_SubprotocolsHint" xml:space="preserve"><value>Separados por coma. Se ofrecen en el handshake y el servidor elige uno.</value></data>
   <data name="WsV_ConnectTimeout" xml:space="preserve"><value>Timeout de conexión (segundos)</value></data>
   <data name="WsV_SendTip" xml:space="preserve"><value>Mandar (Ctrl+Enter)</value></data>
+  <data name="GrpcV_Extracted" xml:space="preserve"><value>Se guardó la variable de sesión {0}.</value></data>
+  <data name="GrpcV_NotExtracted" xml:space="preserve"><value>No se guardó {0}: {1}</value></data>
+  <data name="GrpcV_SendingDone" xml:space="preserve"><value>Se terminó de enviar: el servidor todavía puede contestar.</value></data>
+  <data name="GrpcV_CompleteSending" xml:space="preserve"><value>Terminar de enviar</value></data>
+  <data name="GrpcV_CompleteSendingTip" xml:space="preserve"><value>Avisa al servidor que no se mandan más mensajes</value></data>
+  <data name="GrpcV_Messages" xml:space="preserve"><value>Mensajes</value></data>
+  <data name="GrpcV_CancelStreamTip" xml:space="preserve"><value>Corta la llamada (termina con CANCELLED)</value></data>
 </root>

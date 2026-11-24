@@ -21,6 +21,8 @@
     <DataTemplate DataType="vm:RequestTabViewModel"><views:RequestTabView /></DataTemplate>
     <DataTemplate DataType="vm:GrpcRequestTabViewModel"><views:GrpcRequestTabView /></DataTemplate>
     <DataTemplate DataType="vm:WebSocketTabViewModel"><views:WebSocketTabView /></DataTemplate>
+    <DataTemplate DataType="vm:PreparedMessagesViewModel"><views:PreparedMessagesView /></DataTemplate>
+    <DataTemplate DataType="vm:ConversationViewModel"><views:ConversationView /></DataTemplate>
     <DataTemplate DataType="vm:SampleTabViewModel"><views:SampleTabView /></DataTemplate>
     <DataTemplate DataType="vm:KeyValueListViewModel"><views:KeyValueListView /></DataTemplate>
     <DataTemplate DataType="vm:SampleKeyValueListViewModel"><views:SampleKeyValueListView /></DataTemplate>

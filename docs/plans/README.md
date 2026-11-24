@@ -14,7 +14,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 07 | [Embellecer la aplicación](07-embellecer-ui.md) | ✅ Implementado | — |
 | 08 | [Autenticación por App](08-auth-por-app.md) | ✅ Implementado (etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025, etapa 4 en el Ticket-029) | — |
 | 09 | [Cliente web](09-cliente-web.md) | ✅ Implementado | — |
-| 10 | [gRPC](10-grpc.md) | 🚧 Aprobado; etapa 1 implementada (Ticket-035) | Probar cada etapa en la app de escritorio contra un servidor gRPC real |
+| 10 | [gRPC](10-grpc.md) | 🚧 Aprobado; etapas 1 y 3 implementadas (Ticket-035) | Probar cada etapa en la app de escritorio contra un servidor gRPC real |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 

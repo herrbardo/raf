@@ -1,6 +1,6 @@
 # Plan 10 — gRPC
 
-Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones G1 a G4. **Etapa 1 implementada** (Ticket-035), sin probar todavía en la app de escritorio contra un servidor real; etapas 2 a 4 pendientes. Sale del Ticket-035 (feedback del 24/11/2026).
+Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones G1 a G4. **Etapas 1 y 3 implementadas** (Ticket-035), sin probar todavía en la app de escritorio contra un servidor real; etapas 2 y 4 pendientes. La 3 se hizo antes que la 2 para reusar la conversación del WebSocket (Ticket-036). Sale del Ticket-035 (feedback del 24/11/2026).
 
 ## Objetivo
 
@@ -29,7 +29,14 @@ Aprobadas con el plan, el mismo día:
 - **Proyecto `Raf.Client.Grpc`:** lo referencia solo la app de escritorio. `ProtoJson` traduce JSON ↔ protobuf y arma la plantilla, `DescriptorSet` junta los descriptores (completa los .proto de Google que falten), `ReflectionClient` habla reflection v1 o v1alpha y `GrpcEngine` hace la llamada con un canal por dirección.
 - **`Raf.Client.Core`:** `IGrpcEngine` y la rama gRPC de `RequestRunner`, que arma la metadata (headers y auth) y deja el resultado en el mismo `RunResult` que HTTP: el mensaje como body JSON, la metadata y los trailers como headers y el estado en `GrpcStatus`. Así la respuesta, las extracciones (con estado OK en lugar de 2xx), la consola y el historial funcionan sin cambios.
 - **Dirección:** `https://` o `grpcs://` con TLS, `http://` o `grpc://` sin TLS; sin esquema se pide uno, para no adivinar si hay TLS.
-- **UI:** "Nuevo request gRPC" en el menú de Apps y carpetas, y una pestaña propia con la dirección, el selector de métodos (se piden al abrir y con el botón de recargar), el mensaje con "Usar plantilla" (que se aplica sola si el mensaje está vacío), Metadata, Auth, Extraer y Opciones. Un método de streaming muestra un aviso y no se envía.
+- **UI:** "Nuevo request gRPC" en el menú de Apps y carpetas, y una pestaña propia con la dirección, el selector de métodos (se piden al abrir y con el botón de recargar), el mensaje con "Usar plantilla" (que se aplica sola si el mensaje está vacío), Metadata, Auth, Extraer y Opciones.
+
+## Cómo quedó la etapa 3
+
+- **Motor:** `IGrpcEngine.StartStreamAsync` abre server streaming, client streaming o bidireccional y devuelve un `IGrpcStream`: los mensajes llegan por `Received` (en JSON, o con el error si no se pudieron leer) y el final por `Completed`, con el estado, la metadata y los trailers. `SendAsync` manda un mensaje, `CompleteSendingAsync` termina el envío y `Cancel` corta (termina en CANCELLED). Según G4, el timeout es deadline solo en server streaming.
+- **Modelo:** `GrpcSpec.Messages` guarda los mensajes preparados de client streaming y bidireccional; el tipo `PreparedMessage` es el mismo del WebSocket (antes `WebSocketMessage`, con el mismo JSON). El servidor los valida igual: hasta 200, de hasta 1 MB.
+- **UI:** con un método de streaming, la respuesta se reemplaza por la conversación del WebSocket (`ConversationView`). En server streaming se manda el mensaje de la pestaña al abrir. En client streaming y bidireccional la pestaña "Mensajes" tiene los mensajes preparados (`PreparedMessagesView`, compartida con el WebSocket; uno nuevo nace con la plantilla del método) y la conversación suma el cuadro para escribir y "Terminar de enviar". "Enviar" y Ctrl+Enter abren la llamada o, abierta, mandan lo escrito; "Cancelar" la corta. El login automático corre antes de abrir.
+- **Al terminar:** el estado con su detalle, la metadata, los trailers y un resumen (enviados, recibidos y duración); las extracciones (G3) con el último mensaje recibido y la metadata y los trailers, si terminó en OK; y una línea en el historial.
 
 ## Cómo funciona
 
