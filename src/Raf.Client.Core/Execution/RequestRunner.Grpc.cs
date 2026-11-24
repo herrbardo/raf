@@ -62,6 +62,15 @@ public sealed partial class RequestRunner
         return metadata;
     }
 
+    /// <summary>
+    /// El conjunto de .proto que corresponde al request: null si usa server reflection. Si usa un conjunto y no llegó
+    /// (se borró, o todavía no se sincronizó), se explica en lugar de caer en el reflection.
+    /// </summary>
+    public static GrpcProtoSource? ProtosFor(GrpcSpec grpc, GrpcProtoSource? protos) =>
+        grpc.Source != GrpcDescriptorSource.ProtoSet ? null
+        : protos is { } p && p.Id == grpc.ProtoSetId ? p
+        : throw new GrpcEngineException(CoreTexts.Grpc_ProtoSetMissing);
+
     /// <summary>Una llamada gRPC unaria. Los errores de red, cancelación y timeout los atrapa <see cref="RunOnceAsync"/>.</summary>
     private async Task<RunResult> RunGrpcAsync(RunInput input, RequestSpec spec, RunTrace trace, Stopwatch stopwatch, CancellationToken ct)
     {
@@ -75,7 +84,8 @@ public sealed partial class RequestRunner
         var message = string.IsNullOrWhiteSpace(spec.Body.Content) ? "{}" : spec.Body.Content;
         trace.GrpcCall(address, grpc.Path, metadata, message);
 
-        var target = new GrpcTarget(address, input.Options.AcceptInvalidCertificates, metadata, input.Options.Timeout);
+        var target = new GrpcTarget(address, input.Options.AcceptInvalidCertificates, metadata, input.Options.Timeout,
+            ProtosFor(grpc, input.Protos));
         var result = await _grpc.CallUnaryAsync(new GrpcCall(target, grpc.Service, grpc.Method, message), ct);
         trace.GrpcStatus(result.StatusCode, result.StatusName, result.StatusDetail, result.Headers, result.Trailers);
         stopwatch.Stop();

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raf.Client.Core.Execution;
+using Raf.Client.Core.Grpc;
 using Raf.Client.Core.Localization;
 using Raf.Contracts;
 using Raf.Domain.Requests;
@@ -675,6 +676,45 @@ public sealed class RequestRunnerTests(EchoServer server) : IClassFixture<EchoSe
         Assert.Contains(CoreTexts.Login_Renew401, titles);
         Assert.Contains(CoreTexts.Login_NoExpiry, result.Events.Select(e => e.Detail));
         Assert.Equal(2, result.Events.Count(e => e.Kind == RunEventKind.Request && e.Title.EndsWith("/protected")));
+    }
+
+    [Fact]
+    public async Task Ante_UNAUTHENTICATED_de_gRPC_renueva_el_token_una_vez_y_reintenta()
+    {
+        var engine = new UnauthenticatedWithOldToken();
+        using var runner = new RequestRunner(grpc: engine);
+        var spec = RequestSpec.EmptyGrpc with { Url = "http://localhost:50051", Grpc = new GrpcSpec("a.B", "C") };
+
+        using var result = await runner.RunAsync(new RunInput(spec, null,
+            LoginVars(new Dictionary<string, string> { ["token"] = "viejo" }), Defaults, BearerToken,
+            new AppLoginState(AppLoginConfig(TokenExpiry.None), null)));
+
+        Assert.Equal(new GrpcStatusInfo(0, "OK", null), result.GrpcStatus);
+        Assert.NotNull(result.Token);
+        Assert.Equal(["Bearer viejo", $"Bearer {result.Token.Value}"], engine.Seen);
+        Assert.Contains(CoreTexts.Login_RenewUnauthenticated, result.Events.Select(e => e.Title));
+    }
+
+    /// <summary>Un servidor gRPC que rechaza el token "viejo" con UNAUTHENTICATED y acepta cualquier otro.</summary>
+    private sealed class UnauthenticatedWithOldToken : IGrpcEngine
+    {
+        public List<string?> Seen { get; } = [];
+
+        public Task<GrpcCallResult> CallUnaryAsync(GrpcCall call, CancellationToken ct = default)
+        {
+            var auth = call.Target.Metadata.FirstOrDefault(m => m.Key == "authorization").Value;
+            Seen.Add(auth);
+            return Task.FromResult(auth == "Bearer viejo"
+                ? new GrpcCallResult(16, "UNAUTHENTICATED", "token vencido", [], [], null)
+                : new GrpcCallResult(0, "OK", null, [], [], "{}"));
+        }
+
+        public Task<IReadOnlyList<GrpcMethodInfo>> GetMethodsAsync(GrpcTarget target, bool refresh = false, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public GrpcProtoCheck CheckProtos(IReadOnlyList<ProtoFile> files) => throw new NotSupportedException();
+
+        public Task<IGrpcStream> StartStreamAsync(GrpcCall call, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     [Fact]

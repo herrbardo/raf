@@ -20,6 +20,8 @@
   <ItemGroup>
     <!-- Servicio de prueba: el servidor en memoria lo implementa y los tests comparan contra sus clases generadas. -->
     <Protobuf Include="Protos\test.proto" GrpcServices="Server" />
+    <!-- El mismo archivo, como texto, para los tests del compilador de .proto. -->
+    <None Update="Protos\test.proto" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raf.Client.Grpc\Raf.Client.Grpc.csproj" />

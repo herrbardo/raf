@@ -40,9 +40,9 @@ public sealed partial class RequestRunner
         }
 
         var result = await RunShiftedAsync(input with { Variables = variables }, start, events, ct);
-        if (token is null && result is { Outcome: RunOutcome.Completed, StatusCode: 401 })
+        if (token is null && Unauthorized(result) is { } why)
         {
-            var outcome = await LoginAsync(login.Config, input, variables, CoreTexts.Login_Renew401, start, events, ct);
+            var outcome = await LoginAsync(login.Config, input, variables, why, start, events, ct);
             if (outcome.Failure is { } failure)
             {
                 // Se muestra el 401 del request; el motivo del login fallido ya quedó en la consola.
@@ -77,6 +77,18 @@ public sealed partial class RequestRunner
         var token = outcome.Token!;
         return new PreparedLogin(input.Variables.WithSession(token.Variable, token.Value), token, events, null);
     }
+
+    /// <summary>Código gRPC de UNAUTHENTICATED: en gRPC hace las veces del 401 (Plan 10, etapa 4).</summary>
+    private const int GrpcUnauthenticated = 16;
+
+    /// <summary>El servidor rechazó el token: un 401 en HTTP o UNAUTHENTICATED en gRPC. Null si no.</summary>
+    private static string? Unauthorized(RunResult result) => result switch
+    {
+        { Outcome: not RunOutcome.Completed } => null,
+        { StatusCode: 401 } => CoreTexts.Login_Renew401,
+        { GrpcStatus.Code: GrpcUnauthenticated } => CoreTexts.Login_RenewUnauthenticated,
+        _ => null,
+    };
 
     /// <summary>Por qué hace falta el login, o null si el token guardado sirve.</summary>
     private string? TokenNeeded(AppLoginState login, VariableContext variables)

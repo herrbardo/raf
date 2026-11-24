@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Raf.Client.Core.Api;
 using Raf.Contracts;
+using Raf.Domain.Requests;
 
 namespace Raf.Client.Core.Sync;
 
@@ -93,6 +94,7 @@ internal static class SyncItems
         ChangeKind.Sample => JsonSerializer.Deserialize<SampleDto>(json, ClientJson.Options)!,
         ChangeKind.Workspace => JsonSerializer.Deserialize<WorkspaceDto>(json, ClientJson.Options)!,
         ChangeKind.Login => JsonSerializer.Deserialize<LoginDto>(json, ClientJson.Options)!,
+        ChangeKind.ProtoSet => JsonSerializer.Deserialize<ProtoSetDto>(json, ClientJson.Options)!,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -107,6 +109,7 @@ internal static class SyncItems
         SampleDto x => x.Id,
         WorkspaceDto x => x.Id,
         LoginDto x => x.Id,
+        ProtoSetDto x => x.Id,
         _ => throw new ArgumentException(dto.GetType().Name),
     };
 
@@ -121,6 +124,7 @@ internal static class SyncItems
         SampleDto x => x.Version,
         WorkspaceDto x => x.Version,
         LoginDto x => x.Version,
+        ProtoSetDto x => x.Version,
         _ => throw new ArgumentException(dto.GetType().Name),
     };
 
@@ -135,6 +139,7 @@ internal static class SyncItems
         SampleDto x => x.Name,
         WorkspaceDto x => x.Name,
         LoginDto x => x.Name,
+        ProtoSetDto x => x.Name,
         _ => "",
     };
 
@@ -145,11 +150,20 @@ internal static class SyncItems
         AppDto { LoginId: { } login } => [login],
         FolderDto { ParentFolderId: { } parent } x => [x.AppId, parent],
         FolderDto x => [x.AppId],
-        RequestDto { FolderId: { } folder } x => [x.AppId, folder],
-        RequestDto x => [x.AppId],
+        RequestDto { FolderId: { } folder } x => [x.AppId, folder, .. ProtoSetOf(x)],
+        RequestDto x => [x.AppId, .. ProtoSetOf(x)],
         SampleDto x => [x.RequestId],
         _ => [],
     };
+
+    /// <summary>El conjunto de .proto que usa un request gRPC, si usa uno.</summary>
+    private static Guid[] ProtoSetOf(RequestDto request) =>
+        request.Spec.Grpc is { Source: GrpcDescriptorSource.ProtoSet, ProtoSetId: { } id } ? [id] : [];
+
+    private static RequestSpec RemapProtoSet(RequestSpec spec, IReadOnlyDictionary<Guid, Guid> map) =>
+        spec.Grpc is { ProtoSetId: { } id } grpc && map.TryGetValue(id, out var newId)
+            ? spec with { Grpc = grpc with { ProtoSetId = newId } }
+            : spec;
 
     public static object WithMeta(object dto, long version, long changeSeq) => dto switch
     {
@@ -160,6 +174,7 @@ internal static class SyncItems
         RequestDto x => x with { Version = version, ChangeSeq = changeSeq },
         SampleDto x => x with { Version = version, ChangeSeq = changeSeq },
         LoginDto x => x with { Version = version, ChangeSeq = changeSeq },
+        ProtoSetDto x => x with { Version = version, ChangeSeq = changeSeq },
         _ => dto,
     };
 
@@ -174,8 +189,9 @@ internal static class SyncItems
             VariableDto x => x with { Id = newId, EnvironmentId = ToOpt(x.EnvironmentId) },
             AppDto x => x with { Id = newId, LoginId = ToOpt(x.LoginId) },
             LoginDto x => x with { Id = newId },
+            ProtoSetDto x => x with { Id = newId },
             FolderDto x => x with { Id = newId, AppId = To(x.AppId), ParentFolderId = ToOpt(x.ParentFolderId) },
-            RequestDto x => x with { Id = newId, AppId = To(x.AppId), FolderId = ToOpt(x.FolderId) },
+            RequestDto x => x with { Id = newId, AppId = To(x.AppId), FolderId = ToOpt(x.FolderId), Spec = RemapProtoSet(x.Spec, map) },
             SampleDto x => x with { Id = newId, RequestId = To(x.RequestId) },
             _ => throw new ArgumentException(dto.GetType().Name),
         };
@@ -201,6 +217,7 @@ internal static class SyncItems
         },
         (SampleDto e, SampleDto c) => e with { Id = c.Id, RequestId = c.RequestId, Version = c.Version, ChangeSeq = c.ChangeSeq },
         (LoginDto e, LoginDto c) => e with { Id = c.Id, Version = c.Version, ChangeSeq = c.ChangeSeq },
+        (ProtoSetDto e, ProtoSetDto c) => e with { Id = c.Id, Version = c.Version, ChangeSeq = c.ChangeSeq },
         _ => throw new ApiException(System.Net.HttpStatusCode.BadRequest, CoreTexts.Store_EditedMismatch),
     };
 

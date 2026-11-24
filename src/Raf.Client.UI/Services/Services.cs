@@ -33,7 +33,19 @@ public interface IDialogs
     /// <summary>Muestra un valor que no se vuelve a ver (como una contraseña temporal), con botón para copiarlo.</summary>
     Task ShowSecretAsync(string title, string message, string secret);
     Task<Stream?> SaveFileAsync(string suggestedName);
+
+    /// <summary>Archivos de texto elegidos por el usuario, con su nombre como ruta. Vacío si cancela.</summary>
+    Task<IReadOnlyList<PickedTextFile>> OpenTextFilesAsync(string title, string extension);
+
+    /// <summary>
+    /// Los archivos con <paramref name="extension"/> de una carpeta y sus subcarpetas, con la ruta relativa a ella
+    /// (con "/"), así se conservan las rutas de los imports. Vacío si cancela.
+    /// </summary>
+    Task<IReadOnlyList<PickedTextFile>> OpenTextFolderAsync(string title, string extension);
 }
+
+/// <summary>Un archivo de texto elegido: su ruta (relativa, con "/") y su contenido.</summary>
+public sealed record PickedTextFile(string Path, string Content);
 
 /// <summary>Diálogos simples armados en código. Se muestran con <see cref="IWindowService"/>, así sirven en desktop y en web.</summary>
 public sealed class Dialogs(IWindowService windows) : IDialogs
@@ -97,6 +109,52 @@ public sealed class Dialogs(IWindowService windows) : IDialogs
             Title = Texts.Dialog_SaveResponse,
         });
         return file is null ? null : await file.OpenWriteAsync();
+    }
+
+    /// <summary>Tope por archivo leído: un .proto razonable no se acerca; evita cargar algo elegido por error.</summary>
+    private const long MaxPickedFileSize = 4 * 1024 * 1024;
+
+    public async Task<IReadOnlyList<PickedTextFile>> OpenTextFilesAsync(string title, string extension)
+    {
+        if (windows.Current?.StorageProvider is not { CanOpen: true } storage) return [];
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = true,
+            FileTypeFilter = [new FilePickerFileType(extension) { Patterns = [$"*{extension}"] }],
+        });
+        var result = new List<PickedTextFile>();
+        foreach (var file in files) result.Add(new PickedTextFile(file.Name, await ReadAsync(file)));
+        return result;
+    }
+
+    public async Task<IReadOnlyList<PickedTextFile>> OpenTextFolderAsync(string title, string extension)
+    {
+        if (windows.Current?.StorageProvider is not { CanPickFolder: true } storage) return [];
+        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = title });
+        if (folders.FirstOrDefault() is not { } root) return [];
+
+        var result = new List<PickedTextFile>();
+        async Task WalkAsync(IStorageFolder folder, string prefix)
+        {
+            await foreach (var item in folder.GetItemsAsync())
+            {
+                if (item is IStorageFolder sub) await WalkAsync(sub, $"{prefix}{sub.Name}/");
+                else if (item is IStorageFile file && file.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                    result.Add(new PickedTextFile(prefix + file.Name, await ReadAsync(file)));
+            }
+        }
+        await WalkAsync(root, "");
+        return result.OrderBy(f => f.Path, StringComparer.Ordinal).ToList();
+    }
+
+    private static async Task<string> ReadAsync(IStorageFile file)
+    {
+        var size = (await file.GetBasicPropertiesAsync()).Size;
+        if (size > MaxPickedFileSize) throw new ApiException(null, string.Format(Texts.Dialog_FileTooBig, file.Name));
+        await using var stream = await file.OpenReadAsync();
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync();
     }
 
     private static DialogView Build(

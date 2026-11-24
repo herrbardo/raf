@@ -195,4 +195,11 @@
   <data name="Ws_UseConnect" xml:space="preserve"><value>A WebSocket isn't sent: it's opened with Connect.</value></data>
   <data name="Grpc_NotUnary" xml:space="preserve"><value>{0} is a streaming method: it opens as a conversation, not as a unary call.</value></data>
   <data name="Grpc_NotStreaming" xml:space="preserve"><value>{0} is a unary method: it doesn't open a conversation.</value></data>
+  <data name="Sync_KindProtoSet" xml:space="preserve"><value>.proto set</value></data>
+  <data name="Store_ProtoSetInUse" xml:space="preserve"><value>The set is in use by: {0}. Change it on those requests first.</value></data>
+  <data name="Store_ProtoSetGone" xml:space="preserve"><value>The .proto set no longer exists: choose another.</value></data>
+  <data name="Grpc_ProtoEmpty" xml:space="preserve"><value>The set has no .proto files.</value></data>
+  <data name="Grpc_ProtoErrors" xml:space="preserve"><value>The .proto set doesn't compile: {0}</value></data>
+  <data name="Grpc_ProtoSetMissing" xml:space="preserve"><value>The request's .proto set no longer exists: choose another or use server reflection.</value></data>
+  <data name="Login_RenewUnauthenticated" xml:space="preserve"><value>The response was UNAUTHENTICATED: renewing the token and retrying once</value></data>
 </root>

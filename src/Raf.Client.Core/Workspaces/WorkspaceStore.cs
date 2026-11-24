@@ -50,6 +50,13 @@ public interface IWorkspaceStore
 
     /// <summary>Se rechaza si alguna App lo usa.</summary>
     Task DeleteLoginAsync(Guid ws, Guid id, CancellationToken ct = default);
+
+    Task<IReadOnlyList<ProtoSetDto>> GetProtoSetsAsync(Guid ws, CancellationToken ct = default);
+    Task<ProtoSetDto> CreateProtoSetAsync(Guid ws, CreateProtoSetRequest req, CancellationToken ct = default);
+    Task<ProtoSetDto> UpdateProtoSetAsync(Guid ws, Guid id, UpdateProtoSetRequest req, CancellationToken ct = default);
+
+    /// <summary>Se rechaza si algún request lo usa.</summary>
+    Task DeleteProtoSetAsync(Guid ws, Guid id, CancellationToken ct = default);
 }
 
 public sealed class ApiWorkspaceStore(RafApiClient api) : IWorkspaceStore
@@ -156,4 +163,15 @@ public sealed class ApiWorkspaceStore(RafApiClient api) : IWorkspaceStore
         api.PutAsync<LoginDto>(P(ws, "logins", id), req, ct);
 
     public Task DeleteLoginAsync(Guid ws, Guid id, CancellationToken ct = default) => api.DeleteAsync(P(ws, "logins", id), ct);
+
+    public Task<IReadOnlyList<ProtoSetDto>> GetProtoSetsAsync(Guid ws, CancellationToken ct = default) =>
+        ListAsync<ProtoSetDto>(ws, "proto-sets", ct);
+
+    public Task<ProtoSetDto> CreateProtoSetAsync(Guid ws, CreateProtoSetRequest req, CancellationToken ct = default) =>
+        api.PostAsync<ProtoSetDto>(P(ws, "proto-sets"), req with { Id = req.Id ?? Guid.CreateVersion7() }, ct);
+
+    public Task<ProtoSetDto> UpdateProtoSetAsync(Guid ws, Guid id, UpdateProtoSetRequest req, CancellationToken ct = default) =>
+        api.PutAsync<ProtoSetDto>(P(ws, "proto-sets", id), req, ct);
+
+    public Task DeleteProtoSetAsync(Guid ws, Guid id, CancellationToken ct = default) => api.DeleteAsync(P(ws, "proto-sets", id), ct);
 }

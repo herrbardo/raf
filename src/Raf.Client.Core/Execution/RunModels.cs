@@ -11,7 +11,7 @@ public sealed record RunOptions(TimeSpan Timeout, bool AcceptInvalidCertificates
 /// </summary>
 public sealed record RunInput(
     RequestSpec Request, SampleOverrides? Sample, VariableContext Variables, RunOptions Options, AuthSpec? AppAuth = null,
-    AppLoginState? Login = null);
+    AppLoginState? Login = null, Grpc.GrpcProtoSource? Protos = null);
 
 /// <summary>El login automático de la App y cuándo vence el token guardado (null si no se sabe).</summary>
 public sealed record AppLoginState(AppLogin Config, DateTimeOffset? ExpiresAt);

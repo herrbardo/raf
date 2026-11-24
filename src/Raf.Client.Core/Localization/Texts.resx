@@ -474,4 +474,29 @@
   <data name="GrpcV_CompleteSendingTip" xml:space="preserve"><value>Avisa al servidor que no se mandan más mensajes</value></data>
   <data name="GrpcV_Messages" xml:space="preserve"><value>Mensajes</value></data>
   <data name="GrpcV_CancelStreamTip" xml:space="preserve"><value>Corta la llamada (termina con CANCELLED)</value></data>
+  <data name="ProtoW_Title" xml:space="preserve"><value>Archivos .proto</value></data>
+  <data name="ProtoW_Button" xml:space="preserve"><value>.proto</value></data>
+  <data name="ProtoW_Sets" xml:space="preserve"><value>Conjuntos</value></data>
+  <data name="ProtoW_Files" xml:space="preserve"><value>Archivos</value></data>
+  <data name="ProtoW_Empty" xml:space="preserve"><value>Sin conjuntos. Un conjunto junta los .proto de un servidor gRPC que no tiene server reflection.</value></data>
+  <data name="ProtoW_NoFiles" xml:space="preserve"><value>Sin archivos: agregá los .proto o la carpeta que los tiene.</value></data>
+  <data name="ProtoW_AddFiles" xml:space="preserve"><value>Agregar archivos…</value></data>
+  <data name="ProtoW_AddFolder" xml:space="preserve"><value>Agregar carpeta…</value></data>
+  <data name="ProtoW_AddFolderTip" xml:space="preserve"><value>Agrega todos los .proto de la carpeta y sus subcarpetas, con las rutas que usan los import</value></data>
+  <data name="ProtoW_NoProtoInFolder" xml:space="preserve"><value>La carpeta no tiene archivos .proto.</value></data>
+  <data name="ProtoW_Compile" xml:space="preserve"><value>Compilar</value></data>
+  <data name="ProtoW_CompileTip" xml:space="preserve"><value>Compila el conjunto tal como está, sin guardarlo, para ver si tiene errores</value></data>
+  <data name="ProtoW_CompileDesktopOnly" xml:space="preserve"><value>La compilación se ve en la app de escritorio.</value></data>
+  <data name="ProtoW_Compiled" xml:space="preserve"><value>Compila: define {0} métodos.</value></data>
+  <data name="ProtoW_PathHint" xml:space="preserve"><value>Ruta del archivo: la que usan los import de los otros archivos (por ejemplo acme/common/v1/page.proto).</value></data>
+  <data name="ProtoW_NewTitle" xml:space="preserve"><value>Nuevo conjunto de .proto</value></data>
+  <data name="ProtoW_RenameTitle" xml:space="preserve"><value>Renombrar conjunto</value></data>
+  <data name="ProtoW_DeleteMessage" xml:space="preserve"><value>¿Eliminar el conjunto {0} con todos sus archivos?</value></data>
+  <data name="ProtoW_Invalid" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="ProtoW_CloseUnsaved" xml:space="preserve"><value>Hay archivos .proto sin guardar. ¿Cerrar y descartarlos?</value></data>
+  <data name="Dialog_FileTooBig" xml:space="preserve"><value>{0} supera 4 MB.</value></data>
+  <data name="GrpcV_Source" xml:space="preserve"><value>Servicios</value></data>
+  <data name="GrpcV_Reflection" xml:space="preserve"><value>Server reflection del servidor</value></data>
+  <data name="GrpcV_ProtoSet" xml:space="preserve"><value>Archivos .proto: {0}</value></data>
+  <data name="GrpcV_SourceTip" xml:space="preserve"><value>De dónde salen los servicios: el server reflection del servidor o un conjunto de archivos .proto</value></data>
 </root>

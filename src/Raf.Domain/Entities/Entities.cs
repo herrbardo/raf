@@ -66,6 +66,16 @@ public sealed class Login : SyncEntity
     public AppLogin Config { get; set; } = AppLogin.Default;
 }
 
+/// <summary>
+/// Conjunto de archivos .proto del workspace (Plan 10, etapa 2): los requests gRPC lo eligen para conocer los
+/// servicios cuando el servidor no tiene server reflection.
+/// </summary>
+public sealed class ProtoSet : SyncEntity
+{
+    public required string Name { get; set; }
+    public List<ProtoFile> Files { get; set; } = [];
+}
+
 public sealed class Folder : SyncEntity
 {
     public Guid AppId { get; set; }

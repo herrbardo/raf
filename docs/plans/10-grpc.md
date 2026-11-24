@@ -1,6 +1,6 @@
 # Plan 10 — gRPC
 
-Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones G1 a G4. **Etapas 1 y 3 implementadas** (Ticket-035), sin probar todavía en la app de escritorio contra un servidor real; etapas 2 y 4 pendientes. La 3 se hizo antes que la 2 para reusar la conversación del WebSocket (Ticket-036). Sale del Ticket-035 (feedback del 24/11/2026).
+Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones G1 a G4. **Implementado** (las cuatro etapas, Ticket-035), sin probar todavía en la app de escritorio contra un servidor real. La 3 se hizo antes que la 2 para reusar la conversación del WebSocket (Ticket-036). Sale del Ticket-035 (feedback del 24/11/2026).
 
 ## Objetivo
 
@@ -37,6 +37,24 @@ Aprobadas con el plan, el mismo día:
 - **Modelo:** `GrpcSpec.Messages` guarda los mensajes preparados de client streaming y bidireccional; el tipo `PreparedMessage` es el mismo del WebSocket (antes `WebSocketMessage`, con el mismo JSON). El servidor los valida igual: hasta 200, de hasta 1 MB.
 - **UI:** con un método de streaming, la respuesta se reemplaza por la conversación del WebSocket (`ConversationView`). En server streaming se manda el mensaje de la pestaña al abrir. En client streaming y bidireccional la pestaña "Mensajes" tiene los mensajes preparados (`PreparedMessagesView`, compartida con el WebSocket; uno nuevo nace con la plantilla del método) y la conversación suma el cuadro para escribir y "Terminar de enviar". "Enviar" y Ctrl+Enter abren la llamada o, abierta, mandan lo escrito; "Cancelar" la corta. El login automático corre antes de abrir.
 - **Al terminar:** el estado con su detalle, la metadata, los trailers y un resumen (enviados, recibidos y duración); las extracciones (G3) con el último mensaje recibido y la metadata y los trailers, si terminó en OK; y una línea en el historial.
+
+## Cómo quedó la etapa 4
+
+- **Samples (G1):** los requests gRPC vuelven a tener "Nuevo sample". La pestaña del sample es la misma de HTTP adaptada: muestra el servicio y el método del request (no se cambian), sin método HTTP ni query, con "Metadata" y "Mensaje" para sobreescribir, y también la dirección y la auth. Usa el conjunto de .proto del request. Un sample se envía como llamada unaria: el de un método con streaming avisa que se abre desde el request.
+- **Reintento:** el login automático se renueva una vez y se reintenta ante `UNAUTHENTICATED` (código 16), igual que ante un 401. Vale para las unarias y los samples; una llamada con streaming ya abierta no se reintenta.
+- **Web:** el aviso de que gRPC solo se envía desde escritorio está desde la etapa 1.
+- **Documentación:** README (descripción y proyecto `Raf.Client.Grpc`) y este plan.
+
+## Al publicar
+
+Hay migración (`ProtoSets`) y tipos nuevos en los datos (`grpc` y `webSocket` en el spec, el tipo de cambio `ProtoSet`): un cliente anterior no los entiende y, si guarda un request gRPC o WebSocket, borra esa parte. Hay que desplegar primero el servidor y después subir `Clients:MinVersion` a la versión nueva del cliente, como en la v0.3.0.
+
+## Cómo quedó la etapa 2
+
+- **Servidor:** entidad `ProtoSet` (nombre y archivos con ruta y contenido, en jsonb), migración `ProtoSets`, endpoints `/workspaces/{ws}/proto-sets` (editan Editor y Owner) y tipo de cambio `ProtoSet` en la sincronización. Topes (`ProtoFile.Problem`): hasta 200 archivos y 4 MB por conjunto, rutas relativas con "/" y sin "..", sin repetidas. Un request gRPC con origen `ProtoSet` tiene que apuntar a un conjunto que exista, y un conjunto en uso no se borra (el error nombra los requests).
+- **Sincronización:** el request depende de su conjunto, así que sin conexión se pueden crear los dos y al volver el conjunto se envía primero; si un conflicto le cambia el id al conjunto, el request lo sigue. La caché local aplica las mismas reglas que el servidor.
+- **Compilación:** `ProtoCompiler` usa `protobuf-net.Reflection` (con alias `pbnet`, porque define tipos con los mismos nombres que Google.Protobuf) más `protobuf-net` para serializar los descriptores, que llegan al mismo `DescriptorSet` del reflection. Los imports se resuelven dentro del conjunto; los de `google/protobuf` vienen con la librería. Los errores salen con archivo, línea y columna. El motor compila una vez por conjunto y versión.
+- **UI:** botón ".proto" en la barra superior, con la ventana "Archivos .proto": conjuntos (nuevo, renombrar, eliminar), sus archivos ("Agregar archivos…", "Agregar carpeta…" que conserva las rutas relativas para los imports, quitar), la ruta y el contenido editables y "Compilar" para ver los errores o la cantidad de métodos antes de guardar (en web la compilación no está). En la pestaña gRPC, "Servicios" elige entre el server reflection y un conjunto; con un conjunto los métodos se conocen sin conectarse.
 
 ## Cómo funciona
 

@@ -26,6 +26,7 @@ public static class ContentEndpoints
         MapRequests(ws.MapGroup("/requests").WithTags("Requests"));
         MapSamples(ws.MapGroup("/samples").WithTags("Samples"));
         MapLogins(ws.MapGroup("/logins").WithTags("Logins"));
+        MapProtoSets(ws.MapGroup("/proto-sets").WithTags("ProtoSets"));
     }
 
     private static IQueryable<T> In<T>(this DbSet<T> set, Guid ws) where T : SyncEntity =>
@@ -72,6 +73,7 @@ public static class ContentEndpoints
         seqs.AddRange(await NextSeqsAsync(db.Requests, ws, from, take, ct));
         seqs.AddRange(await NextSeqsAsync(db.Samples, ws, from, take, ct));
         seqs.AddRange(await NextSeqsAsync(db.Logins, ws, from, take, ct));
+        seqs.AddRange(await NextSeqsAsync(db.ProtoSets, ws, from, take, ct));
 
         if (seqs.Count == 0)
             return Results.Ok(new ChangesResponse(from, false, role, null, [], [], [], [], [], [], [], [], []));
@@ -88,13 +90,14 @@ public static class ContentEndpoints
         var requests = await SliceAsync(db.Requests, ws, from, cutoff, ct);
         var samples = await SliceAsync(db.Samples, ws, from, cutoff, ct);
         var logins = await SliceAsync(db.Logins, ws, from, cutoff, ct);
+        var protoSets = await SliceAsync(db.ProtoSets, ws, from, cutoff, ct);
 
         var hasMore =
             await HasLaterAsync(db.Workspaces, ws, cutoff, ct) || await HasLaterAsync(db.WorkspaceMembers, ws, cutoff, ct) ||
             await HasLaterAsync(db.Environments, ws, cutoff, ct) || await HasLaterAsync(db.Variables, ws, cutoff, ct) ||
             await HasLaterAsync(db.Apps, ws, cutoff, ct) || await HasLaterAsync(db.Folders, ws, cutoff, ct) ||
             await HasLaterAsync(db.Requests, ws, cutoff, ct) || await HasLaterAsync(db.Samples, ws, cutoff, ct) ||
-            await HasLaterAsync(db.Logins, ws, cutoff, ct);
+            await HasLaterAsync(db.Logins, ws, cutoff, ct) || await HasLaterAsync(db.ProtoSets, ws, cutoff, ct);
 
         var userIds = members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
         var users = await db.Users.Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, ct);
@@ -112,6 +115,7 @@ public static class ContentEndpoints
         Tombstones(ChangeKind.Request, requests);
         Tombstones(ChangeKind.Sample, samples);
         Tombstones(ChangeKind.Login, logins);
+        Tombstones(ChangeKind.ProtoSet, protoSets);
 
         var canSee = role >= WorkspaceRole.Editor;
         var variableDtos = new List<VariableDto>();
@@ -129,7 +133,8 @@ public static class ContentEndpoints
             requests.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
             samples.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
             deleted,
-            logins.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList()));
+            logins.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList(),
+            protoSets.Where(x => !x.IsDeleted).Select(x => x.ToDto()).ToList()));
     }
 
     private static Task<List<long>> NextSeqsAsync<T>(DbSet<T> set, Guid ws, long since, int take, CancellationToken ct) where T : SyncEntity =>
@@ -505,6 +510,7 @@ public static class ContentEndpoints
         {
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
             if (ValidateSpec(req.Spec) is { } badSpec) return badSpec;
+            if (await ValidateProtoSetRefAsync(db, ws, req.Spec, ct) is { } badProtos) return badProtos;
             if (!await db.Apps.In(ws).AnyAsync(a => a.Id == req.AppId, ct)) return Problems.BadRequest("La app no existe.");
             if (!await FolderBelongsToAppAsync(db, ws, req.FolderId, req.AppId, ct))
                 return Problems.BadRequest("La carpeta no existe en esa app.");
@@ -526,6 +532,7 @@ public static class ContentEndpoints
             if (Problems.ValidateName(req.Name) is { } invalid) return invalid;
             if (req.Spec is null) return Problems.BadRequest("'spec' es obligatorio.");
             if (ValidateSpec(req.Spec) is { } badSpec) return badSpec;
+            if (await ValidateProtoSetRefAsync(db, ws, req.Spec, ct) is { } badProtos) return badProtos;
             var r = await db.Requests.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
             if (r is null) return Problems.NotFound("Request");
             if (r.Version != req.Version) return Problems.VersionConflict(r);
@@ -682,5 +689,68 @@ public static class ContentEndpoints
             return Results.NoContent();
         }).RequireWorkspaceRole(WorkspaceRole.Editor)
           .WithSummary("Elimina el login. Se rechaza si alguna app lo usa.");
+    }
+
+    // ---------- Conjuntos de .proto (Plan 10, etapa 2) ----------
+
+    private static ProtoSetDto ToDto(this ProtoSet p) => new(p.Id, p.Name, p.Files, p.Version, p.ChangeSeq);
+
+    private static IResult? ValidateProtoSet(string? name, IReadOnlyList<ProtoFile>? files) =>
+        Problems.ValidateName(name) ?? (ProtoFile.Problem(files) is { } problem ? Problems.BadRequest(problem) : null);
+
+    /// <summary>Un request gRPC que usa un conjunto de .proto tiene que apuntar a uno que exista.</summary>
+    private static async Task<IResult?> ValidateProtoSetRefAsync(RafDbContext db, Guid ws, RequestSpec? spec, CancellationToken ct) =>
+        spec?.Grpc is { Source: GrpcDescriptorSource.ProtoSet, ProtoSetId: { } id } && !await db.ProtoSets.In(ws).AnyAsync(p => p.Id == id, ct)
+            ? Problems.BadRequest("El conjunto de .proto no existe en este workspace.")
+            : null;
+
+    /// <summary>Los requests que usan el conjunto. El spec se guarda como JSON, así que se filtra en memoria.</summary>
+    private static async Task<List<string>> ProtoSetUsersAsync(RafDbContext db, Guid ws, Guid id, CancellationToken ct) =>
+        (await db.Requests.In(ws).Select(r => new { r.Name, r.Spec }).ToListAsync(ct))
+            .Where(r => r.Spec.Grpc is { Source: GrpcDescriptorSource.ProtoSet } grpc && grpc.ProtoSetId == id)
+            .Select(r => r.Name).Order(StringComparer.CurrentCultureIgnoreCase).ToList();
+
+    private static void MapProtoSets(RouteGroupBuilder g)
+    {
+        g.MapGet("/", async (Guid ws, RafDbContext db, CancellationToken ct) =>
+            (await db.ProtoSets.In(ws).OrderBy(p => p.Name).ToListAsync(ct)).Select(p => p.ToDto()));
+
+        g.MapPost("/", async (Guid ws, CreateProtoSetRequest req, RafDbContext db, CancellationToken ct) =>
+        {
+            if (ValidateProtoSet(req.Name, req.Files) is { } invalid) return invalid;
+            if (await RetriedCreateAsync(db.ProtoSets, ws, req.Id, "proto-sets", x => x.ToDto(), ct) is { } retried) return retried;
+
+            var p = new ProtoSet { Id = req.Id ?? Guid.CreateVersion7(), WorkspaceId = ws, Name = req.Name.Trim(), Files = req.Files.ToList() };
+            db.ProtoSets.Add(p);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/workspaces/{ws}/proto-sets/{p.Id}", p.ToDto());
+        }).RequireWorkspaceRole(WorkspaceRole.Editor);
+
+        g.MapPut("/{id:guid}", async (Guid ws, Guid id, UpdateProtoSetRequest req, RafDbContext db, CancellationToken ct) =>
+        {
+            if (ValidateProtoSet(req.Name, req.Files) is { } invalid) return invalid;
+            var p = await db.ProtoSets.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
+            if (p is null) return Problems.NotFound("Conjunto de .proto");
+            if (p.Version != req.Version) return Problems.VersionConflict(p);
+
+            p.Name = req.Name.Trim();
+            p.Files = req.Files.ToList();
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(p.ToDto());
+        }).RequireWorkspaceRole(WorkspaceRole.Editor);
+
+        g.MapDelete("/{id:guid}", async (Guid ws, Guid id, RafDbContext db, CancellationToken ct) =>
+        {
+            var p = await db.ProtoSets.In(ws).FirstOrDefaultAsync(x => x.Id == id, ct);
+            if (p is null) return Problems.NotFound("Conjunto de .proto");
+            var users = await ProtoSetUsersAsync(db, ws, id, ct);
+            if (users.Count > 0)
+                return Problems.Conflict($"El conjunto está en uso por: {string.Join(", ", users)}. Primero hay que cambiárselo a esos requests.");
+
+            p.IsDeleted = true;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        }).RequireWorkspaceRole(WorkspaceRole.Editor)
+          .WithSummary("Elimina el conjunto de .proto. Se rechaza si algún request lo usa.");
     }
 }

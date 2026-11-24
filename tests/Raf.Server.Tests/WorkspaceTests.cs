@@ -218,6 +218,62 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
+    public async Task Proto_sets_are_validated_referenced_by_grpc_requests_and_cannot_be_deleted_in_use()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var b = $"/workspaces/{ws.Id}";
+        var sets = $"{b}/proto-sets";
+        var app = await owner.PostOkAsync<AppDto>($"{b}/apps", new CreateAppRequest("Api"));
+        ProtoFile[] files =
+        [
+            new("acme/users.proto", "syntax = \"proto3\"; package acme; import \"acme/common.proto\";"),
+            new("acme/common.proto", "syntax = \"proto3\"; package acme;"),
+        ];
+
+        var set = await owner.PostOkAsync<ProtoSetDto>(sets, new CreateProtoSetRequest("Contratos", files));
+        Assert.Equal(files, set.Files);
+        foreach (var bad in new ProtoFile[][]
+                 {
+                     [new("a.proto", ""), new("a.proto", "")],
+                     [new("../fuera.proto", "")],
+                     [new("C:\\windows.proto", "")],
+                     [new("/absoluta.proto", "")],
+                     [new("grande.proto", new string('x', ProtoFile.MaxTotalLength + 1))],
+                 })
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync(sets, new CreateProtoSetRequest("Mal", bad))).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await owner.PutJsonAsync($"{sets}/{set.Id}", new UpdateProtoSetRequest("Contratos", bad, set.Version))).StatusCode);
+        }
+
+        // Un request gRPC lo elige; uno inexistente se rechaza.
+        var spec = RequestSpec.EmptyGrpc with { Grpc = new GrpcSpec("acme.Users", "Get", GrpcDescriptorSource.ProtoSet, set.Id) };
+        var request = await owner.PostOkAsync<RequestDto>($"{b}/requests", new CreateRequestRequest(app.Id, "Get", spec));
+        Assert.Equal(set.Id, request.Spec.Grpc!.ProtoSetId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostJsonAsync($"{b}/requests",
+            new CreateRequestRequest(app.Id, "Mal", spec with { Grpc = spec.Grpc! with { ProtoSetId = Guid.NewGuid() } }))).StatusCode);
+
+        // Se edita con control de versión.
+        var edited = await owner.PutOkAsync<ProtoSetDto>($"{sets}/{set.Id}", new UpdateProtoSetRequest("Contratos v2", files[..1], set.Version));
+        Assert.Equal(("Contratos v2", 1), (edited.Name, edited.Files.Count));
+        Assert.Equal(HttpStatusCode.Conflict,
+            (await owner.PutJsonAsync($"{sets}/{set.Id}", new UpdateProtoSetRequest("Viejo", files, set.Version))).StatusCode);
+
+        // En uso no se borra; el error nombra los requests. Sin uso se borra y viaja como borrado en los cambios.
+        var inUse = await owner.DeleteAsync($"{sets}/{set.Id}");
+        Assert.Equal(HttpStatusCode.Conflict, inUse.StatusCode);
+        Assert.Contains("Get", await inUse.Content.ReadAsStringAsync());
+        await (await owner.PutJsonAsync($"{b}/requests/{request.Id}",
+            new UpdateRequestRequest("Get", null, 0, RequestSpec.EmptyGrpc, request.Version))).EnsureStatusAsync(HttpStatusCode.OK);
+        var other = await owner.PostOkAsync<ProtoSetDto>(sets, new CreateProtoSetRequest("Otro", []));
+        await (await owner.DeleteAsync($"{sets}/{set.Id}")).EnsureStatusAsync(HttpStatusCode.NoContent);
+
+        var changes = await owner.GetOkAsync<ChangesResponse>($"/workspaces/{ws.Id}/changes?since=0");
+        Assert.Contains(changes.Deleted, d => d.Kind == ChangeKind.ProtoSet && d.Id == set.Id);
+        Assert.Equal([other.Id], changes.ProtoSets!.Select(p => p.Id));
+    }
+
+    [Fact]
     public async Task WebSockets_keep_their_messages_and_reject_inconsistent_data()
     {
         var (owner, ws) = await NewWorkspaceAsync();

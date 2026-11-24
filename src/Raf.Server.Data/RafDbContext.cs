@@ -26,6 +26,7 @@ public sealed class RafDbContext(
     public DbSet<ApiRequest> Requests => Set<ApiRequest>();
     public DbSet<Sample> Samples => Set<Sample>();
     public DbSet<Login> Logins => Set<Login>();
+    public DbSet<ProtoSet> ProtoSets => Set<ProtoSet>();
 
     internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -87,6 +88,12 @@ public sealed class RafDbContext(
         {
             e.Property(x => x.Name).HasMaxLength(200);
             Json(e.Property(x => x.Config));
+        });
+
+        Sync<ProtoSet>(b, e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            Json(e.Property(x => x.Files));
         });
 
         Sync<Folder>(b, e =>

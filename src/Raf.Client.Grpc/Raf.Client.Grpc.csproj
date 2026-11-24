@@ -4,6 +4,10 @@
     <PackageReference Include="Google.Protobuf" />
     <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Grpc.Reflection" />
+    <!-- Compila .proto sin protoc (etapa 2). Define tipos con los mismos nombres que Google.Protobuf: va con alias. -->
+    <PackageReference Include="protobuf-net.Reflection" Aliases="pbnet" />
+    <!-- El modelo de tipos con el que protobuf-net serializa los descriptores que compiló. -->
+    <PackageReference Include="protobuf-net" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Raf.Client.Grpc.Tests" />

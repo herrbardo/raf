@@ -6,6 +6,7 @@ using Raf.Client.Controls;
 using Raf.Client.Core.Api;
 using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Execution;
+using Raf.Client.Core.Grpc;
 using Raf.Client.Core.History;
 using Raf.Client.Core.Local;
 using Raf.Client.Core.Sync;
@@ -83,8 +84,8 @@ public sealed partial class TreeNodeViewModel : ObservableObject
 
     public bool CanEdit => _owner.CanEdit;
     public bool CanAddContainer => CanEdit && Kind is NodeKind.App or NodeKind.Folder;
-    /// <summary>Los samples son de HTTP por ahora: los de gRPC llegan en la etapa 4 del Plan 10 y un WebSocket no los usa.</summary>
-    public bool CanAddSample => CanEdit && Kind == NodeKind.Request && Request.Spec is { IsGrpc: false, IsWebSocket: false };
+    /// <summary>HTTP y gRPC tienen samples (los de gRPC, desde la etapa 4 del Plan 10); un WebSocket no los usa.</summary>
+    public bool CanAddSample => CanEdit && Kind == NodeKind.Request && !Request.Spec.IsWebSocket;
 
     public IEnumerable<TreeNodeViewModel> SelfAndDescendants() =>
         Children.SelectMany(c => c.SelfAndDescendants()).Prepend(this);
@@ -228,6 +229,17 @@ public sealed partial class MainViewModel : ObservableObject
             return null;
         return new AppLoginState(login, _sessionVariables.ExpiresAt(WorkspaceId, SelectedEnvironment?.Id, login.Variable));
     }
+
+    /// <summary>Los conjuntos de .proto del workspace, por id (Plan 10, etapa 2).</summary>
+    private Dictionary<Guid, ProtoSetDto> _protoSets = [];
+
+    /// <summary>Para elegir uno en la pestaña gRPC, por nombre.</summary>
+    public IReadOnlyList<ProtoSetDto> ProtoSets =>
+        _protoSets.Values.OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+
+    /// <summary>El conjunto que usa un request gRPC, listo para el motor; null si no existe.</summary>
+    public GrpcProtoSource? ProtoSourceOf(Guid? id) =>
+        id is { } key && _protoSets.TryGetValue(key, out var set) ? new GrpcProtoSource(set.Id, set.Version, set.Files) : null;
 
     private void RefreshSessionRows()
     {
@@ -511,9 +523,11 @@ public sealed partial class MainViewModel : ObservableObject
             var requests = await Services.Store.GetRequestsAsync(ws);
             var samples = await Services.Store.GetSamplesAsync(ws);
             var logins = await Services.Store.GetLoginsAsync(ws);
+            var protoSets = await Services.Store.GetProtoSetsAsync(ws);
             if (ws != WorkspaceId) return;
 
             _logins = logins.ToDictionary(l => l.Id);
+            _protoSets = protoSets.ToDictionary(p => p.Id);
 
             var expanded = Roots.SelectMany(r => r.SelfAndDescendants()).Where(n => n.IsExpanded).Select(n => n.Id).ToHashSet();
             var nodes = BuildTree(apps, folders, requests, samples);
@@ -914,6 +928,21 @@ public sealed partial class MainViewModel : ObservableObject
         await ShowLogins(vm);
         if (!vm.Changed) return;
         _logins = (await Services.Store.GetLoginsAsync(WorkspaceId)).ToDictionary(l => l.Id);
+        foreach (var tab in Tabs) tab.OnAppChanged();
+    });
+
+    /// <summary>Lo implementa la vista, que abre la ventana de archivos .proto.</summary>
+    public Func<ProtoSetsViewModel, Task>? ShowProtoSets { get; set; }
+
+    [RelayCommand]
+    private Task EditProtoSetsAsync() => GuardAsync(async () =>
+    {
+        if (SelectedWorkspace is null || ShowProtoSets is null) return;
+        var vm = new ProtoSetsViewModel(Services, WorkspaceId, CanEdit);
+        await vm.LoadAsync();
+        await ShowProtoSets(vm);
+        if (!vm.Changed) return;
+        _protoSets = (await Services.Store.GetProtoSetsAsync(WorkspaceId)).ToDictionary(p => p.Id);
         foreach (var tab in Tabs) tab.OnAppChanged();
     });
 

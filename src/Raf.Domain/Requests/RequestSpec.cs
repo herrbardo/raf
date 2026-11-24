@@ -90,6 +90,33 @@ public sealed record WebSocketSpec(IReadOnlyList<PreparedMessage> Messages, IRea
 /// </summary>
 public sealed record PreparedMessage(string Name, string Content);
 
+/// <summary>
+/// Un archivo de un conjunto de .proto. <see cref="Path"/> es la ruta con la que lo importan los demás
+/// (<c>acme/users/v1/users.proto</c>), siempre con "/".
+/// </summary>
+public sealed record ProtoFile(string Path, string Content)
+{
+    public const int MaxFiles = 200;
+    public const int MaxPathLength = 300;
+
+    /// <summary>Tope de todo el conjunto: alcanza para contratos grandes sin cargar de más la sincronización.</summary>
+    public const int MaxTotalLength = 4 * 1024 * 1024;
+
+    /// <summary>Qué le falta a un conjunto para poder guardarse, o null si está bien.</summary>
+    public static string? Problem(IReadOnlyList<ProtoFile>? files)
+    {
+        if (files is null) return "'files' es obligatorio.";
+        if (files.Count > MaxFiles) return $"Como máximo {MaxFiles} archivos.";
+        if (files.Any(f => f is null || string.IsNullOrWhiteSpace(f.Path) || f.Content is null))
+            return "Cada archivo lleva path y content.";
+        if (files.Any(f => f.Path.Length > MaxPathLength || f.Path.Contains('\\') || f.Path.StartsWith('/') || f.Path.Split('/').Contains("..")))
+            return $"Las rutas van con \"/\", relativas y sin \"..\", de hasta {MaxPathLength} caracteres.";
+        if (files.Select(f => f.Path).Distinct(StringComparer.Ordinal).Count() != files.Count) return "Hay rutas repetidas.";
+        if (files.Sum(f => (long)f.Content.Length) > MaxTotalLength) return "El conjunto supera 4 MB.";
+        return null;
+    }
+}
+
 /// <summary>De dónde salen los servicios y mensajes: el server reflection del servidor o un conjunto de .proto.</summary>
 public enum GrpcDescriptorSource { Reflection, ProtoSet }
 

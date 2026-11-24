@@ -373,6 +373,7 @@ public sealed class SyncEngine
         ChangeKind.Request => CoreTexts.Sync_KindRequest,
         ChangeKind.Sample => CoreTexts.Sync_KindSample,
         ChangeKind.Login => CoreTexts.Sync_KindLogin,
+        ChangeKind.ProtoSet => CoreTexts.Sync_KindProtoSet,
         _ => kind.ToString(),
     };
 
@@ -418,6 +419,7 @@ public sealed class SyncEngine
             (OutboxOp.Create, RequestDto d) => await _api.CreateRequestAsync(ws, new CreateRequestRequest(d.AppId, d.Name, d.Spec, d.FolderId, d.Order, d.Id), ct),
             (OutboxOp.Create, SampleDto d) => await _api.CreateSampleAsync(ws, new CreateSampleRequest(d.RequestId, d.Name, d.Overrides, d.Order, d.Id), ct),
             (OutboxOp.Create, LoginDto d) => await _api.CreateLoginAsync(ws, new CreateLoginRequest(d.Name, d.Config, d.Id), ct),
+            (OutboxOp.Create, ProtoSetDto d) => await _api.CreateProtoSetAsync(ws, new CreateProtoSetRequest(d.Name, d.Files, d.Id), ct),
 
             (OutboxOp.Update, EnvironmentDto d) => await _api.UpdateEnvironmentAsync(ws, d.Id, new UpdateEnvironmentRequest(d.Name, v), ct),
             (OutboxOp.Update, VariableDto d) => await _api.UpdateVariableAsync(ws, d.Id, new UpdateVariableRequest(d.Key, d.Value ?? "", d.IsSecret, v), ct),
@@ -426,6 +428,7 @@ public sealed class SyncEngine
             (OutboxOp.Update, RequestDto d) => await _api.UpdateRequestAsync(ws, d.Id, new UpdateRequestRequest(d.Name, d.FolderId, d.Order, d.Spec, v), ct),
             (OutboxOp.Update, SampleDto d) => await _api.UpdateSampleAsync(ws, d.Id, new UpdateSampleRequest(d.Name, d.Order, d.Overrides, v), ct),
             (OutboxOp.Update, LoginDto d) => await _api.UpdateLoginAsync(ws, d.Id, new UpdateLoginRequest(d.Name, d.Config, v), ct),
+            (OutboxOp.Update, ProtoSetDto d) => await _api.UpdateProtoSetAsync(ws, d.Id, new UpdateProtoSetRequest(d.Name, d.Files, v), ct),
 
             _ => throw new InvalidOperationException($"Cambio sin envío definido: {item.Op} {item.Kind}."),
         };
@@ -445,6 +448,7 @@ public sealed class SyncEngine
                 ChangeKind.Request => _api.DeleteRequestAsync(ws, id, ct),
                 ChangeKind.Sample => _api.DeleteSampleAsync(ws, id, ct),
                 ChangeKind.Login => _api.DeleteLoginAsync(ws, id, ct),
+                ChangeKind.ProtoSet => _api.DeleteProtoSetAsync(ws, id, ct),
                 _ => throw new InvalidOperationException($"Borrado no soportado: {item.Kind}."),
             });
         }
@@ -467,6 +471,7 @@ public sealed class SyncEngine
             ChangeKind.Request => (await _api.GetRequestsAsync(ws, ct)).FirstOrDefault(x => x.Id == id),
             ChangeKind.Sample => (await _api.GetSamplesAsync(ws, ct)).FirstOrDefault(x => x.Id == id),
             ChangeKind.Login => (await _api.GetLoginsAsync(ws, ct)).FirstOrDefault(x => x.Id == id),
+            ChangeKind.ProtoSet => (await _api.GetProtoSetsAsync(ws, ct)).FirstOrDefault(x => x.Id == id),
             _ => null,
         };
     }
