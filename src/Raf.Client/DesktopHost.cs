@@ -2,6 +2,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
 using Raf.Client.Core.Execution;
 using Raf.Client.Core.Local;
+using Raf.Client.Grpc;
 using Raf.Client.Services;
 using Raf.Client.ViewModels;
 
@@ -21,7 +22,7 @@ public sealed class DesktopHost : ClientHost
         services.AddSingleton(SecureStores.CreateDefault());
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<IWindowService, WindowService>();
-        services.AddSingleton(new RequestRunner());
+        services.AddSingleton(new RequestRunner(grpc: new GrpcEngine()));
     }
 
     public override void Show(IApplicationLifetime? lifetime, ShellViewModel shell, IServiceProvider services)

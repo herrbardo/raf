@@ -23,5 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raf.Client.UI\Raf.Client.UI.csproj" />
+    <!-- gRPC solo en escritorio: el cliente web no lo incluye (Plan 10). -->
+    <ProjectReference Include="..\Raf.Client.Grpc\Raf.Client.Grpc.csproj" />
   </ItemGroup>
 </Project>

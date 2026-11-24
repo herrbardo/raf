@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Raf.Client.Core.Localization"
+             xmlns:vm="using:Raf.Client.ViewModels"
+             xmlns:ctl="using:Raf.Client.Controls"
+             x:Class="Raf.Client.Views.GrpcRequestTabView"
+             x:DataType="vm:GrpcRequestTabViewModel">
+  <!-- Como RequestTabView: Ctrl+S y Ctrl+Enter están en MainWindow -->
+  <Grid RowDefinitions="Auto,Auto,Auto,*,5,*">
+    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,14,14,0">
+      <ctl:MethodBadge Classes="large" Method="GRPC" Margin="4,0,6,0" ToolTip.Tip="{x:Static l:Texts.GrpcV_AddressTip}" />
+      <ctl:TextField Grid.Column="1" BoundText="{Binding Url}" IsReadOnly="{Binding IsReadOnly}" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+        <Panel>
+          <Button Classes="accent primary-action" Command="{Binding SendCommand}" IsVisible="{Binding !IsRunning}"
+                  IsEnabled="{Binding IsAvailable}" ToolTip.Tip="{x:Static l:Texts.V_SendTip}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <ctl:Icon Data="{StaticResource IconSend}" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Send}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="primary-action" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <ctl:Icon Data="{StaticResource IconClose}" />
+              <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Cancel}" />
+            </StackPanel>
+          </Button>
+        </Panel>
+        <Button Command="{Binding SaveCommand}" IsEnabled="{Binding IsDirty}" IsVisible="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.V_SaveTip}">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <ctl:Icon Data="{StaticResource IconSave}" />
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Save}" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Grid>
+
+    <!-- Método: se elige entre los que informa el server reflection -->
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,8,14,0">
+      <TextBlock Classes="label" VerticalAlignment="Center" Text="{x:Static l:Texts.GrpcV_Method}" />
+      <Panel Grid.Column="1">
+        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GrpcMethods}" SelectedItem="{Binding SelectedMethod}"
+                  IsEnabled="{Binding CanEdit}" PlaceholderText="{Binding MethodText}" IsVisible="{Binding !!GrpcMethods.Count}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:GrpcMethodChoice">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Classes="mono" Text="{Binding Title}" VerticalAlignment="Center" />
+                <TextBlock Classes="caption" Text="{Binding KindText}" VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Classes="mono" VerticalAlignment="Center" Text="{Binding MethodText}" IsVisible="{Binding !GrpcMethods.Count}" />
+      </Panel>
+      <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{x:Static l:Texts.GrpcV_Reload}" Command="{Binding ReloadMethodsCommand}"
+              IsEnabled="{Binding !IsLoadingMethods}" IsVisible="{Binding IsAvailable}">
+        <ctl:Icon Data="{StaticResource IconRefresh}" />
+      </Button>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Margin="14,6,14,0" Spacing="4">
+      <TextBlock Classes="warning" TextWrapping="Wrap" Text="{x:Static l:CoreTexts.Run_GrpcUnavailable}" IsVisible="{Binding !IsAvailable}" />
+      <TextBlock Classes="warning" TextWrapping="Wrap" Text="{x:Static l:Texts.GrpcV_StreamingNotYet}" IsVisible="{Binding IsStreaming}" />
+      <TextBlock Classes="warning" TextWrapping="Wrap" Text="{Binding MethodsError}"
+                 IsVisible="{Binding MethodsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Classes="warning" Text="{Binding Warning}"
+                 IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    </StackPanel>
+
+    <TabControl Grid.Row="3" Classes="section" Margin="14,6,14,0" Padding="0,6,0,8">
+      <TabItem Header="{x:Static l:Texts.GrpcV_Message}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding CanEdit}">
+            <Button Classes="link" Content="{x:Static l:Texts.GrpcV_Template}" Command="{Binding UseTemplateCommand}"
+                    IsEnabled="{Binding SelectedMethod, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    ToolTip.Tip="{x:Static l:Texts.GrpcV_TemplateTip}" />
+          </StackPanel>
+          <ctl:TextField BoundText="{Binding Message}" Multiline="True" Syntax="Json" IsReadOnly="{Binding IsReadOnly}" />
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="Metadata"><ContentControl Content="{Binding Headers}" /></TabItem>
+      <TabItem Header="Auth"><ContentControl Content="{Binding Auth}" /></TabItem>
+      <TabItem Header="{x:Static l:Texts.Req_Extract}"><ContentControl Content="{Binding Extractions}" /></TabItem>
+      <TabItem Header="{x:Static l:Texts.V_Options}">
+        <StackPanel Spacing="12" Margin="0,4" MaxWidth="460" HorizontalAlignment="Left">
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.Req_OptionsHint}" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.V_Timeout}" />
+            <TextBox Width="190" Text="{Binding TimeoutText}" Watermark="{Binding TimeoutHint}" />
+          </StackPanel>
+          <CheckBox IsChecked="{Binding AcceptInvalidCertificates}" Content="{x:Static l:Texts.V_AcceptInvalidCerts}" />
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+
+    <GridSplitter Grid.Row="4" ResizeDirection="Rows" />
+    <Border Grid.Row="5" Classes="panel">
+      <ContentControl Content="{Binding Response}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    </Border>
+  </Grid>
+</UserControl>

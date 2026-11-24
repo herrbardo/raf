@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Raf.Client/Raf.Client.csproj" />
     <Project Path="src/Raf.Client.Core/Raf.Client.Core.csproj" />
+    <Project Path="src/Raf.Client.Grpc/Raf.Client.Grpc.csproj" />
     <Project Path="src/Raf.Client.UI/Raf.Client.UI.csproj" />
     <Project Path="src/Raf.Contracts/Raf.Contracts.csproj" />
     <Project Path="src/Raf.Domain/Raf.Domain.csproj" />
@@ -10,6 +11,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Raf.Client.Core.Tests/Raf.Client.Core.Tests.csproj" />
+    <Project Path="tests/Raf.Client.Grpc.Tests/Raf.Client.Grpc.Tests.csproj" />
     <Project Path="tests/Raf.Domain.Tests/Raf.Domain.Tests.csproj" />
     <Project Path="tests/Raf.Server.Tests/Raf.Server.Tests.csproj" />
   </Folder>

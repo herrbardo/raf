@@ -448,7 +448,19 @@ public static class ContentEndpoints
         : string.IsNullOrWhiteSpace(spec.Method) || spec.Method.Length > 20 ? Problems.BadRequest("'method' inválido.")
         : spec.Headers is null || spec.QueryParams is null || spec.Body is null || spec.Auth is null
             ? Problems.BadRequest("'spec' incompleto: headers, queryParams, body y auth son obligatorios.")
-        : null;
+        : ValidateGrpc(spec);
+
+    /// <summary>Un request gRPC puede guardarse sin método elegido todavía, pero no con datos inconsistentes.</summary>
+    private static IResult? ValidateGrpc(RequestSpec spec) => spec.Grpc switch
+    {
+        null when spec.Method == GrpcSpec.MethodLabel => Problems.BadRequest($"'method' {GrpcSpec.MethodLabel} es solo para requests gRPC."),
+        null => null,
+        _ when spec.Method != GrpcSpec.MethodLabel => Problems.BadRequest($"Un request gRPC lleva 'method' {GrpcSpec.MethodLabel}."),
+        { Service: null } or { Method: null } => Problems.BadRequest("'grpc' incompleto: service y method son obligatorios."),
+        { Service.Length: > 500 } or { Method.Length: > 200 } => Problems.BadRequest("'grpc': service o method demasiado largo."),
+        { Source: GrpcDescriptorSource.ProtoSet, ProtoSetId: null } => Problems.BadRequest("'grpc': falta el conjunto de .proto."),
+        _ => null,
+    };
 
     private static async Task<bool> FolderBelongsToAppAsync(RafDbContext db, Guid ws, Guid? folderId, Guid appId, CancellationToken ct) =>
         folderId is not { } fid || await db.Folders.In(ws).AnyAsync(f => f.Id == fid && f.AppId == appId, ct);

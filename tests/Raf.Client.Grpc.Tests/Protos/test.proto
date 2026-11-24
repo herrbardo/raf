@@ -1,0 +1,77 @@
+// Servicio de prueba de los tests de gRPC: cubre todos los tipos de campo y los tipos conocidos de Google.
+syntax = "proto3";
+
+package raf.test;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "Raf.Client.Grpc.Tests.Proto";
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  RED = 1;
+  GREEN = 2;
+}
+
+message Inner {
+  string name = 1;
+  repeated int32 values = 2;
+}
+
+message Everything {
+  double d = 1;
+  float f = 2;
+  int64 i64 = 3;
+  uint64 u64 = 4;
+  int32 i32 = 5;
+  fixed64 f64 = 6;
+  fixed32 f32 = 7;
+  bool b = 8;
+  string s = 9;
+  bytes by = 10;
+  uint32 u32 = 11;
+  sfixed32 sf32 = 12;
+  sfixed64 sf64 = 13;
+  sint32 si32 = 14;
+  sint64 si64 = 15;
+  Color color = 16;
+  Inner inner = 17;
+  repeated Inner inners = 18;
+  repeated int64 numbers = 19;
+  map<string, Inner> by_name = 20;
+  map<int32, string> labels = 21;
+  oneof choice {
+    string text = 22;
+    Inner nested = 23;
+  }
+  optional int32 maybe = 24;
+  google.protobuf.Timestamp at = 25;
+  google.protobuf.Duration took = 26;
+  google.protobuf.Int32Value wrapped = 27;
+  google.protobuf.Struct meta = 28;
+  google.protobuf.Value any_value = 29;
+  google.protobuf.FieldMask mask = 30;
+  google.protobuf.Any extra = 31;
+  repeated Color colors = 32;
+  google.protobuf.ListValue list = 33;
+  string snake_case_name = 34;
+  repeated double ratios = 35;
+}
+
+service Echo {
+  // Devuelve el mismo mensaje.
+  rpc Echo(Everything) returns (Everything);
+  // Siempre falla con NOT_FOUND y un trailer.
+  rpc Fail(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Devuelve la metadata authorization que recibió.
+  rpc Whoami(google.protobuf.Empty) returns (google.protobuf.StringValue);
+  rpc Watch(Inner) returns (stream Inner);
+  rpc Upload(stream Inner) returns (Inner);
+  rpc Chat(stream Inner) returns (stream Inner);
+}

@@ -19,6 +19,7 @@
     <DataTemplate DataType="vm:UpdateRequiredViewModel"><views:UpdateRequiredView /></DataTemplate>
     <DataTemplate DataType="vm:MainViewModel"><views:MainView /></DataTemplate>
     <DataTemplate DataType="vm:RequestTabViewModel"><views:RequestTabView /></DataTemplate>
+    <DataTemplate DataType="vm:GrpcRequestTabViewModel"><views:GrpcRequestTabView /></DataTemplate>
     <DataTemplate DataType="vm:SampleTabViewModel"><views:SampleTabView /></DataTemplate>
     <DataTemplate DataType="vm:KeyValueListViewModel"><views:KeyValueListView /></DataTemplate>
     <DataTemplate DataType="vm:SampleKeyValueListViewModel"><views:SampleKeyValueListView /></DataTemplate>

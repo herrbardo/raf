@@ -25,6 +25,22 @@
   <data name="Trace_Redirects" xml:space="preserve"><value>Redirects: {0}</value></data>
   <data name="Trace_Total" xml:space="preserve"><value>Total: {0}</value></data>
   <data name="Trace_BodyPreview" xml:space="preserve"><value>… (showing the first {0} KB of the body)</value></data>
+  <data name="Trace_GrpcCall" xml:space="preserve"><value>gRPC call {0} to {1}</value></data>
+  <data name="Trace_GrpcStatus" xml:space="preserve"><value>gRPC status: {0} ({1})</value></data>
+  <data name="Trace_GrpcTrailers" xml:space="preserve"><value>Trailers:</value></data>
+  <data name="Trace_GrpcApiKeyQuery" xml:space="preserve"><value>gRPC has no query: the API key set to go in the query isn't sent. Set it to go as a header.</value></data>
+  <data name="Run_GrpcUnavailable" xml:space="preserve"><value>gRPC can only be sent from the desktop app.</value></data>
+  <data name="Run_GrpcNoMethod" xml:space="preserve"><value>Choose the gRPC service and method.</value></data>
+  <data name="Run_GrpcAddress" xml:space="preserve"><value>The gRPC address must start with https:// (with TLS) or http:// (without TLS), for example https://server:443.</value></data>
+  <data name="Grpc_NoReflection" xml:space="preserve"><value>The server doesn't have server reflection enabled: its services can't be discovered.</value></data>
+  <data name="Grpc_UnknownMethod" xml:space="preserve"><value>The server doesn't offer the method {0}. Reload the method list.</value></data>
+  <data name="Grpc_UnknownType" xml:space="preserve"><value>The definition of type {0} wasn't found.</value></data>
+  <data name="Grpc_InvalidJson" xml:space="preserve"><value>The message isn't valid JSON: {0}</value></data>
+  <data name="Grpc_InvalidField" xml:space="preserve"><value>Field {0}: {1}</value></data>
+  <data name="Grpc_UnknownField" xml:space="preserve"><value>type {0} has no such field</value></data>
+  <data name="Grpc_ExpectedValue" xml:space="preserve"><value>expected {0}</value></data>
+  <data name="Grpc_InvalidResponse" xml:space="preserve"><value>The response couldn't be read as {0}: {1}</value></data>
+  <data name="Grpc_ReflectionFailed" xml:space="preserve"><value>Couldn't get the services through reflection: {0}</value></data>
   <data name="Trace_BasicMasked" xml:space="preserve"><value>(the credentials use a secret variable)</value></data>
   <data name="Trace_Cipher" xml:space="preserve"><value>Cipher: {0}</value></data>
   <data name="Trace_Certificate" xml:space="preserve"><value>Certificate: {0}</value></data>
@@ -173,4 +189,5 @@
   <data name="LoginProblem_InvalidVariable" xml:space="preserve"><value>The token variable name is not valid: only letters, digits, dot, hyphen and underscore.</value></data>
   <data name="LoginProblem_MissingExpiryPath" xml:space="preserve"><value>Indicate the expiration field.</value></data>
   <data name="LoginProblem_InvalidExpiryMinutes" xml:space="preserve"><value>The expiration minutes must be a number greater than zero.</value></data>
+  <data name="Grpc_StreamingNotYet" xml:space="preserve"><value>{0} is a streaming method: for now RAF only sends unary calls.</value></data>
 </root>

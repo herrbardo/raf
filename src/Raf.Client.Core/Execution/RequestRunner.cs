@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using Raf.Client.Core.Grpc;
 using Raf.Client.Core.Local;
 using Raf.Domain.Requests;
 
@@ -15,9 +16,11 @@ public sealed class RequestBuildException(string message) : Exception(message);
 /// el handler que arma <paramref name="handlers"/> (recibe si se aceptan certificados inválidos): por defecto,
 /// directo a la red; en el cliente web, por el relay del servidor (<see cref="RelayHandler"/>).
 /// </summary>
-public sealed partial class RequestRunner(TimeProvider? time = null, Func<bool, HttpMessageHandler>? handlers = null) : IDisposable
+public sealed partial class RequestRunner(
+    TimeProvider? time = null, Func<bool, HttpMessageHandler>? handlers = null, IGrpcEngine? grpc = null) : IDisposable
 {
     private readonly TimeProvider _time = time ?? TimeProvider.System;
+    private readonly IGrpcEngine? _grpc = grpc;
 
     /// <summary>Tope de lo que se conserva en memoria y se muestra de un body.</summary>
     public const int PreviewLimit = 2 * 1024 * 1024;
@@ -107,6 +110,8 @@ public sealed partial class RequestRunner(TimeProvider? time = null, Func<bool, 
                     ? CoreTexts.Trace_AuthInheritedNone
                     : string.Format(CoreTexts.Trace_AuthInherited, spec.Auth.Type));
 
+            if (spec.IsGrpc) return await RunGrpcAsync(input, spec, trace, stopwatch, timeout.Token);
+
             var message = BuildMessage(spec);
             messages.Add(message);
             var body = message.Content is null ? null : await message.Content.ReadAsStringAsync(timeout.Token);
@@ -171,7 +176,7 @@ public sealed partial class RequestRunner(TimeProvider? time = null, Func<bool, 
             trace.Fail(RunEventLevel.Error, string.Format(CoreTexts.Run_TimeoutTrace, error));
             return new RunResult { Outcome = RunOutcome.TimedOut, Elapsed = stopwatch.Elapsed, Error = error, Events = trace.Finish() };
         }
-        catch (Exception e) when (e is HttpRequestException or RequestBuildException or IOException)
+        catch (Exception e) when (e is HttpRequestException or RequestBuildException or IOException or GrpcEngineException)
         {
             var error = input.Variables.Scrub(Describe(e));
             trace.Fail(RunEventLevel.Error, error, e is RequestBuildException ? null : e);

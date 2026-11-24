@@ -22,6 +22,7 @@ jobs:
           global-json-file: global.json
       - run: dotnet build src/Raf.Client
       - run: dotnet test tests/Raf.Client.Core.Tests
+      - run: dotnet test tests/Raf.Client.Grpc.Tests
 
   # Cliente web: fuera de Raf.slnx porque necesita el workload de WebAssembly. Se publica (no solo se compila) para
   # que el recorte de ensamblados también se controle.
