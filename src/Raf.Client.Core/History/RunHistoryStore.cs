@@ -16,7 +16,12 @@ public sealed record RunHistoryEntry(
     int? StatusCode,
     long ElapsedMs,
     long? Size,
-    string? Error);
+    string? Error,
+    string? Source = null)
+{
+    /// <summary>Lo ejecutó el asistente por MCP (Plan 12, M12).</summary>
+    public const string McpSource = "MCP";
+}
 
 /// <summary>Historial local por usuario, en un archivo de una entrada por línea. No se sincroniza.</summary>
 public sealed class RunHistoryStore(string directory)

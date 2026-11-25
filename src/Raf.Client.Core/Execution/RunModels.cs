@@ -47,7 +47,19 @@ public sealed class ResponseBody(byte[] preview, long length, FileStream? overfl
     public string? MediaType { get; } = mediaType;
     public bool IsTruncated => overflow is not null;
 
-    public string GetPreviewText()
+    public string GetPreviewText() => Decode(Preview);
+
+    /// <summary>El body entero, también la parte que quedó en el archivo temporal.</summary>
+    public async Task<byte[]> ReadAllAsync(CancellationToken ct = default)
+    {
+        if (overflow is null) return Preview;
+        using var all = new MemoryStream();
+        await SaveToAsync(all, ct);
+        return all.ToArray();
+    }
+
+    /// <summary>Texto con el charset de la respuesta (UTF-8 si no trae o no se conoce).</summary>
+    public string Decode(byte[] bytes)
     {
         Encoding encoding = Encoding.UTF8;
         try
@@ -59,7 +71,7 @@ public sealed class ResponseBody(byte[] preview, long length, FileStream? overfl
             // Charset desconocido: se muestra como UTF-8.
         }
 
-        using var reader = new StreamReader(new MemoryStream(Preview), encoding, detectEncodingFromByteOrderMarks: true);
+        using var reader = new StreamReader(new MemoryStream(bytes), encoding, detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd();
     }
 

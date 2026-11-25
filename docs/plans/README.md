@@ -16,7 +16,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 09 | [Cliente web](09-cliente-web.md) | ✅ Implementado | — |
 | 10 | [gRPC](10-grpc.md) | ✅ Implementado (Ticket-035), sin probar en la app de escritorio | Probar en la app de escritorio contra un servidor gRPC real; al publicar, servidor primero y después `Clients:MinVersion` |
 | 11 | [Variables por App](11-variables-por-app.md) | ✅ Implementado (Ticket-018), sin probar en la app de escritorio | Probar en la app de escritorio; al publicar, servidor primero (migración `VariableApps`) y después `Clients:MinVersion` |
-| 12 | [Servidor MCP](12-servidor-mcp.md) | 🚧 Aprobado, etapa 1 hecha (Ticket-019) | Conectar un harness real; al publicar, servidor primero (`/auth/sessions`) y después la app |
+| 12 | [Servidor MCP](12-servidor-mcp.md) | ✅ Implementado (Ticket-019), sin probar con un harness real | Conectar un harness real; al publicar, servidor primero (`/auth/sessions`) y después la app |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
@@ -26,7 +26,7 @@ Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
 **v0.3.0** suma lo hecho desde la v0.2.0: cliente web (plan 09), renovación automática del token con el login de la App (Ticket-025), logins automáticos compartidos entre Apps (Ticket-029), tooltip con el valor de las variables (Ticket-030) y mejoras en la ventana de environments: buscador, columna de la clave más ancha, foco en la variable nueva y el environment activo seleccionado al abrir (Tickets 026, 027, 028 y 031). La migración `SharedLogins` pasa el login de cada App a un login compartido y un cliente anterior no conoce ese tipo de cambio: hay que desplegar primero el servidor y después subir `Clients:MinVersion` a `0.3.0`.
 
-**Próxima versión** (sin publicar): pantalla de servidores guardados (Ticket-033), duplicar (Ticket-034), gRPC (plan 10, Ticket-035), WebSocket (Ticket-036) y variables por App (plan 11, Ticket-018). Las migraciones `ProtoSets` y `VariableApps` y los tipos nuevos (`grpc` y `webSocket` en el spec, el cambio `ProtoSet`) no los entiende un cliente anterior: hay que desplegar primero el servidor y después subir `Clients:MinVersion` a la versión nueva.
+**Próxima versión** (sin publicar): pantalla de servidores guardados (Ticket-033), duplicar (Ticket-034), gRPC (plan 10, Ticket-035), WebSocket (Ticket-036), variables por App (plan 11, Ticket-018) y el servidor MCP de la app de escritorio (plan 12, Ticket-019). Las migraciones `ProtoSets` y `VariableApps`, el endpoint `/auth/sessions` y los tipos nuevos (`grpc` y `webSocket` en el spec, el cambio `ProtoSet`) no los entiende un cliente anterior: hay que desplegar primero el servidor y después subir `Clients:MinVersion` a la versión nueva.
 
 ## Decisiones pendientes
 
