@@ -363,14 +363,18 @@ public sealed class SyncedWorkspaceStore : IWorkspaceStore, IAsyncDisposable
     {
         ValidateKey(req.Key);
         return CreateAsync(ws, ChangeKind.Variable, new VariableDto(
-            req.Id ?? Guid.CreateVersion7(), req.EnvironmentId, req.Key.Trim(), req.Value, req.IsSecret, 0, 0), ct);
+            req.Id ?? Guid.CreateVersion7(), req.EnvironmentId, req.Key.Trim(), req.Value, req.IsSecret, 0, 0, req.AppId), ct);
     }
 
     public Task<VariableDto> UpdateVariableAsync(Guid ws, Guid id, UpdateVariableRequest req, CancellationToken ct = default)
     {
         ValidateKey(req.Key);
         return UpdateAsync<VariableDto>(ws, ChangeKind.Variable, id, req.Version,
-            x => x with { Key = req.Key.Trim(), Value = req.Value, IsSecret = req.IsSecret }, ct);
+            x => x with
+            {
+                Key = req.Key.Trim(), Value = req.Value, IsSecret = req.IsSecret,
+                AppId = req.AppId is null ? x.AppId : req.AppId == Guid.Empty ? null : req.AppId,
+            }, ct);
     }
 
     public Task DeleteVariableAsync(Guid ws, Guid id, CancellationToken ct = default) => DeleteAsync(ws, ChangeKind.Variable, id, ct);

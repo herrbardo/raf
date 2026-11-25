@@ -38,10 +38,14 @@ public sealed class WorkspaceEnvironment : SyncEntity
     public required string Name { get; set; }
 }
 
-/// <summary>Variable global del workspace (<see cref="EnvironmentId"/> null) o de un environment.</summary>
+/// <summary>
+/// Variable global del workspace (<see cref="EnvironmentId"/> null) o de un environment, para todas las Apps
+/// (<see cref="AppId"/> null) o para una sola (Plan 11).
+/// </summary>
 public sealed class Variable : SyncEntity
 {
     public Guid? EnvironmentId { get; set; }
+    public Guid? AppId { get; set; }
     public required string Key { get; set; }
     public string Value { get; set; } = "";
     public bool IsSecret { get; set; }

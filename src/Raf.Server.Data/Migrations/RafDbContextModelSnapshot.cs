@@ -438,6 +438,9 @@ namespace Raf.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AppId")
+                        .HasColumnType("uuid");
+
                     b.Property<long>("ChangeSeq")
                         .HasColumnType("bigint");
 
@@ -476,11 +479,11 @@ namespace Raf.Server.Data.Migrations
 
                     b.HasIndex("WorkspaceId", "ChangeSeq");
 
-                    b.HasIndex("WorkspaceId", "EnvironmentId", "Key")
+                    b.HasIndex("WorkspaceId", "EnvironmentId", "AppId", "Key")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
 
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("WorkspaceId", "EnvironmentId", "Key"), false);
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("WorkspaceId", "EnvironmentId", "AppId", "Key"), false);
 
                     b.ToTable("Variables");
                 });

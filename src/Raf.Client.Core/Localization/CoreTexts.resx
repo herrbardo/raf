@@ -109,6 +109,10 @@
   <data name="Completion_Global" xml:space="preserve"><value>Global</value></data>
   <data name="Completion_Environment" xml:space="preserve"><value>Environment activo</value></data>
   <data name="Completion_Session" xml:space="preserve"><value>Sesión</value></data>
+  <data name="Completion_AppGlobal" xml:space="preserve"><value>Global de la App</value></data>
+  <data name="Completion_AppEnvironment" xml:space="preserve"><value>Environment activo de la App</value></data>
+  <data name="Hover_AppGlobal" xml:space="preserve"><value>Global de {0}</value></data>
+  <data name="Hover_AppScope" xml:space="preserve"><value>App {0} · {1}</value></data>
   <data name="Store_AppCannotInherit" xml:space="preserve"><value>Una App no puede heredar la autenticación.</value></data>
   <data name="Store_LoginGone" xml:space="preserve"><value>El login elegido ya no existe.</value></data>
   <data name="Store_LoginInUse" xml:space="preserve"><value>El login está en uso por: {0}. Primero hay que quitárselo a esas Apps.</value></data>

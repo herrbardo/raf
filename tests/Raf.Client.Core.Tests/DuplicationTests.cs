@@ -73,10 +73,18 @@ public class DuplicationTests
         var folder = await store.CreateFolderAsync(Ws, new CreateFolderRequest(app.Id, "Carpeta"));
         await store.CreateRequestAsync(Ws, new CreateRequestRequest(app.Id, "En carpeta", null, folder.Id));
         await store.CreateRequestAsync(Ws, new CreateRequestRequest(app.Id, "En la raíz"));
+        var env = Guid.NewGuid();
+        await store.CreateVariableAsync(Ws, new CreateVariableRequest("baseUrl", "dev", env, AppId: app.Id));
+        await store.CreateVariableAsync(Ws, new CreateVariableRequest("clave", "s", IsSecret: true, AppId: app.Id));
+        await store.CreateVariableAsync(Ws, new CreateVariableRequest("deTodas", "x"));
+        await store.CreateVariableAsync(Ws, new CreateVariableRequest("deOtra", "y", AppId: other.Id));
 
         var copy = await new WorkspaceDuplicator(store, Ws).DuplicateAppAsync(app, "App (1)", 1);
 
         Assert.Equal(("App (1)", 1, auth, (Guid?)login.Id), (copy.Name, copy.Order, copy.Auth, copy.LoginId));
+        Assert.Equal([("baseUrl", "dev", (Guid?)env, false), ("clave", "s", null, true)],
+            store.Variables.Where(v => v.AppId == copy.Id).Select(v => (v.Key, v.Value!, v.EnvironmentId, v.IsSecret)).OrderBy(v => v.Key));
+        Assert.Equal(6, store.Variables.Count);
         var folderCopy = Assert.Single(store.Folders, f => f.AppId == copy.Id);
         Assert.Equal("En carpeta", Assert.Single(store.Requests, r => r.FolderId == folderCopy.Id).Name);
         Assert.Equal(["En carpeta", "En la raíz"], store.Requests.Where(r => r.AppId == copy.Id).Select(r => r.Name).Order());
@@ -112,6 +120,7 @@ public class DuplicationTests
         public List<RequestDto> Requests { get; } = [];
         public List<SampleDto> Samples { get; } = [];
         public List<LoginDto> Logins { get; } = [];
+        public List<VariableDto> Variables { get; } = [];
 
         private static T Add<T>(List<T> list, T item)
         {
@@ -149,8 +158,10 @@ public class DuplicationTests
         public Task<EnvironmentDto> CreateEnvironmentAsync(Guid ws, string name, Guid? id = null, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<EnvironmentDto> UpdateEnvironmentAsync(Guid ws, Guid id, UpdateEnvironmentRequest req, CancellationToken ct = default) => throw new NotSupportedException();
         public Task DeleteEnvironmentAsync(Guid ws, Guid id, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<IReadOnlyList<VariableDto>> GetVariablesAsync(Guid ws, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<VariableDto> CreateVariableAsync(Guid ws, CreateVariableRequest req, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<VariableDto>> GetVariablesAsync(Guid ws, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<VariableDto>>(Variables.ToList());
+        public Task<VariableDto> CreateVariableAsync(Guid ws, CreateVariableRequest req, CancellationToken ct = default) =>
+            Task.FromResult(Add(Variables, new VariableDto(Guid.NewGuid(), req.EnvironmentId, req.Key, req.Value, req.IsSecret, 1, 0, req.AppId)));
         public Task<VariableDto> UpdateVariableAsync(Guid ws, Guid id, UpdateVariableRequest req, CancellationToken ct = default) => throw new NotSupportedException();
         public Task DeleteVariableAsync(Guid ws, Guid id, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<AppDto> UpdateAppAsync(Guid ws, Guid id, UpdateAppRequest req, CancellationToken ct = default) => throw new NotSupportedException();
