@@ -232,6 +232,33 @@ public class SyncEngineTests(RafApp app)
     }
 
     [Fact]
+    public async Task La_variable_de_una_App_creada_sin_conexion_llega_despues_de_la_App_y_se_va_con_ella()
+    {
+        var (a, b, ws) = await TwoDevicesAsync();
+
+        a.GoOffline();
+        var app = await a.Store.CreateAppAsync(ws, new CreateAppRequest("Orders"));
+        await a.Store.CreateVariableAsync(ws, new CreateVariableRequest("baseUrl", "orders", AppId: app.Id));
+        a.GoOnline();
+        await a.SyncAsync();
+        await b.SyncAsync();
+        var seen = Assert.Single(await b.Store.GetVariablesAsync(ws));
+        Assert.Equal((app.Id, "orders"), (seen.AppId!.Value, seen.Value));
+
+        // Editar sin tocar la App la conserva; borrar la App la borra en el otro cliente.
+        await b.Store.UpdateVariableAsync(ws, seen.Id, new UpdateVariableRequest("baseUrl", "orders2", false, seen.Version));
+        await b.SyncAsync();
+        await a.SyncAsync();
+        Assert.Equal((app.Id, "orders2"), Assert.Single(await a.Store.GetVariablesAsync(ws)) is var v ? (v.AppId!.Value, v.Value) : default);
+
+        await a.Store.DeleteAppAsync(ws, app.Id);
+        Assert.Empty(await a.Store.GetVariablesAsync(ws));
+        await a.SyncAsync();
+        await b.SyncAsync();
+        Assert.Empty(await b.Store.GetVariablesAsync(ws));
+    }
+
+    [Fact]
     public async Task El_conjunto_de_proto_llega_al_otro_cliente_antes_que_el_request_que_lo_usa()
     {
         var (a, b, ws) = await TwoDevicesAsync();

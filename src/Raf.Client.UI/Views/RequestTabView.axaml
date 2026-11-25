@@ -4,7 +4,8 @@
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.RequestTabView"
-             x:DataType="vm:RequestTabViewModel">
+             x:DataType="vm:RequestTabViewModel"
+             ctl:VariableHighlight.Lookup="{Binding Lookup}">
   <!-- Ctrl+S y Ctrl+Enter están en MainWindow: así funcionan aunque el foco no esté dentro de la pestaña -->
   <Grid RowDefinitions="Auto,Auto,*,5,*">
     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,14,14,0">

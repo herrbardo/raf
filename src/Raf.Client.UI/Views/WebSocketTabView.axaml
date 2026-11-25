@@ -5,7 +5,8 @@
              xmlns:ctl="using:Raf.Client.Controls"
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.Views.WebSocketTabView"
-             x:DataType="vm:WebSocketTabViewModel">
+             x:DataType="vm:WebSocketTabViewModel"
+             ctl:VariableHighlight.Lookup="{Binding Lookup}">
   <!-- Ctrl+Enter (en ShellView) conecta, o manda lo escrito si ya hay conexión. -->
   <Grid RowDefinitions="Auto,Auto,*,5,*">
     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,14,14,0">

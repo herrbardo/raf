@@ -7,6 +7,12 @@ using Raf.Contracts;
 
 namespace Raf.Client.ViewModels;
 
+/// <summary>Una App para la columna y el filtro de la ventana de environments; <see cref="Id"/> null = todas (Plan 11).</summary>
+public sealed record AppChoice(Guid? Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
 public sealed partial class VariableRowViewModel : ObservableObject
 {
     private readonly EnvironmentsViewModel _owner;
@@ -27,6 +33,11 @@ public sealed partial class VariableRowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(MaskChar))]
     private bool _reveal;
 
+    /// <summary>La App de la variable, o "Todas" (Plan 11, V1). Cambiarla la mueve de alcance (V7).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges))]
+    private AppChoice _app;
+
     /// <summary>Si la fila pasa el filtro del buscador. Las filas nuevas se ven siempre, aunque no coincidan.</summary>
     [ObservableProperty] private bool _isShown = true;
 
@@ -38,7 +49,7 @@ public sealed partial class VariableRowViewModel : ObservableObject
     /// <summary>La fila recién agregada pide el foco en la clave cuando la vista la muestra (una sola vez).</summary>
     internal bool FocusKeyOnShow { get; set; }
 
-    public VariableRowViewModel(EnvironmentsViewModel owner, Guid? environmentId, VariableDto? saved)
+    public VariableRowViewModel(EnvironmentsViewModel owner, Guid? environmentId, VariableDto? saved, AppChoice? app = null)
     {
         _owner = owner;
         EnvironmentId = environmentId;
@@ -46,9 +57,11 @@ public sealed partial class VariableRowViewModel : ObservableObject
         _key = saved?.Key;
         _value = saved?.Value;
         _isSecret = saved?.IsSecret ?? false;
+        _app = owner.AppChoiceFor(saved?.AppId ?? app?.Id);
     }
 
     public Guid? EnvironmentId { get; }
+    public IReadOnlyList<AppChoice> AppChoices => _owner.AppChoices;
     public VariableDto? Saved { get; set; }
     public bool CanEdit => _owner.CanEdit;
     public bool IsReadOnly => !CanEdit;
@@ -59,12 +72,13 @@ public sealed partial class VariableRowViewModel : ObservableObject
 
     public bool HasChanges =>
         Saved is null ? !string.IsNullOrWhiteSpace(Key)
-        : Key != Saved.Key || (Value ?? "") != (Saved.Value ?? "") || IsSecret != Saved.IsSecret;
+        : Key != Saved.Key || (Value ?? "") != (Saved.Value ?? "") || IsSecret != Saved.IsSecret || App.Id != Saved.AppId;
 
     // Cualquier edición vuelve viejo el aviso de "guardado".
     partial void OnKeyChanged(string? value) => _owner.OnEdited();
     partial void OnValueChanged(string? value) => _owner.OnEdited();
     partial void OnIsSecretChanged(bool value) => _owner.OnEdited();
+    partial void OnAppChanged(AppChoice value) => _owner.OnEdited();
 
     public void MarkSaved(VariableDto dto)
     {
@@ -94,9 +108,26 @@ public sealed partial class VariableScopeViewModel : ObservableObject
     public ObservableCollection<VariableRowViewModel> Rows { get; } = [];
 }
 
-public sealed partial class EnvironmentsViewModel(ClientServices services, Guid workspaceId, bool canEdit) : ObservableObject
+public sealed partial class EnvironmentsViewModel(
+    ClientServices services, Guid workspaceId, bool canEdit, IReadOnlyList<AppChoice>? apps = null) : ObservableObject
 {
     private readonly List<VariableRowViewModel> _removed = [];
+
+    private static AppChoice AllApps => new(null, Texts.EnvW_AllApps);
+
+    /// <summary>Lo que se elige en la columna App: "Todas" y las Apps del workspace, en orden.</summary>
+    public IReadOnlyList<AppChoice> AppChoices { get; } = [AllApps, .. apps ?? []];
+
+    /// <summary>El filtro por App (Plan 11, V6): "Todas las Apps" (Id null) o una App.</summary>
+    public IReadOnlyList<AppChoice> AppFilters { get; } = [new(null, Texts.EnvW_FilterAllApps), .. apps ?? []];
+
+    [ObservableProperty] private AppChoice? _appFilter;
+
+    /// <summary>Hay Apps para elegir: si no, la columna y el filtro no aportan nada.</summary>
+    public bool HasApps => AppChoices.Count > 1;
+
+    /// <summary>La opción de una App por id; "Todas" si es null o si la App ya no está.</summary>
+    internal AppChoice AppChoiceFor(Guid? id) => AppChoices.FirstOrDefault(a => a.Id == id) ?? AppChoices[0];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RenameEnvironmentCommand), nameof(DeleteEnvironmentCommand))]
@@ -114,9 +145,13 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
 
     public bool HasChanges => _removed.Count > 0 || Scopes.Any(s => s.Rows.Any(r => r.HasChanges));
 
-    /// <summary>Carga los alcances y elige el environment activo de la ventana principal, o las globales si no hay.</summary>
-    public async Task LoadAsync(Guid? activeEnvironment = null)
+    /// <summary>
+    /// Carga los alcances y elige el environment activo de la ventana principal, o las globales si no hay. El filtro
+    /// arranca en la App de la pestaña activa, o en "Todas las Apps".
+    /// </summary>
+    public async Task LoadAsync(Guid? activeEnvironment = null, Guid? activeApp = null)
     {
+        AppFilter = AppFilters.FirstOrDefault(a => a.Id == activeApp) ?? AppFilters[0];
         var environments = await services.Store.GetEnvironmentsAsync(workspaceId);
         var variables = await services.Store.GetVariablesAsync(workspaceId);
 
@@ -143,18 +178,23 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
 
     partial void OnSearchChanged(string? value) => ApplyFilter();
     partial void OnSelectedScopeChanged(VariableScopeViewModel? value) => ApplyFilter();
+    partial void OnAppFilterChanged(AppChoice? value) => ApplyFilter();
 
-    // Se filtra al cambiar la búsqueda o el alcance, no al editar: así una fila no desaparece mientras se escribe.
+    private bool IsFiltering => !string.IsNullOrWhiteSpace(Search) || AppFilter?.Id is not null;
+
+    // Se filtra al cambiar la búsqueda, el alcance o la App, no al editar: así una fila no desaparece mientras se escribe.
+    // Con una App elegida se ven sus variables y las de todas las Apps.
     private void ApplyFilter()
     {
         var term = Search?.Trim() ?? "";
+        var app = AppFilter?.Id;
         foreach (var row in SelectedScope?.Rows ?? [])
-            row.IsShown = term.Length == 0 || row.Matches(term);
+            row.IsShown = (term.Length == 0 || row.Matches(term)) && (app is null || row.App.Id is null || row.App.Id == app);
         UpdateNoMatches();
     }
 
     private void UpdateNoMatches() =>
-        NoMatches = !string.IsNullOrWhiteSpace(Search) && SelectedScope?.Rows.Any(r => r.IsShown) != true;
+        NoMatches = IsFiltering && SelectedScope?.Rows.Any(r => r.IsShown) != true;
 
     internal void RemoveRow(VariableRowViewModel row)
     {
@@ -168,7 +208,8 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
     private void AddVariable()
     {
         OnEdited();
-        SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null) { FocusKeyOnShow = true });
+        // Nace con la App del filtro, para que se vea en la grilla filtrada.
+        SelectedScope?.Rows.Add(new VariableRowViewModel(this, SelectedScope.Id, null, AppFilter) { FocusKeyOnShow = true });
         UpdateNoMatches();
     }
 
@@ -238,6 +279,11 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
             SavedMessage = Texts.Env_NoChanges;
             return;
         }
+        if (Repeated() is { Count: > 0 } repeated)
+        {
+            Error = string.Format(Texts.Env_Repeated, string.Join(", ", repeated));
+            return;
+        }
 
         foreach (var row in _removed.ToList())
         {
@@ -250,11 +296,24 @@ public sealed partial class EnvironmentsViewModel(ClientServices services, Guid 
             var key = row.Key?.Trim() ?? "";
             row.MarkSaved(row.Saved is { } saved
                 ? await services.Store.UpdateVariableAsync(
-                    workspaceId, saved.Id, new UpdateVariableRequest(key, row.Value ?? "", row.IsSecret, saved.Version))
+                    workspaceId, saved.Id, new UpdateVariableRequest(key, row.Value ?? "", row.IsSecret, saved.Version, row.App.Id ?? Guid.Empty))
                 : await services.Store.CreateVariableAsync(
-                    workspaceId, new CreateVariableRequest(key, row.Value ?? "", row.EnvironmentId, row.IsSecret)));
+                    workspaceId, new CreateVariableRequest(key, row.Value ?? "", row.EnvironmentId, row.IsSecret, AppId: row.App.Id)));
         }
 
         SavedMessage = total == 1 ? Texts.Env_SavedOne : string.Format(Texts.Env_SavedMany, total);
     });
+
+    /// <summary>
+    /// Las claves repetidas en la misma pestaña y para la misma App (Plan 11, V2), como "baseUrl (Orders)"; así no se
+    /// guarda nada a medias.
+    /// </summary>
+    private List<string> Repeated() =>
+        Scopes.SelectMany(s => s.Rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.Key))
+                .GroupBy(r => (Key: r.Key!.Trim(), r.App.Id))
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key.Id is null ? $"{g.Key.Key} ({s.Name})" : $"{g.Key.Key} ({s.Name} · {g.First().App.Name})"))
+            .Distinct()
+            .ToList();
 }

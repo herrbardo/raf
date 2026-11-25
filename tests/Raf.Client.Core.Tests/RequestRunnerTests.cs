@@ -631,6 +631,23 @@ public sealed class RequestRunnerTests(EchoServer server) : IClassFixture<EchoSe
     }
 
     [Fact]
+    public async Task El_login_usa_las_variables_de_todas_las_Apps_y_el_request_las_de_su_App()
+    {
+        var app = Guid.NewGuid();
+        var vars = VariableContext.From(
+        [
+            Var("clave", server.Password, secret: true),
+            Var("clave", "la-de-la-app", secret: true) with { AppId = app },
+        ], null, appId: app);
+        Assert.Equal("la-de-la-app", vars.CreateResolver().Resolve("{{clave}}"));
+
+        using var result = await RunProtectedAsync(vars, AppLoginConfig());
+
+        Assert.Equal(200, result.StatusCode);
+        Assert.NotNull(result.Token);
+    }
+
+    [Fact]
     public async Task Con_token_vigente_no_ejecuta_el_login()
     {
         using var first = await RunProtectedAsync(LoginVars(), AppLoginConfig());

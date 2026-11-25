@@ -6,6 +6,7 @@ using Raf.Client.Core.Execution;
 using Raf.Client.Core.History;
 using Raf.Client.Core.Local;
 using Raf.Client.Services;
+using Raf.Client.Controls;
 using Raf.Contracts;
 using Raf.Domain.Requests;
 
@@ -53,6 +54,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     {
         Node = node;
         OnPropertyChanged(nameof(Node));
+        ApplyVariables(); // el request pudo pasar a otra App
     }
     public Guid RequestId { get; }
     public ResponseViewModel Response { get; }
@@ -77,7 +79,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         _loading = false;
         _baseline = Serialize();
         IsDirty = false;
-        RefreshWarning();
+        ApplyVariables();
     }
 
     protected void OnContentChanged()
@@ -90,12 +92,25 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     private string Serialize() => JsonSerializer.Serialize(Snapshot(), ClientJson.Options);
 
     /// <summary>La App del request: su auth es la que usa un request con <see cref="AuthType.Inherit"/>.</summary>
-    protected Guid AppId => Node.Dto is SampleDto ? Node.Parent!.Request.AppId : Node.Request.AppId;
+    public Guid AppId => Node.Dto is SampleDto ? Node.Parent!.Request.AppId : Node.Request.AppId;
 
     protected AuthSpec? AppAuth => Owner.AppAuthOf(AppId);
 
-    /// <summary>Cambió la autenticación de alguna App.</summary>
-    public virtual void OnAppChanged() => RefreshWarning();
+    /// <summary>Las variables vigentes para este request: las de su App y las de todas (Plan 11).</summary>
+    protected VariableContext Variables => Owner.VariablesFor(AppId);
+
+    /// <summary>Lo que resaltan, completan y explican los campos de la pestaña: las variables de su App.</summary>
+    public VariableLookup Lookup { get; } = new();
+
+    /// <summary>Cambiaron las variables, el environment activo o la App del request.</summary>
+    public void ApplyVariables()
+    {
+        Lookup.Update(Variables, Owner.ActiveEnvironmentName, Owner.AppNameOf(AppId));
+        RefreshWarning();
+    }
+
+    /// <summary>Cambió alguna App: su autenticación o su nombre.</summary>
+    public virtual void OnAppChanged() => ApplyVariables();
 
     /// <summary>
     /// Las variables sin valor. La del token no cuenta si el request hereda la auth y la App tiene login
@@ -112,7 +127,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     public void RefreshWarning()
     {
         var (request, sample) = RunTarget();
-        var check = Preflight(request, sample, Owner.Variables, AppAuth);
+        var check = Preflight(request, sample, Variables, AppAuth);
         var parts = new List<string>();
         if (check.Missing.Count > 0) parts.Add(string.Format(Texts.Tab_NoValue, string.Join(", ", check.Missing)));
         if (check.UnreadableSecrets.Count > 0) parts.Add(string.Format(Texts.Tab_UnreadableSecrets, string.Join(", ", check.UnreadableSecrets)));
@@ -142,7 +157,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
     /// <summary>Si el request usa secretos que el rol no puede leer, pregunta si enviarlo igual.</summary>
     protected async Task<bool> ConfirmUnreadableSecretsAsync(RequestSpec request, SampleOverrides? sample)
     {
-        var check = Preflight(request, sample, Owner.Variables, AppAuth);
+        var check = Preflight(request, sample, Variables, AppAuth);
         return check.UnreadableSecrets.Count == 0 || await Owner.Services.Dialogs.ConfirmAsync(
             Texts.Tab_SecretsTitle,
             string.Format(Texts.Tab_SecretsMessage, string.Join(", ", check.UnreadableSecrets)),
@@ -161,7 +176,7 @@ public abstract partial class EditorTabViewModel : ObservableObject, IDisposable
         if (await TrySendCustomAsync()) return;
 
         var (request, sample) = RunTarget();
-        var variables = Owner.Variables;
+        var variables = Variables;
         var appAuth = AppAuth;
         if (!await ConfirmUnreadableSecretsAsync(request, sample)) return;
 

@@ -4,7 +4,8 @@
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:ctl="using:Raf.Client.Controls"
              x:Class="Raf.Client.Views.GrpcRequestTabView"
-             x:DataType="vm:GrpcRequestTabViewModel">
+             x:DataType="vm:GrpcRequestTabViewModel"
+             ctl:VariableHighlight.Lookup="{Binding Lookup}">
   <!-- Como RequestTabView: Ctrl+S y Ctrl+Enter están en MainWindow -->
   <Grid RowDefinitions="Auto,Auto,Auto,*,5,*">
     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="14,14,14,0">

@@ -15,6 +15,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 08 | [Autenticación por App](08-auth-por-app.md) | ✅ Implementado (etapas 1 y 2 en el Ticket-017, etapa 3 en el Ticket-025, etapa 4 en el Ticket-029) | — |
 | 09 | [Cliente web](09-cliente-web.md) | ✅ Implementado | — |
 | 10 | [gRPC](10-grpc.md) | ✅ Implementado (Ticket-035), sin probar en la app de escritorio | Probar en la app de escritorio contra un servidor gRPC real; al publicar, servidor primero y después `Clients:MinVersion` |
+| 11 | [Variables por App](11-variables-por-app.md) | 📝 Propuesto (Ticket-018) | Aprobar el plan (decisiones V5 a V10); al publicar, servidor primero y después `Clients:MinVersion` |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 

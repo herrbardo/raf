@@ -89,6 +89,48 @@ public class WorkspaceTests(RafApp app)
     }
 
     [Fact]
+    public async Task Variables_per_app_repeat_the_key_per_app_keep_it_when_omitted_and_go_away_with_the_app()
+    {
+        var (owner, ws) = await NewWorkspaceAsync();
+        var (stranger, other) = await NewWorkspaceAsync();
+        var env = await owner.PostOkAsync<EnvironmentDto>($"/workspaces/{ws.Id}/environments", new CreateEnvironmentRequest("dev"));
+        var orders = await owner.PostOkAsync<AppDto>($"/workspaces/{ws.Id}/apps", new CreateAppRequest("Orders"));
+        var users = await owner.PostOkAsync<AppDto>($"/workspaces/{ws.Id}/apps", new CreateAppRequest("Users"));
+        var foreign = await stranger.PostOkAsync<AppDto>($"/workspaces/{other.Id}/apps", new CreateAppRequest("Ajena"));
+        var url = $"/workspaces/{ws.Id}/variables";
+
+        var all = await owner.PostOkAsync<VariableDto>(url, new CreateVariableRequest("baseUrl", "todas", env.Id));
+        var ofOrders = await owner.PostOkAsync<VariableDto>(url, new CreateVariableRequest("baseUrl", "orders", env.Id, AppId: orders.Id));
+        var ofUsers = await owner.PostOkAsync<VariableDto>(url, new CreateVariableRequest("baseUrl", "users", env.Id, AppId: users.Id));
+        var repeated = await owner.PostJsonAsync(url, new CreateVariableRequest("baseUrl", "otra", env.Id, AppId: orders.Id));
+        var badApp = await owner.PostJsonAsync(url, new CreateVariableRequest("x", "1", AppId: foreign.Id));
+
+        Assert.Equal((Guid?)null, all.AppId);
+        Assert.Equal(orders.Id, ofOrders.AppId);
+        Assert.Equal(HttpStatusCode.Conflict, repeated.StatusCode);
+        Assert.Contains("Ya existe una variable", await repeated.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, badApp.StatusCode);
+
+        // Sin App en el PUT la conserva; Guid.Empty la pasa a todas, y ahí choca con la que ya existe.
+        var kept = await owner.PutOkAsync<VariableDto>($"{url}/{ofOrders.Id}", new UpdateVariableRequest("baseUrl", "orders2", false, ofOrders.Version));
+        var toAll = await owner.PutJsonAsync($"{url}/{ofOrders.Id}", new UpdateVariableRequest("baseUrl", "orders2", false, kept.Version, Guid.Empty));
+        var moved = await owner.PutOkAsync<VariableDto>($"{url}/{ofUsers.Id}",
+            new UpdateVariableRequest("solo", "users", false, ofUsers.Version, Guid.Empty));
+        Assert.Equal((orders.Id, "orders2"), (kept.AppId!.Value, kept.Value));
+        Assert.Equal(HttpStatusCode.Conflict, toAll.StatusCode);
+        Assert.Null(moved.AppId);
+
+        var forOrders = await owner.GetOkAsync<List<VariableDto>>($"{url}?appId={orders.Id}");
+        Assert.Equal(["orders2", "todas", "users"], forOrders.Select(v => v.Value).Order());
+
+        var deleted = await owner.DeleteAsync($"/workspaces/{ws.Id}/apps/{orders.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+        var left = await owner.GetOkAsync<List<VariableDto>>(url);
+        Assert.DoesNotContain(left, v => v.Id == ofOrders.Id);
+        Assert.Equal(2, left.Count);
+    }
+
+    [Fact]
     public async Task Stale_version_returns_409()
     {
         var (owner, ws) = await NewWorkspaceAsync();
