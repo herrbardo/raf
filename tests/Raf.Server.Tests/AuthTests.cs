@@ -88,6 +88,24 @@ public class AuthTests(RafApp app)
     }
 
     [Fact]
+    public async Task An_extra_session_is_independent_and_revoked_on_its_own()
+    {
+        var (user, _) = await app.CreateActiveUserAsync();
+        var login = await app.LoginRawAsync(user.Email, "NuevaClave123");
+        var anon = app.Anonymous();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anon.PostJsonAsync("/auth/sessions", new { })).StatusCode);
+        var extra = await app.WithToken(login.AccessToken).PostOkAsync<TokenResponse>("/auth/sessions", new { }, HttpStatusCode.OK);
+        Assert.Equal(user.Id, extra.User.Id);
+        Assert.NotEqual(login.RefreshToken, extra.RefreshToken);
+
+        // Cada una rota su propio refresh token sin tocar la otra; revocar la extra no cierra la de la app.
+        var renewedExtra = await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(extra.RefreshToken), HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.NoContent, (await anon.PostJsonAsync("/auth/logout", new LogoutRequest(renewedExtra.RefreshToken))).StatusCode);
+        await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(login.RefreshToken), HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Logout_revokes_refresh_token()
     {
         var (user, _) = await app.CreateActiveUserAsync();

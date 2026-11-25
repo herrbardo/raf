@@ -424,6 +424,22 @@
   <data name="Prefs_Language" xml:space="preserve"><value>LANGUAGE</value></data>
   <data name="Prefs_LanguageHint" xml:space="preserve"><value>Saved on this computer. On automatic, RAF uses Spanish if the system is in Spanish and English otherwise.</value></data>
   <data name="Prefs_RestartNeeded" xml:space="preserve"><value>The new language applies the next time you open RAF.</value></data>
+  <data name="Mcp_Title" xml:space="preserve"><value>Assistant (MCP)</value></data>
+  <data name="Mcp_Hint" xml:space="preserve"><value>An assistant such as Claude Code or GitHub Copilot can use RAF over MCP, as you and from this computer. It uses its own session, which you can disconnect without signing out.</value></data>
+  <data name="Mcp_Connected" xml:space="preserve"><value>Connected as {0} on {1}</value></data>
+  <data name="Mcp_NotConnected" xml:space="preserve"><value>Not connected</value></data>
+  <data name="Mcp_Connect" xml:space="preserve"><value>Connect</value></data>
+  <data name="Mcp_Disconnect" xml:space="preserve"><value>Disconnect</value></data>
+  <data name="Mcp_ReconnectTitle" xml:space="preserve"><value>Reconnect</value></data>
+  <data name="Mcp_ReconnectMessage" xml:space="preserve"><value>The assistant's current session is revoked and a new one is created with your user and this server.</value></data>
+  <data name="Mcp_OtherServer" xml:space="preserve"><value>The connection is with another server or user. Connecting replaces it with this session's.</value></data>
+  <data name="Mcp_Permissions" xml:space="preserve"><value>What it can do</value></data>
+  <data name="Mcp_Read" xml:space="preserve"><value>Read workspaces, requests and variables (without secret values)</value></data>
+  <data name="Mcp_Run" xml:space="preserve"><value>Run requests</value></data>
+  <data name="Mcp_Write" xml:space="preserve"><value>Create, update and delete</value></data>
+  <data name="Mcp_Setup" xml:space="preserve"><value>Set up the assistant</value></data>
+  <data name="Mcp_ClaudeCode" xml:space="preserve"><value>Claude Code: run in a terminal</value></data>
+  <data name="Mcp_VsCode" xml:space="preserve"><value>VS Code: add to .vscode/mcp.json</value></data>
   <data name="MainV_About" xml:space="preserve"><value>About RAF…</value></data>
   <data name="About_Title" xml:space="preserve"><value>About RAF</value></data>
   <data name="About_Version" xml:space="preserve"><value>VERSION</value></data>

@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using Raf.Client.Core.Api;
 using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.Local;
+using Raf.Client.Core.Mcp;
 using Raf.Client.Core.Session;
 using Raf.Client.Core.Sync;
 using Raf.Client.Services;
@@ -57,9 +58,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty] private object? _page;
 
-    public ShellViewModel(ClientServices services, IUpdateService updates, ClientVersionHandler version)
+    private readonly McpConnection _mcp;
+
+    public ShellViewModel(ClientServices services, IUpdateService updates, ClientVersionHandler version, McpConnection mcp)
     {
         _services = services;
+        _mcp = mcp;
         Updates = updates;
         EventConsole = new EventConsoleViewModel(services.Events);
         _clientVersion = version.ClientVersion;
@@ -97,7 +101,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [RelayCommand]
     private Task OpenPreferencesAsync() =>
-        ShowPreferences?.Invoke(new PreferencesViewModel(_services.Settings)) ?? Task.CompletedTask;
+        ShowPreferences?.Invoke(new PreferencesViewModel(_services.Settings, McpPreferences())) ?? Task.CompletedTask;
+
+    /// <summary>La sección del MCP: solo en la app de escritorio y con sesión iniciada (Plan 12).</summary>
+    private McpPreferencesViewModel? McpPreferences() =>
+        ClientHost.Current.McpExecutable is { } exe && _services.Session is { User: not null, Server: { } server }
+            ? new McpPreferencesViewModel(_mcp, _services.Api, _services.Settings, _services.Dialogs, server, exe)
+            : null;
 
     /// <summary>Lo implementa la ventana principal, que abre "Acerca de" como diálogo.</summary>
     public Func<AboutViewModel, Task>? ShowAbout { get; set; }

@@ -264,6 +264,19 @@ public sealed class LocalSettings
     public Dictionary<Guid, Guid> ActiveEnvironments { get; set; } = new();
 
     public Dictionary<Guid, RequestLocalOptions> RequestOptions { get; set; } = new();
+
+    /// <summary>Qué puede hacer el asistente conectado por MCP (Plan 12). Todo apagado por defecto.</summary>
+    public McpPermissions Mcp { get; set; } = new();
+}
+
+/// <summary>
+/// Permisos del MCP (Plan 12, M5). Ejecutar y escribir necesitan leer; el proceso MCP los relee en cada llamada.
+/// </summary>
+public sealed record McpPermissions(bool Read = false, bool Run = false, bool Write = false)
+{
+    public bool CanRead => Read;
+    public bool CanRun => Read && Run;
+    public bool CanWrite => Read && Write;
 }
 
 /// <summary>Preferencias del equipo: un archivo JSON en desktop, el almacenamiento del navegador en web.</summary>

@@ -16,6 +16,7 @@ Cada plan termina en un **checkpoint humano**: el punto donde hace falta una dec
 | 09 | [Cliente web](09-cliente-web.md) | ✅ Implementado | — |
 | 10 | [gRPC](10-grpc.md) | ✅ Implementado (Ticket-035), sin probar en la app de escritorio | Probar en la app de escritorio contra un servidor gRPC real; al publicar, servidor primero y después `Clients:MinVersion` |
 | 11 | [Variables por App](11-variables-por-app.md) | ✅ Implementado (Ticket-018), sin probar en la app de escritorio | Probar en la app de escritorio; al publicar, servidor primero (migración `VariableApps`) y después `Clients:MinVersion` |
+| 12 | [Servidor MCP](12-servidor-mcp.md) | 🚧 Aprobado, etapa 1 hecha (Ticket-019) | Conectar un harness real; al publicar, servidor primero (`/auth/sessions`) y después la app |
 
 Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
