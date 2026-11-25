@@ -33,6 +33,11 @@ public abstract class ClientHost
     /// </summary>
     public virtual bool SupportsWebSockets => true;
 
+    /// <summary>
+    /// El ejecutable que el harness lanza con el argumento <c>mcp</c> (Plan 12). Null donde no hay MCP, como en web.
+    /// </summary>
+    public virtual string? McpExecutable => null;
+
     public abstract SettingsStore CreateSettings();
 
     /// <summary>

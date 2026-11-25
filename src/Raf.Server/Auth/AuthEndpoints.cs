@@ -50,6 +50,15 @@ public static class AuthEndpoints
             return Results.NoContent();
         }).AllowAnonymous();
 
+        auth.MapPost("/sessions", async (
+            ClaimsPrincipal principal, UserManager<AppUser> users, TokenService tokens, CancellationToken ct) =>
+        {
+            var user = await users.FindByIdAsync(principal.GetUserId().ToString());
+            if (user is null || user.IsDisabled) return Results.Unauthorized();
+            return Results.Ok(await tokens.IssueAsync(user, ct));
+        }).RequireAuthorization()
+          .WithSummary("Emite una sesión más del usuario, independiente de la actual (el MCP de la app de escritorio, Plan 12). Se revoca con /auth/logout.");
+
         auth.MapPost("/change-password", async (
             ChangePasswordRequest req, ClaimsPrincipal principal, UserManager<AppUser> users,
             TokenService tokens, CancellationToken ct) =>

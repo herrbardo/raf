@@ -16,13 +16,19 @@ public sealed partial class PreferencesViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(NeedsRestart))]
     private LanguageOption _language;
 
-    public PreferencesViewModel(SettingsStore settings)
+    public PreferencesViewModel(SettingsStore settings, McpPreferencesViewModel? mcp = null)
     {
         _settings = settings;
+        Mcp = mcp;
         _language = Languages.Options.FirstOrDefault(o => o.Code == settings.Current.Language) ?? Languages.Options[0];
     }
 
     public IReadOnlyList<LanguageOption> LanguageOptions => Languages.Options;
+
+    /// <summary>La sección del asistente por MCP; null en web o sin sesión (Plan 12).</summary>
+    public McpPreferencesViewModel? Mcp { get; }
+
+    public bool HasMcp => Mcp is not null;
 
     /// <summary>El idioma elegido no es el que se está usando: se ve recién al volver a abrir RAF.</summary>
     public bool NeedsRestart =>

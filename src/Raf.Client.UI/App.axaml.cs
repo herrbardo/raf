@@ -7,6 +7,7 @@ using Raf.Client.Core.Api;
 using Raf.Client.Core.Diagnostics;
 using Raf.Client.Core.History;
 using Raf.Client.Core.Local;
+using Raf.Client.Core.Mcp;
 using Raf.Client.Core.Session;
 using Raf.Client.Core.Workspaces;
 using Raf.Client.Services;
@@ -69,6 +70,8 @@ public partial class App : Application
         services.AddSingleton(sp => new SessionManager(
             sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISecureStore>(),
             TimeProvider.System, Path.Combine(data, "session.lock"), sp.GetRequiredService<EventLog>()));
+        services.AddSingleton(sp => new McpConnection(
+            sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISecureStore>(), TimeProvider.System, data));
         services.AddSingleton<RafApiClient>();
         services.AddSingleton<IWorkspaceStore, ApiWorkspaceStore>();
         services.AddSingleton<IDialogs, Dialogs>();

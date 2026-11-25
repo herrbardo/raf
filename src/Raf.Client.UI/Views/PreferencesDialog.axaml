@@ -6,7 +6,7 @@
         x:Class="Raf.Client.Views.PreferencesDialog"
         x:DataType="vm:PreferencesViewModel"
         Title="{x:Static l:Texts.Prefs_Title}"
-        DialogWidth="460" DialogCanResize="False">
+        DialogWidth="560" DialogCanResize="False">
   <DockPanel>
     <Border DockPanel.Dock="Bottom" Classes="dialog-footer">
       <Button HorizontalAlignment="Right" Classes="accent" IsDefault="True" IsCancel="True"
@@ -23,6 +23,35 @@
           <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" Text="{x:Static l:Texts.Prefs_RestartNeeded}" />
         </StackPanel>
       </Border>
+
+      <!-- Asistente por MCP (Plan 12): solo en la app de escritorio y con sesión iniciada -->
+      <StackPanel Spacing="8" Margin="0,14,0,0" IsVisible="{Binding HasMcp}">
+        <Separator />
+        <TextBlock Classes="label" Text="{x:Static l:Texts.Mcp_Title}" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.Mcp_Hint}" />
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+            <Button Content="{x:Static l:Texts.Mcp_Connect}" Command="{Binding Mcp.ConnectCommand}" IsEnabled="{Binding !Mcp.IsBusy}" />
+            <Button Content="{x:Static l:Texts.Mcp_Disconnect}" Command="{Binding Mcp.DisconnectCommand}"
+                    IsVisible="{Binding Mcp.IsConnected}" IsEnabled="{Binding !Mcp.IsBusy}" />
+          </StackPanel>
+          <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding Mcp.StatusText}" />
+        </DockPanel>
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{x:Static l:Texts.Mcp_OtherServer}" IsVisible="{Binding Mcp.IsOtherServer}" />
+        <TextBlock Classes="error" TextWrapping="Wrap" Text="{Binding Mcp.Error}"
+                   IsVisible="{Binding Mcp.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <TextBlock Classes="label" Margin="0,6,0,0" Text="{x:Static l:Texts.Mcp_Permissions}" />
+        <CheckBox IsChecked="{Binding Mcp.CanRead}" Content="{x:Static l:Texts.Mcp_Read}" />
+        <CheckBox IsChecked="{Binding Mcp.CanRun}" Content="{x:Static l:Texts.Mcp_Run}" IsEnabled="{Binding Mcp.CanChooseMore}" Margin="20,0,0,0" />
+        <CheckBox IsChecked="{Binding Mcp.CanWrite}" Content="{x:Static l:Texts.Mcp_Write}" IsEnabled="{Binding Mcp.CanChooseMore}" Margin="20,0,0,0" />
+
+        <TextBlock Classes="label" Margin="0,6,0,0" Text="{x:Static l:Texts.Mcp_Setup}" />
+        <TextBlock Classes="caption" Text="{x:Static l:Texts.Mcp_ClaudeCode}" />
+        <TextBox Classes="mono" IsReadOnly="True" TextWrapping="Wrap" Text="{Binding Mcp.ClaudeCodeCommand, Mode=OneWay}" />
+        <TextBlock Classes="caption" Text="{x:Static l:Texts.Mcp_VsCode}" />
+        <TextBox Classes="mono" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Mcp.VsCodeConfig, Mode=OneWay}" />
+      </StackPanel>
     </StackPanel>
   </DockPanel>
 </svc:DialogView>

@@ -14,6 +14,9 @@ namespace Raf.Client;
 /// </summary>
 public sealed class DesktopHost : ClientHost
 {
+    /// <summary>Instalada con Velopack, la ruta (…\current\RAF.exe) no cambia al actualizar.</summary>
+    public override string? McpExecutable => Environment.ProcessPath;
+
     public override SettingsStore CreateSettings() =>
         new(Path.Combine(AppPaths.DataDirectory, "settings.json"));
 

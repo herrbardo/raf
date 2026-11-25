@@ -34,9 +34,13 @@ public static class ServerUrl
 /// archivo la serializa entre instancias de la app.
 /// </summary>
 public sealed class SessionManager(
-    HttpClient http, ISecureStore store, TimeProvider clock, string lockPath, EventLog? events = null)
+    HttpClient http, ISecureStore store, TimeProvider clock, string lockPath, EventLog? events = null,
+    string storeKey = SessionManager.AppStoreKey)
 {
-    private const string StoreKey = "session";
+    /// <summary>Dónde guarda la app su sesión. El MCP usa otra (Plan 12), para no compartir el refresh token.</summary>
+    public const string AppStoreKey = "session";
+
+    private string StoreKey => storeKey;
     private static readonly TimeSpan ExpiryMargin = TimeSpan.FromSeconds(30);
 
     private sealed record StoredSession(string Server, TokenResponse Tokens);
@@ -67,6 +71,17 @@ public sealed class SessionManager(
         lock (_sync) _session = stored;
         events?.Info(EventCategory.Session, string.Format(CoreTexts.Session_Restored, Server, stored.Tokens.User.Email));
         return true;
+    }
+
+    /// <summary>
+    /// Recupera la sesión guardada sea del servidor que sea, y lo toma como el actual. Lo usa el MCP, que no elige
+    /// servidor: trabaja con el de la sesión que le creó la app.
+    /// </summary>
+    public bool TryRestoreAny()
+    {
+        if (ReadStored() is not { } stored || !Uri.TryCreate(stored.Server, UriKind.Absolute, out var server)) return false;
+        Server = server;
+        return TryRestore();
     }
 
     public async Task<UserDto> LoginAsync(string email, string password, CancellationToken ct = default)
@@ -132,9 +147,17 @@ public sealed class SessionManager(
         if (inFlight is not null)
             await inFlight.ContinueWith(_ => { }, TaskScheduler.Default); // su resultado no importa: solo debe terminar
 
-        var refreshToken = Volatile.Read(ref _session)?.Tokens.RefreshToken;
+        // Bajo el mismo lock que las renovaciones: otro proceso con esta sesión (el MCP, por ejemplo) pudo haberla
+        // rotado, y revocar un token ya rotado haría que el servidor lo tome como robo al usarlo después.
+        string? refreshToken;
+        using (await AcquireFileLockAsync())
+        {
+            var current = Volatile.Read(ref _session);
+            var stored = ReadStored();
+            refreshToken = stored is not null && stored.Server == current?.Server ? stored.Tokens.RefreshToken : current?.Tokens.RefreshToken;
+            Clear();
+        }
         var server = Server;
-        Clear();
         if (refreshToken is null || server is null) return;
         events?.Info(EventCategory.Session, CoreTexts.Session_Closed);
 
