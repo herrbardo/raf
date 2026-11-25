@@ -12,6 +12,22 @@ public class SessionVariableStoreTests
     private SessionVariableStore Store(string user = "u1") => new(_secure, user);
 
     [Fact]
+    public void Dos_instancias_vivas_se_ven_y_no_se_pisan()
+    {
+        // La app y el proceso MCP, cada uno con la suya sobre el mismo almacén (Plan 12, M8).
+        var app = Store();
+        var mcp = Store();
+        app.Set(_ws, _dev, "deLaApp", "1");
+        Assert.Equal("1", mcp.Get(_ws, _dev)["deLaApp"]);
+
+        mcp.Set(_ws, _dev, "token", "del-mcp");
+        app.Set(_ws, _dev, "otra", "2");
+
+        Assert.Equal(["deLaApp", "otra", "token"], app.Get(_ws, _dev).Keys.Order());
+        Assert.Equal("del-mcp", mcp.Get(_ws, _dev)["token"]);
+    }
+
+    [Fact]
     public void Separa_por_environment_y_persiste_entre_instancias()
     {
         var store = Store();

@@ -25,5 +25,7 @@
     <ProjectReference Include="..\Raf.Client.UI\Raf.Client.UI.csproj" />
     <!-- gRPC solo en escritorio: el cliente web no lo incluye (Plan 10). -->
     <ProjectReference Include="..\Raf.Client.Grpc\Raf.Client.Grpc.csproj" />
+    <!-- RAF.exe mcp: el servidor MCP (Plan 12), solo en escritorio. -->
+    <ProjectReference Include="..\Raf.Client.Mcp\Raf.Client.Mcp.csproj" />
   </ItemGroup>
 </Project>

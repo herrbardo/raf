@@ -3,6 +3,7 @@
     <Project Path="src/Raf.Client/Raf.Client.csproj" />
     <Project Path="src/Raf.Client.Core/Raf.Client.Core.csproj" />
     <Project Path="src/Raf.Client.Grpc/Raf.Client.Grpc.csproj" />
+    <Project Path="src/Raf.Client.Mcp/Raf.Client.Mcp.csproj" />
     <Project Path="src/Raf.Client.UI/Raf.Client.UI.csproj" />
     <Project Path="src/Raf.Contracts/Raf.Contracts.csproj" />
     <Project Path="src/Raf.Domain/Raf.Domain.csproj" />

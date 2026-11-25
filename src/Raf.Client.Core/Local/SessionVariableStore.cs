@@ -22,8 +22,6 @@ public sealed class SessionVariableStore(ISecureStore secure, string scope)
         [property: JsonPropertyName("v")] string Value,
         [property: JsonPropertyName("e")] DateTimeOffset? ExpiresAt = null);
 
-    // workspace → environment → variable → valor
-    private readonly Dictionary<Guid, Dictionary<string, Dictionary<string, Entry>>> _loaded = [];
     private readonly Lock _gate = new();
 
     /// <summary>Cambió alguna variable de sesión.</summary>
@@ -102,9 +100,9 @@ public sealed class SessionVariableStore(ISecureStore secure, string scope)
 
     private Dictionary<string, Dictionary<string, Entry>> Workspace(Guid workspace)
     {
-        if (_loaded.TryGetValue(workspace, out var all)) return all;
-
-        all = [];
+        // Sin caché: la app y el proceso MCP comparten estas variables (Plan 12, M8), así que cada lectura y cada
+        // cambio parten de lo último guardado por cualquiera de los dos.
+        var all = new Dictionary<string, Dictionary<string, Entry>>();
         if (secure.Read(Name(workspace)) is { } json)
         {
             try
@@ -127,7 +125,6 @@ public sealed class SessionVariableStore(ISecureStore secure, string scope)
                 all = [];
             }
         }
-        _loaded[workspace] = all;
         return all;
     }
 

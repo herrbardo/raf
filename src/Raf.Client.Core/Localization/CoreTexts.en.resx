@@ -109,6 +109,26 @@
   <data name="Completion_Global" xml:space="preserve"><value>Global</value></data>
   <data name="Completion_Environment" xml:space="preserve"><value>Active environment</value></data>
   <data name="Completion_Session" xml:space="preserve"><value>Session</value></data>
+  <data name="Mcp_PermissionRead" xml:space="preserve"><value>read</value></data>
+  <data name="Mcp_PermissionRun" xml:space="preserve"><value>run requests</value></data>
+  <data name="Mcp_PermissionWrite" xml:space="preserve"><value>create, update and delete</value></data>
+  <data name="Mcp_NotAllowed" xml:space="preserve"><value>RAF does not allow the assistant to {0}. Turn it on in the RAF app: Preferences → Assistant (MCP).</value></data>
+  <data name="Mcp_NotConnectedError" xml:space="preserve"><value>The assistant is not connected to RAF. Connect it in the RAF app: Preferences → Assistant (MCP) → Connect.</value></data>
+  <data name="Mcp_SessionExpired" xml:space="preserve"><value>The assistant's session expired or was revoked. Connect it again in the RAF app: Preferences → Assistant (MCP) → Connect.</value></data>
+  <data name="Mcp_RequestOrSample" xml:space="preserve"><value>Give a request or a sample, only one.</value></data>
+  <data name="Mcp_KindWorkspace" xml:space="preserve"><value>workspace</value></data>
+  <data name="Mcp_KindApp" xml:space="preserve"><value>app</value></data>
+  <data name="Mcp_KindEnvironment" xml:space="preserve"><value>environment</value></data>
+  <data name="Mcp_KindVariable" xml:space="preserve"><value>variable</value></data>
+  <data name="Mcp_KindFolder" xml:space="preserve"><value>folder</value></data>
+  <data name="Mcp_KindLogin" xml:space="preserve"><value>login</value></data>
+  <data name="Mcp_InvalidId" xml:space="preserve"><value>"{0}" is neither a valid id nor "none".</value></data>
+  <data name="Mcp_InvalidJson" xml:space="preserve"><value>The JSON for {0} is not valid: {1}</value></data>
+  <data name="Mcp_NotFound" xml:space="preserve"><value>There is no {0} with id or name "{1}".</value></data>
+  <data name="Mcp_Ambiguous" xml:space="preserve"><value>There is more than one {0} named "{1}": use its id.</value></data>
+  <data name="Mcp_OnlyHttp" xml:space="preserve"><value>For now the assistant only runs HTTP requests: gRPC and WebSocket ones are sent from the app.</value></data>
+  <data name="Mcp_UnreadableSecrets" xml:space="preserve"><value>The request uses secret variables your role cannot read ({0}): it was not sent.</value></data>
+  <data name="Mcp_Instructions" xml:space="preserve"><value>RAF is a collaborative API client (like Postman). Workspaces have apps with folders, requests and samples, and {{name}} variables that are global or per environment, for all apps or for one. Secret values are never returned. What the assistant may do (read, run, write) is decided by the user in the app.</value></data>
   <data name="Completion_AppGlobal" xml:space="preserve"><value>App global</value></data>
   <data name="Completion_AppEnvironment" xml:space="preserve"><value>App, active environment</value></data>
   <data name="Hover_AppGlobal" xml:space="preserve"><value>Global of {0}</value></data>

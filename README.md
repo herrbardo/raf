@@ -60,6 +60,7 @@ Firma: macOS se publica firmado y notarizado. Windows se publica sin firmar por 
 | `src/Raf.Server` | API (Minimal APIs), auth JWT, permisos |
 | `src/Raf.Client.Core` | Lógica del cliente sin UI: sesión, API, caché local, sincronización y ejecución de requests (directa o por el relay) y WebSockets |
 | `src/Raf.Client.Grpc` | gRPC de la app de escritorio: JSON ↔ protobuf, server reflection, compilación de .proto y llamadas. El cliente web no lo incluye |
+| `src/Raf.Client.Mcp` | Servidor MCP de la app de escritorio (`RAF.exe mcp`, ver [plan 12](docs/plans/12-servidor-mcp.md)): un asistente lee, ejecuta y escribe con los permisos que da el usuario en Preferencias |
 | `src/Raf.Client.UI` | Interfaz compartida (Avalonia): vistas, ViewModels, estilos y diálogos |
 | `src/Raf.Client` | App de escritorio y actualizaciones (Velopack) |
 | `src/Raf.Client.Browser` | Cliente web (WebAssembly), servido con Caddy. Fuera de `Raf.slnx`: necesita `wasm-tools` |

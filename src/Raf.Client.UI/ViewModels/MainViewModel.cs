@@ -132,7 +132,8 @@ public sealed record HistoryRow(RunHistoryEntry Entry)
     public string Url => Entry.Url;
     public string Result =>
         (Entry.StatusCode?.ToString() ?? ResponseViewModel.OutcomeText(Entry.Outcome))
-        + $" · {Entry.ElapsedMs} ms · {Entry.At.LocalDateTime:g}";
+        + $" · {Entry.ElapsedMs} ms · {Entry.At.LocalDateTime:g}"
+        + (Entry.Source is { } source ? $" · {source}" : "");
 }
 
 public sealed partial class MainViewModel : ObservableObject

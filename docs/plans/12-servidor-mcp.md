@@ -1,6 +1,6 @@
 # Plan 12 — Servidor MCP
 
-Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones M1 a M13. Etapa 1 implementada (Ticket-019). Sale del Ticket-019 (surgió de la prueba humana del Ticket-001).
+Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones M1 a M13. **Implementado** (las cuatro etapas, Ticket-019), sin probar con un harness real. Sale del Ticket-019 (surgió de la prueba humana del Ticket-001).
 
 ## Objetivo
 
@@ -80,14 +80,37 @@ Todas validan lo mismo que el servidor y devuelven el elemento guardado. Un conf
 - `RAF.exe mcp` arranca sin interfaz: lee la sesión del MCP, la renueva cuando hace falta y atiende stdio con el SDK. Sin sesión o con lectura apagada, cada herramienta responde con un error que explica qué activar en la app.
 - Las herramientas de lectura usan la API existente (`IWorkspaceStore` sobre la API, sin caché).
 
+### Cómo quedó la etapa 2
+
+- **Proyecto `Raf.Client.Mcp`** (solo escritorio), con `ModelContextProtocol.Core` 2.3.1, sin el host genérico. `RafMcpServer.CreateOptions` registra cada método con `[McpServerTool]`; `RunStdioAsync` atiende stdio.
+- **`RAF.exe mcp`:** `Program.Main` lo atiende antes de Velopack, para que una actualización pendiente no reinicie el proceso en medio de la conversación con el harness.
+- **`RafMcpContext`:** relee `settings.json` en cada llamada (M5) y restaura la sesión del MCP la primera vez; sin permiso o sin sesión, la herramienta devuelve un error que dice qué activar en la app. Si la sesión vence, la próxima llamada vuelve a leer la guardada, por si se reconectó.
+- **Herramientas de lectura** (anotadas como de solo lectura): `list_workspaces`, `list_environments` (con el activo de la app), `get_tree` (opcionalmente de una App), `get_request` (request o sample, con el spec combinado), `list_variables` (filtros por environment y App, sin valores secretos) y `get_app`. Workspaces, Apps y environments se indican por id o por nombre; un nombre repetido pide el id.
+- Las descripciones de las herramientas están en inglés, como el resto del protocolo; los errores y las instrucciones del servidor salen de los textos de la app (español o inglés).
+
 ## Etapa 3 — Ejecución
 
 - `run_request` arma el `RunInput` como la pestaña: spec efectivo del sample, variables de la App y el environment (`VariableContext`), sesión compartida (M8), auth y login de la App. Usa el mismo `RequestRunner`.
 - Guarda el token del login, las extracciones y la línea del historial (M12).
 
+### Cómo quedó la etapa 3
+
+- **`run_request`** (anotada como no de solo lectura, destructiva y de mundo abierto: un request puede borrar datos en la API): request o sample, environment opcional (por defecto el activo de la app) y timeout opcional (por defecto el del request en este equipo o el de las preferencias). Arma el envío como la pestaña: variables de la App y del environment, variables de sesión, auth de la App y login automático, con el mismo `RequestRunner`. Si el request usa secretos que el rol no puede leer, no lo envía y lo explica. Solo HTTP: gRPC y WebSocket devuelven un error que dice que se envían desde la app.
+- **Respuesta (M4, M7, M10):** estado, headers, body entero (texto por tipo de contenido o UTF-8 válido; si no, `bodyBase64`), los nombres de las variables extraídas (sin sus valores) y la consola. Headers, body, error y consola pasan por el enmascarado, también del token que acaba de obtener el login. `ResponseBody.ReadAllAsync` lee también lo que quedó en el archivo temporal.
+- **Variables de sesión compartidas (M8):** el token del login y las extracciones quedan en las mismas variables de sesión que la app. Para que los dos procesos se vean, `SessionVariableStore` dejó de guardarlas en memoria: cada lectura y cada cambio parten de lo último guardado en el almacén seguro.
+- **Historial (M12):** cada ejecución suma una línea con `Source = "MCP"`, que la app muestra al final del resultado. La app la ve al volver a cargar el historial. Si el archivo está ocupado por la app, la línea se pierde y la ejecución no falla.
+
 ## Etapa 4 — Escritura
 
 - Las herramientas de escritura sobre la API, con las validaciones del servidor. `update_request` mezcla los cambios parciales sobre la versión actual y manda su `Version`.
+
+### Cómo quedó la etapa 4
+
+- **Herramientas:** `create_environment`, `create_app`, `update_app`, `create_folder`, `update_folder`, `create_request`, `update_request`, `create_sample`, `update_sample` y `set_variable`, más un `delete_*` por cada una (sin `delete_login`: los logins compartidos se editan desde la app). Las de borrar y las de modificar están anotadas como destructivas; las de crear, no.
+- **Cambios parciales:** `create_request` y `update_request` reciben un spec parcial (`spec` o `changes`) que se mezcla con el actual: cada propiedad que viene reemplaza la del mismo nombre, sin distinguir mayúsculas, y el resto queda. Lo mismo `create_sample` y `update_sample` con lo que sobreescribe el sample. Un JSON que no encaja devuelve un error que lo explica.
+- **Lo que no se nombra no cambia:** nombre, auth, login, carpeta o carpeta padre; `"none"` saca el login de una App o lleva un request o una carpeta a la raíz de la App. Lo nuevo va al final de sus hermanos, como al crearlo desde la app.
+- **Conflictos:** las modificaciones aceptan la `version` leída; si otro la cambió, el servidor responde con un conflicto y no se guarda nada. Sin `version`, se usa la actual.
+- **`set_variable`:** crea o modifica por clave, environment y App. El valor secreto entra pero no vuelve a salir; sin `secret`, una variable existente conserva lo que tenía.
 
 ## Cómo se prueba
 

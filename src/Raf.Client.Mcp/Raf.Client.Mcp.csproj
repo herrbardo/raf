@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Servidor MCP de la app de escritorio (Plan 12): RAF.exe mcp. El cliente web no lo incluye. -->
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Raf.Client.Core.Localization" />
+    <InternalsVisibleTo Include="Raf.Server.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raf.Client.Core\Raf.Client.Core.csproj" />
+  </ItemGroup>
+</Project>
