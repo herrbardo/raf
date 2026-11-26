@@ -132,7 +132,10 @@ public sealed partial class LoginsViewModel(ClientServices services, Guid worksp
         Changed = true;
     });
 
-    [RelayCommand(CanExecute = nameof(HasSelection))]
+    /// <summary>También lo usa Supr en la lista, que no se oculta como el botón para quien solo puede ver.</summary>
+    private bool CanDelete => CanEdit && HasSelection;
+
+    [RelayCommand(CanExecute = nameof(CanDelete))]
     private Task DeleteAsync() => GuardAsync(async () =>
     {
         var item = Selected!;

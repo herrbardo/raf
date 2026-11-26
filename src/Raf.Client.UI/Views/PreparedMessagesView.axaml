@@ -20,7 +20,7 @@
       <Grid>
         <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.WsV_NoMessages}"
                    IsVisible="{Binding !Items.Count}" />
-        <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+        <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" ctl:DeleteKey.Command="{Binding RemoveCommand}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:PreparedMessageViewModel">
               <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />

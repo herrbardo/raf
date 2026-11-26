@@ -44,7 +44,7 @@
             <Button Classes="link" Content="{x:Static l:Texts.V_Rename}" Command="{Binding RenameEnvironmentCommand}" />
             <Button Classes="link" Content="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteEnvironmentCommand}" />
           </StackPanel>
-          <ListBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}">
+          <ListBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}" ctl:DeleteKey.Command="{Binding DeleteEnvironmentCommand}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:VariableScopeViewModel">
                 <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />

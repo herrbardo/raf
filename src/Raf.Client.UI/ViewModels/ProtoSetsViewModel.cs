@@ -177,7 +177,10 @@ public sealed partial class ProtoSetsViewModel(ClientServices services, Guid wor
         Changed = true;
     });
 
-    [RelayCommand(CanExecute = nameof(HasSelection))]
+    /// <summary>También lo usa Supr en las listas, que no se ocultan como los botones para quien solo puede ver.</summary>
+    private bool CanDelete => CanEdit && HasSelection;
+
+    [RelayCommand(CanExecute = nameof(CanDelete))]
     private Task DeleteAsync() => GuardAsync(async () =>
     {
         var item = Selected!;
@@ -210,7 +213,7 @@ public sealed partial class ProtoSetsViewModel(ClientServices services, Guid wor
         Compile();
     });
 
-    [RelayCommand(CanExecute = nameof(HasSelection))]
+    [RelayCommand(CanExecute = nameof(CanDelete))]
     private void RemoveFile() => Selected?.RemoveSelected();
 
     /// <summary>Compila el conjunto elegido tal como está en la ventana, sin guardarlo.</summary>

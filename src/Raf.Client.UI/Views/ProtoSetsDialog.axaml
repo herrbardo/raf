@@ -47,7 +47,7 @@
           </WrapPanel>
           <Grid>
             <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.ProtoW_Empty}" IsVisible="{Binding !Items.Count}" />
-            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" ctl:DeleteKey.Command="{Binding DeleteCommand}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ProtoSetItemViewModel">
                   <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
@@ -72,7 +72,8 @@
           <Grid>
             <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.ProtoW_NoFiles}"
                        IsVisible="{Binding !Selected.Files.Count, FallbackValue=False}" />
-            <ListBox ItemsSource="{Binding Selected.Files}" SelectedItem="{Binding Selected.SelectedFile}">
+            <ListBox ItemsSource="{Binding Selected.Files}" SelectedItem="{Binding Selected.SelectedFile}"
+                     ctl:DeleteKey.Command="{Binding RemoveFileCommand}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:ProtoFileViewModel">
                   <TextBlock Classes="mono" Text="{Binding Path}" TextTrimming="LeadingCharacterEllipsis" ToolTip.Tip="{Binding Path}" />

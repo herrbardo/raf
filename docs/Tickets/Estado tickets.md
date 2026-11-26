@@ -155,3 +155,43 @@
     - Creado: 24/11/2026
     - Estado: [HECHO]
     - Comentarios: Decisiones del usuario: el WebSocket guarda la URL, los headers y una lista de mensajes preparados (la sesión no se guarda); por ahora solo se conecta desde la app de escritorio (el navegador no manda headers propios en el handshake); y va antes que la etapa 3 de gRPC, que va a reusar la pantalla de conversación. Solución: en Raf.Domain, WebSocketSpec (mensajes con nombre y contenido, y subprotocolos) en RequestSpec.WebSocket, con Method "WS"; el servidor (ContentEndpoints.ValidateWebSocket) exige que coincidan, hasta 200 mensajes de hasta 1 MB y nombres de hasta 200 caracteres, y rechaza un request que sea gRPC y WebSocket a la vez. En Raf.Client.Core: WebSocketSession (src/Raf.Client.Core/WebSockets) abre la conexión con ClientWebSocket (headers, subprotocolos, aceptar certificados inválidos y timeout), recibe en segundo plano armando cada mensaje completo (los binarios en base64, con tope de 16 MB por mensaje), manda texto y cierra en orden; un handshake rechazado informa el código y los headers de la respuesta. RequestRunner.WebSocketHandshake arma la URL (query y API key en la query; acepta http/https y los pasa a ws/wss) y los headers con la auth; RequestRunner.PrepareLoginAsync expone el login automático de la App para usarlo antes de conectar. En la UI: "Nuevo WebSocket" en el menú de Apps y carpetas, badge "WS" con color propio en los dos temas, y la pestaña WebSocketTabView con la URL, Conectar/Desconectar, los mensajes preparados (lista, nombre, contenido con resaltado de JSON y variables, y "Enviar" para mandarlo), Query, Headers, Auth y Opciones (subprotocolos, timeout de conexión, certificados). Abajo, la conversación (ConversationViewModel y ConversationView, pensadas para reusar en el streaming de gRPC): lista con hora, dirección y tamaño de cada mensaje, el elegido formateado si es JSON o XML, avisos de conexión con los headers enviados (secretos enmascarados) y recibidos, el cierre con quién cerró, el motivo y un resumen, y abajo el texto para mandar. Ctrl+Enter conecta o, ya conectado, manda lo escrito. Las variables se resuelven al conectar y al mandar cada mensaje; en la conversación lo enviado se muestra sin los secretos. El historial anota cada conexión (WS, URL, código del handshake o error). Al cerrar la pestaña se cierra la conexión, y una pestaña conectada no se recrea cuando la sincronización trae cambios. Los requests gRPC y WebSocket ya no ofrecen "Nuevo sample" (los samples de gRPC son de la etapa 4 del Plan 10). Cómo se probó: dotnet build sin advertencias; 8 tests nuevos en WebSocketTests contra un servidor WebSocket real (Kestrel en un puerto local): texto con acentos y binario de ida y vuelta, query en la URL, cierre propio y cierre del servidor con código y motivo, handshake rechazado con 401 y sus headers, el mismo con Authorization aceptado, puerto cerrado, y el armado de URL y headers; los 225 tests de Raf.Client.Core, los 27 de Raf.Client.Grpc y los de validación del servidor (gRPC y WebSocket) en verde. En el cliente web contra el servidor en Docker (reconstruido): "Nuevo WebSocket" crea el request con el badge, la pestaña muestra el aviso de solo escritorio con Conectar deshabilitado, se agregó un mensaje preparado con nombre y contenido con una variable, se guardó y la API devolvió la URL y el mensaje. No se probó: nada de la conexión desde la interfaz (la app de escritorio no se pudo mirar desde acá): conectar, la conversación, mandar mensajes preparados y escritos, desconectar, el login automático antes de conectar, ni contra un servidor wss real; tampoco el tema claro. Efectos secundarios posibles: un cliente anterior ve el WebSocket como un request "WS" y, si lo guarda, borra la parte WebSocket (como con gRPC, al publicar hay que subir Clients:MinVersion).
+
+- Ticket-037.md
+    - Creado: 26/11/2026
+    - Estado: [HECHO]
+    - Comentarios: Solución: propiedad adjunta nueva ctl:DeleteKey.Command (src/Raf.Client.UI/Controls/DeleteKey.cs): con el foco en una lista o árbol, Supr ejecuta el comando de eliminar indicado; también responde a Retroceso, que es la tecla "delete" de los teclados de Mac. No actúa con modificadores ni si el foco está en un TextBox o TextField dentro de la lista, y solo si el comando se puede ejecutar. Se aplica en el árbol de la colección (MainView, elimina el nodo elegido: App, carpeta, request o sample), en las listas de Logins, de conjuntos .proto y de sus archivos, de environments (EnvironmentsDialog) y de mensajes preparados de WebSocket y gRPC (PreparedMessagesView). Todas pasan por la misma confirmación que el menú, salvo quitar un archivo .proto o un mensaje preparado, que nunca la tuvieron y se deshacen sin guardar. Como la tecla llega aunque el botón o el menú estén ocultos, el permiso se controla en el comando: MainViewModel.DeleteAsync y PreparedMessagesViewModel.Remove salen si no se puede editar, y en Logins, .proto y Environments el CanExecute pasó a exigir CanEdit además de la selección. La lista de servidores de la pantalla de conexión no tiene selección y quedó afuera. Cómo se probó: dotnet build sin errores; en el cliente web contra el servidor en Docker, en el workspace Equipo Demo: se creó la App "Prueba Supr", se eligió en el árbol y Supr mostró "¿Eliminar 'Prueba Supr' y todo lo que contiene?"; Cancelar la dejó; Retroceso volvió a pedir la confirmación y Eliminar la borró. En Logins se creó "Login Supr", escribir y borrar en la URL no disparó nada, y Supr con el login elegido pidió confirmación y lo eliminó. No se probó: la app de escritorio (ni en Windows ni en Mac, donde importa Retroceso), las listas de .proto, environments y mensajes preparados, y un usuario con rol de solo lectura.
+
+- Ticket-038.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:
+
+- Ticket-039.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:
+
+- Ticket-040.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:
+
+- Ticket-041.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:
+
+- Ticket-042.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:
+
+- Ticket-043.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:
+
+- Ticket-044.md
+    - Creado: 26/11/2026
+    - Estado: CREADO
+    - Comentarios:

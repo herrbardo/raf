@@ -136,7 +136,8 @@
                   <TextBlock Classes="empty-title" Text="{x:Static l:Texts.MainV_EmptyCollection}" />
                   <TextBlock Classes="caption" Text="{x:Static l:Texts.MainV_EmptyCollectionHint}" IsVisible="{Binding CanEdit}" />
                 </StackPanel>
-                <TreeView ItemsSource="{Binding Roots}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <TreeView x:Name="Tree" ItemsSource="{Binding Roots}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ctl:DeleteKey.Command="{Binding #Tree.((vm:TreeNodeViewModel)SelectedItem).DeleteCommand}">
                   <TreeView.Styles>
                     <Style Selector="TreeViewItem" x:DataType="vm:TreeNodeViewModel">
                       <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />

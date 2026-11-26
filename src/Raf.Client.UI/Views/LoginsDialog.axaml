@@ -51,7 +51,7 @@
             <TextBlock Classes="caption" Margin="6,0" TextWrapping="Wrap" Text="{x:Static l:Texts.LoginsW_Empty}"
                        IsVisible="{Binding !Items.Count}" />
             <!-- El clic derecho selecciona la fila, así que el menú actúa sobre el login seleccionado. -->
-            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" ctl:DeleteKey.Command="{Binding DeleteCommand}">
               <ListBox.ContextMenu>
                 <ContextMenu Opening="OnListMenuOpening">
                   <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" />
