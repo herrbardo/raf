@@ -7,4 +7,4 @@ Multilenguaje. Sacar los textos de la UI a recursos y permitir elegir el idioma 
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-CREADO
+[HECHO]

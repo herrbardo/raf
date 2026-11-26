@@ -7,4 +7,4 @@ Prueba humana del Plan 04 (colaboración y administración). Probar con tres usu
 Plan: docs/plans/04-colaboracion-admin.md
 
 # Estado
-CREADO
+[HECHO]

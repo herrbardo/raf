@@ -9,4 +9,4 @@ Causa probable (diagnóstico del Ticket-002): los campos usan ctl:TextField, bas
 Surgió de la prueba humana del Ticket-002.
 
 # Estado
-CREADO
+[HECHO]

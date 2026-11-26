@@ -24,4 +24,4 @@ Validar lo mismo que en el Ticket-004: dos clientes ven los cambios en tiempo re
 Recordatorio: ningún identificador del proyecto de Railway (IDs, dominios, tokens) va al repo (CLAUDE.md).
 
 # Estado
-CREADO
+[HECHO]

@@ -8,4 +8,4 @@ Depende de: Ticket-004 y Ticket-005.
 Plan: docs/plans/06-distribucion.md
 
 # Estado
-CREADO
+[HECHO]

@@ -8,4 +8,4 @@ Requiere del usuario: el ícono y la decisión sobre el nombre.
 Plan: docs/plans/06-distribucion.md
 
 # Estado
-CREADO
+[HECHO]

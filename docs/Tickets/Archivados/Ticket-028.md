@@ -9,4 +9,4 @@ A definir: cómo se tratan las variables secretas al buscar por valor (sobre tod
 Surgió del uso en Mac.
 
 # Estado
-INCOMPLETO
+[HECHO]

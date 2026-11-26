@@ -7,4 +7,4 @@ Formatear el body en el editor del request. Un botón (y atajo) para darle forma
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-CREADO
+[HECHO]

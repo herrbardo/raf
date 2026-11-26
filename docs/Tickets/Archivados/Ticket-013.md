@@ -7,4 +7,4 @@ Consola por request. Además de la respuesta, una vista con los eventos de esa e
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-CREADO
+[HECHO]

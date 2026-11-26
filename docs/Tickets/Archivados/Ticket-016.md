@@ -7,4 +7,4 @@ Menú contextual en la respuesta. Con clic derecho sobre una línea del body: co
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-CREADO
+[HECHO]

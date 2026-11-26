@@ -12,4 +12,4 @@ Etapa 3 del Plan 08 (docs/plans/08-auth-por-app.md): que la App obtenga y renuev
 Parte de lo hecho en el Ticket-017 (etapas 1 y 2: auth heredada de la App y variables de sesión).
 
 # Estado
-CREADO
+[HECHO]

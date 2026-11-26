@@ -7,4 +7,4 @@ Release estable v0.1.0. Con los tickets anteriores resueltos (macOS puede quedar
 Depende de: Ticket-001 a Ticket-008 y Ticket-010.
 
 # Estado
-CREADO
+[HECHO]

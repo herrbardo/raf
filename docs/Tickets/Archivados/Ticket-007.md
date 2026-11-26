@@ -8,4 +8,4 @@ Requiere del usuario: el certificado.
 Plan: docs/plans/06-distribucion.md
 
 # Estado
-CREADO
+[HECHO]
