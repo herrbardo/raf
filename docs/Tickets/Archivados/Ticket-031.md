@@ -7,4 +7,4 @@ Al abrir la ventana de environments, tiene que aparecer seleccionado el environm
 Surgió del uso en Mac.
 
 # Estado
-INCOMPLETO
+[HECHO]

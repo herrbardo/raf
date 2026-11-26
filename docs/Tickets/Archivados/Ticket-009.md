@@ -8,4 +8,4 @@ Requiere del usuario: la cuenta Apple Developer y los certificados.
 Plan: docs/plans/06-distribucion.md
 
 # Estado
-CREADO
+[HECHO]

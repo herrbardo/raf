@@ -7,4 +7,4 @@ Prueba humana del Plan 03 (sincronización). Dos clientes con dos usuarios disti
 Plan: docs/plans/03-sincronizacion.md
 
 # Estado
-CREADO
+[HECHO]

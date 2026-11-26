@@ -2,7 +2,7 @@
 FEATURE
 
 # Descripción
-Soporte para WebSocket.
+Soporte para el protocolo gRPC.
 
 # Estado
-CREADO
+[HECHO]

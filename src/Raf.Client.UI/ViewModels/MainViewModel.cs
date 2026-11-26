@@ -831,6 +831,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public Task DeleteAsync(TreeNodeViewModel node) => GuardAsync(async () =>
     {
+        if (!CanEdit) return; // Supr llega aunque el menú esté oculto para quien solo ve
         if (!await Services.Dialogs.ConfirmAsync(
                 Texts.Main_Delete, string.Format(Texts.Main_DeleteConfirm, node.Name), Texts.Main_Delete))
             return;

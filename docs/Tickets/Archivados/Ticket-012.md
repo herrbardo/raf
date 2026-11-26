@@ -7,4 +7,4 @@ Consola global de eventos. Un panel con los eventos de la app (sincronización, 
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-CREADO
+[HECHO]

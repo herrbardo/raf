@@ -7,4 +7,4 @@ Prueba humana del Plan 02 (cliente base). Recorrer en Windows el flujo completo 
 Plan: docs/plans/02-cliente-base.md
 
 # Estado
-CREADO
+[HECHO]

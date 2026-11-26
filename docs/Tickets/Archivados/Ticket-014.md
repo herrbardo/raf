@@ -7,4 +7,4 @@ Autocompletar variables. Al escribir {{ en cualquier campo que acepte variables 
 Surgió de la prueba humana del Ticket-001.
 
 # Estado
-CREADO
+[HECHO]

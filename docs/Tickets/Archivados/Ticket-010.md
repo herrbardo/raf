@@ -7,4 +7,4 @@ Revisión visual del Plan 07. Recorrer cada pantalla y cada caso borde en tema o
 Plan: docs/plans/07-embellecer-ui.md
 
 # Estado
-CREADO
+[HECHO]

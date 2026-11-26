@@ -7,4 +7,4 @@ En la ventana de environments, la columna de las claves (keys) se ve muy angosta
 Surgió del uso en Mac.
 
 # Estado
-INCOMPLETO
+[HECHO]

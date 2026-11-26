@@ -70,7 +70,7 @@ public sealed partial class PreparedMessagesViewModel(
     [RelayCommand]
     private void Remove()
     {
-        if (Selected is not { } message) return;
+        if (!CanEdit || Selected is not { } message) return; // Supr llega aunque el botón esté oculto
         var index = Items.IndexOf(message);
         Items.Remove(message);
         Selected = Items.ElementAtOrDefault(Math.Min(index, Items.Count - 1));

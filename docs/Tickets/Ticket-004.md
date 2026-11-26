@@ -9,4 +9,4 @@ Recordatorio: ningún identificador de la infraestructura real va al repo (CLAUD
 Plan: docs/plans/05-despliegue-aws.md
 
 # Estado
-CREADO
+[EN PROGRESO]

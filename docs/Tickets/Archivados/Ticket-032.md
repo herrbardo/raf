@@ -11,4 +11,4 @@ Publicar la imagen del servidor (src/Raf.Server/Dockerfile) en Docker Hub. Hay q
 El usuario de Docker Hub y el token van como secretos del repo o de la máquina, nunca versionados.
 
 # Estado
-CREADO
+[HECHO]

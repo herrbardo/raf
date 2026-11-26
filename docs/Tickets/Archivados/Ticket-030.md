@@ -9,4 +9,4 @@ A definir: qué se muestra para una variable secreta (enmascarada o no, según e
 Surgió del uso en Mac.
 
 # Estado
-INCOMPLETO
+[HECHO]

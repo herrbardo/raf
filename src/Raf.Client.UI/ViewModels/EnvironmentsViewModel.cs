@@ -256,7 +256,10 @@ public sealed partial class EnvironmentsViewModel(
         scope.Name = scope.Dto.Name;
     });
 
-    [RelayCommand(CanExecute = nameof(IsEnvironmentSelected))]
+    /// <summary>También lo usa Supr en la lista, que no se oculta como el botón para quien solo puede ver.</summary>
+    private bool CanDeleteEnvironment => CanEdit && IsEnvironmentSelected;
+
+    [RelayCommand(CanExecute = nameof(CanDeleteEnvironment))]
     private Task DeleteEnvironmentAsync() => GuardAsync(async () =>
     {
         var scope = SelectedScope!;

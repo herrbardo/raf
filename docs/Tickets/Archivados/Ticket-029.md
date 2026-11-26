@@ -9,4 +9,4 @@ Falta el diseño: iterar antes de implementar (dónde vive, quién lo edita, có
 Surgió del uso en Mac.
 
 # Estado
-INCOMPLETO
+[HECHO]

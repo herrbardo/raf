@@ -7,4 +7,4 @@ En la ventana de environments, al agregar una variable nueva el foco tiene que i
 Surgió del uso en Mac.
 
 # Estado
-INCOMPLETO
+[HECHO]

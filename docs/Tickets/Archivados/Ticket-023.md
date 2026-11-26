@@ -7,4 +7,4 @@ Agregar a la app un menú con una opción "Acerca de" que abra una ventana con, 
 El nombre del desarrollador lo confirma el usuario al tomar el ticket.
 
 # Estado
-CREADO
+[HECHO]

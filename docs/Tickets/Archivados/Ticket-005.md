@@ -7,4 +7,4 @@ Primer release de prueba del cliente. El workflow .github/workflows/release.yml 
 Plan: docs/plans/06-distribucion.md
 
 # Estado
-CREADO
+[HECHO]
