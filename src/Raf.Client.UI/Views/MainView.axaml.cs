@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Raf.Client.Services;
 using Raf.Client.ViewModels;
 
@@ -28,6 +30,21 @@ public partial class MainView : UserControl
     private void OnNodeTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: TreeNodeViewModel node } && DataContext is MainViewModel vm) vm.Open(node);
+    }
+
+    /// <summary>
+    /// El botón del medio sobre la pestaña de un request la cierra, como el botón de cerrar (Ticket-039). Solo las
+    /// pestañas de este TabControl: las secciones de adentro (Headers, Body...) también son TabItem.
+    /// </summary>
+    private void OnDocumentsPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.InitialPressMouseButton != MouseButton.Middle || sender is not TabControl documents) return;
+        var item = (e.Source as Visual)?.GetSelfAndVisualAncestors().OfType<TabItem>()
+            .FirstOrDefault(t => ItemsControl.ItemsControlFromItemContainer(t) == documents);
+        if (item?.DataContext is not EditorTabViewModel tab) return;
+
+        e.Handled = true;
+        tab.CloseCommand.Execute(null);
     }
 
     private void OnHistoryTapped(object? sender, TappedEventArgs e)

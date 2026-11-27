@@ -263,7 +263,7 @@
           </StackPanel>
         </Border>
         <TabControl Classes="documents" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
-                    IsVisible="{Binding !!Tabs.Count}">
+                    IsVisible="{Binding !!Tabs.Count}" PointerReleased="OnDocumentsPointerReleased">
           <TabControl.ItemTemplate>
             <DataTemplate x:DataType="vm:EditorTabViewModel">
               <Grid ColumnDefinitions="Auto,*,Auto,Auto" MaxWidth="230" ToolTip.Tip="{Binding Node.Name}">
