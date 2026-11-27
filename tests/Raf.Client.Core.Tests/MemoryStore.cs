@@ -64,7 +64,7 @@ internal sealed class MemoryStore : IWorkspaceStore
     public Task<IReadOnlyList<VariableDto>> GetVariablesAsync(Guid ws, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<VariableDto>>(Variables.ToList());
     public Task<VariableDto> CreateVariableAsync(Guid ws, CreateVariableRequest req, CancellationToken ct = default) =>
-        Task.FromResult(Add(Variables, new VariableDto(Guid.NewGuid(), req.EnvironmentId, req.Key, req.Value, req.IsSecret, 1, 0, req.AppId)));
+        Task.FromResult(Add(Variables, new VariableDto(Guid.NewGuid(), req.EnvironmentId, req.Key, req.Value, req.IsSecret, 1, 0)));
     public Task<VariableDto> UpdateVariableAsync(Guid ws, Guid id, UpdateVariableRequest req, CancellationToken ct = default) => throw new NotSupportedException();
     public Task DeleteVariableAsync(Guid ws, Guid id, CancellationToken ct = default) => throw new NotSupportedException();
     public Task<AppDto> UpdateAppAsync(Guid ws, Guid id, UpdateAppRequest req, CancellationToken ct = default) =>

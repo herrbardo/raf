@@ -2,6 +2,8 @@
 
 Estado: **aprobado** por el usuario el 24/11/2026, con las decisiones V1 a V10. **Implementado** (las tres etapas, Ticket-018): probado con tests y a mano en el cliente web; sin probar en la app de escritorio. Sale del Ticket-018 (surgió de la prueba humana del Ticket-001).
 
+> **Dejado sin efecto el 26/11/2026 (Ticket-044).** A pedido del usuario, las variables vuelven a valer para todas las Apps: no hay columna ni filtro por App. La migración `SharedVariables` pasó a "Todas" las variables de una App; si chocaban con otra del mismo nombre en el mismo environment, ganó la de "Todas" (o, si no había, la modificada más recientemente) y las demás quedaron marcadas como borradas. La ventana de environments lista en cada environment las claves de todos, en orden alfabético, con las que faltan sin valor. Lo que sigue queda como registro de cómo había sido.
+
 ## Objetivo
 
 Que una variable pueda valer para una sola App, así cada App define su propio valor para el mismo nombre (por ejemplo `{{baseUrl}}` en todas las Apps, con un valor distinto en cada una) sin prefijos como `ordersBaseUrl` y `usersBaseUrl`. De paso, la ventana de environments deja filtrar por App, para que con muchas variables se vean solo las de la App en la que se está trabajando.

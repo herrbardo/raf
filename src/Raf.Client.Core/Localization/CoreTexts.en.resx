@@ -128,11 +128,7 @@
   <data name="Mcp_Ambiguous" xml:space="preserve"><value>There is more than one {0} named "{1}": use its id.</value></data>
   <data name="Mcp_OnlyHttp" xml:space="preserve"><value>For now the assistant only runs HTTP requests: gRPC and WebSocket ones are sent from the app.</value></data>
   <data name="Mcp_UnreadableSecrets" xml:space="preserve"><value>The request uses secret variables your role cannot read ({0}): it was not sent.</value></data>
-  <data name="Mcp_Instructions" xml:space="preserve"><value>RAF is a collaborative API client (like Postman). Workspaces have apps with folders, requests and samples, and {{name}} variables that are global or per environment, for all apps or for one. Secret values are never returned. What the assistant may do (read, run, write) is decided by the user in the app.</value></data>
-  <data name="Completion_AppGlobal" xml:space="preserve"><value>App global</value></data>
-  <data name="Completion_AppEnvironment" xml:space="preserve"><value>App, active environment</value></data>
-  <data name="Hover_AppGlobal" xml:space="preserve"><value>Global of {0}</value></data>
-  <data name="Hover_AppScope" xml:space="preserve"><value>App {0} · {1}</value></data>
+  <data name="Mcp_Instructions" xml:space="preserve"><value>RAF is a collaborative API client (like Postman). Workspaces have apps with folders, requests and samples, and {{name}} variables that are global or per environment, shared by all apps. Secret values are never returned. What the assistant may do (read, run, write) is decided by the user in the app.</value></data>
   <data name="Store_AppCannotInherit" xml:space="preserve"><value>An App cannot inherit authentication.</value></data>
   <data name="Store_LoginGone" xml:space="preserve"><value>The selected login no longer exists.</value></data>
   <data name="Store_LoginInUse" xml:space="preserve"><value>The login is used by: {0}. Remove it from those Apps first.</value></data>

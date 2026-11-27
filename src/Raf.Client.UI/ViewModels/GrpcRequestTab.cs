@@ -222,7 +222,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         MethodsError = null;
         try
         {
-            var spec = Variables.CreateResolver().Resolve(RequestRunner.Effective(ToSpec(), null, AppAuth));
+            var spec = Owner.Variables.CreateResolver().Resolve(RequestRunner.Effective(ToSpec(), null, AppAuth));
             var methods = await engine.GetMethodsAsync(TargetFor(spec, TimeSpan.FromSeconds(30), descriptorsOnly: true), refresh);
 
             var keep = _grpc;
@@ -234,7 +234,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         }
         catch (Exception e) when (e is GrpcEngineException or RequestBuildException or HttpRequestException)
         {
-            MethodsError = Variables.Scrub(e.Message);
+            MethodsError = Owner.Variables.Scrub(e.Message);
         }
         finally
         {
@@ -299,7 +299,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         try
         {
             // El login automático de la App, si hace falta, antes de abrir la llamada.
-            var input = new RunInput(request, null, Variables, new RunOptions(Timeout, AcceptInvalidCertificates),
+            var input = new RunInput(request, null, Owner.Variables, new RunOptions(Timeout, AcceptInvalidCertificates),
                 AppAuth, Owner.AppLoginOf(AppId));
             var login = await Owner.Services.Runner.PrepareLoginAsync(input);
             foreach (var e in login.Events)
@@ -338,7 +338,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         }
         catch (Exception e) when (e is GrpcEngineException or RequestBuildException or HttpRequestException)
         {
-            var error = Variables.Scrub(e.Message);
+            var error = Owner.Variables.Scrub(e.Message);
             Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, error));
             IsStreamOpen = false;
             await AddHistoryAsync(address ?? request.Url, RunOutcome.Failed, started, error);
@@ -414,7 +414,7 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
     private async Task SendToStreamAsync(string text)
     {
         if (_stream is not { CanSend: true } stream) return;
-        var resolver = Variables.CreateResolver();
+        var resolver = Owner.Variables.CreateResolver();
         var resolved = resolver.Resolve(text);
         if (resolver.Missing.Count > 0)
             Conversation.Add(new ConversationEntry(ConversationEntryKind.Info, DateTimeOffset.Now,
@@ -422,11 +422,11 @@ public sealed partial class GrpcRequestTabViewModel : EditorTabViewModel
         try
         {
             var size = await stream.SendAsync(resolved);
-            Conversation.Add(new ConversationEntry(ConversationEntryKind.Sent, DateTimeOffset.Now, Variables.Scrub(resolved), size));
+            Conversation.Add(new ConversationEntry(ConversationEntryKind.Sent, DateTimeOffset.Now, Owner.Variables.Scrub(resolved), size));
         }
         catch (Exception e) when (e is GrpcEngineException or InvalidOperationException)
         {
-            Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, Variables.Scrub(e.Message)));
+            Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, Owner.Variables.Scrub(e.Message)));
         }
     }
 

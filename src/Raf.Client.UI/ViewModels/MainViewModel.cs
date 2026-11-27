@@ -270,9 +270,7 @@ public sealed partial class MainViewModel : ObservableObject
     public Task EditAppAuthAsync(TreeNodeViewModel node) => GuardAsync(async () =>
     {
         if (ShowAppAuth is null || node.Dto is not AppDto app) return;
-        var lookup = new VariableLookup();
-        lookup.Update(VariablesFor(app.Id), ActiveEnvironmentName, app.Name);
-        var vm = new AppAuthViewModel(app, await Services.Store.GetLoginsAsync(WorkspaceId), CanEdit, lookup);
+        var vm = new AppAuthViewModel(app, await Services.Store.GetLoginsAsync(WorkspaceId), CanEdit, VariableLookup);
         await ShowAppAuth(vm);
         if (vm.Result is not { } auth || node.Dto is not AppDto current) return;
         node.Dto = await Services.Store.UpdateAppAsync(
@@ -407,23 +405,7 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<EditorTabViewModel> Tabs { get; } = [];
     public ObservableCollection<HistoryRow> History { get; } = [];
 
-    /// <summary>Las variables de todas las Apps: las del login compartido y de lo que no pertenece a una App.</summary>
     public VariableContext Variables { get; private set; } = VariableContext.Empty;
-
-    private readonly Dictionary<Guid, VariableContext> _appVariables = [];
-
-    /// <summary>Las variables vigentes para los requests de una App, con las suyas (Plan 11).</summary>
-    public VariableContext VariablesFor(Guid appId)
-    {
-        if (!_appVariables.TryGetValue(appId, out var context))
-            _appVariables[appId] = context = VariableContext.From(_variables, SelectedEnvironment?.Id, CurrentSession(), appId);
-        return context;
-    }
-
-    public string? AppNameOf(Guid appId) => Roots.FirstOrDefault(n => n.Id == appId)?.Dto is AppDto a ? a.Name : null;
-
-    /// <summary>El environment activo, para nombrarlo en el tooltip de las variables; null si no hay.</summary>
-    public string? ActiveEnvironmentName => SelectedEnvironment?.Id is null ? null : SelectedEnvironment.Name;
 
     public Guid WorkspaceId => SelectedWorkspace?.Id ?? Guid.Empty;
 
@@ -665,10 +647,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         var session = CurrentSession();
         Variables = VariableContext.From(_variables, SelectedEnvironment?.Id, session);
-        _appVariables.Clear();
-        VariableLookup.Update(Variables, ActiveEnvironmentName);
+        VariableLookup.Update(Variables, SelectedEnvironment?.Id is null ? null : SelectedEnvironment.Name);
         RefreshSessionRows();
-        foreach (var tab in Tabs) tab.ApplyVariables();
+        foreach (var tab in Tabs) tab.RefreshWarning();
     }
 
     private EditorTabViewModel CreateTab(TreeNodeViewModel node) => node.Kind switch
@@ -1091,9 +1072,8 @@ public sealed partial class MainViewModel : ObservableObject
     private Task EditEnvironmentsAsync() => GuardAsync(async () =>
     {
         if (SelectedWorkspace is null || ShowEnvironments is null) return;
-        var apps = Roots.Where(n => n.Dto is AppDto).Select(n => new AppChoice(n.Id, n.Name)).ToList();
-        var vm = new EnvironmentsViewModel(Services, WorkspaceId, CanEdit, apps);
-        await vm.LoadAsync(SelectedEnvironment?.Id, SelectedTab?.AppId);
+        var vm = new EnvironmentsViewModel(Services, WorkspaceId, CanEdit);
+        await vm.LoadAsync(SelectedEnvironment?.Id);
         await ShowEnvironments(vm);
         await ReloadVariablesAsync();
     });

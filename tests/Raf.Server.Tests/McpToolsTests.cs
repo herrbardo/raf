@@ -131,7 +131,7 @@ public sealed partial class McpToolsTests(RafApp app)
         var list = await admin.PostOkAsync<RequestDto>($"{w}/requests", new CreateRequestRequest(orders.Id, "Listar", spec, folder.Id));
         var sample = await admin.PostOkAsync<SampleDto>($"{w}/samples",
             new CreateSampleRequest(list.Id, "Página 2", SampleOverrides.Empty with { Url = "{{baseUrl}}/pedidos?page=2" }));
-        await admin.PostOkAsync<VariableDto>($"{w}/variables", new CreateVariableRequest("baseUrl", "https://orders.example.com", dev.Id, AppId: orders.Id));
+        await admin.PostOkAsync<VariableDto>($"{w}/variables", new CreateVariableRequest("baseUrl", "https://orders.example.com", dev.Id));
         await admin.PostOkAsync<VariableDto>($"{w}/variables", new CreateVariableRequest("token", "valor-secreto", IsSecret: true));
 
         await using var mcp = await Harness.StartAsync(app);
@@ -165,9 +165,8 @@ public sealed partial class McpToolsTests(RafApp app)
         Assert.True(token.GetProperty("secret").GetBoolean());
         Assert.False(token.TryGetProperty("value", out _));
         var baseUrl = Assert.Single(variables, v => v.GetProperty("key").GetString() == "baseUrl");
-        Assert.Equal(("dev", "Orders"), (baseUrl.GetProperty("environment").GetString(), baseUrl.GetProperty("app").GetString()));
-        var forUsers = await mcp.JsonAsync("list_variables", new { workspace = name, app = "Users" });
-        Assert.Equal(["token"], forUsers.EnumerateArray().Select(v => v.GetProperty("key").GetString()));
+        Assert.Equal("dev", baseUrl.GetProperty("environment").GetString());
+        Assert.False(baseUrl.TryGetProperty("app", out _));
 
         var appInfo = await mcp.JsonAsync("get_app", new { workspace = name, app = "Orders" });
         Assert.Equal("{{token}}", appInfo.GetProperty("auth").GetProperty("token").GetString());

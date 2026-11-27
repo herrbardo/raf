@@ -41,7 +41,7 @@ public sealed class RafRunTools(RafMcpContext context)
         var login = app.LoginId is { } loginId ? (await store.GetLoginsAsync(ws.Id, ct)).FirstOrDefault(l => l.Id == loginId) : null;
         var session = context.SessionVariables();
         var variables = VariableContext.From(
-            await store.GetVariablesAsync(ws.Id, ct), environmentId, session.Get(ws.Id, environmentId), app.Id);
+            await store.GetVariablesAsync(ws.Id, ct), environmentId, session.Get(ws.Id, environmentId));
         var loginState = login?.Config is { Enabled: true } config
             ? new AppLoginState(config, session.ExpiresAt(ws.Id, environmentId, config.Variable))
             : null;

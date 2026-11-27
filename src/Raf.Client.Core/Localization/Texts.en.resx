@@ -135,6 +135,8 @@
   <data name="Env_NoChanges" xml:space="preserve"><value>There are no changes to save.</value></data>
   <data name="Env_SavedOne" xml:space="preserve"><value>Saved: 1 change.</value></data>
   <data name="Env_SavedMany" xml:space="preserve"><value>Saved: {0} changes.</value></data>
+  <data name="Env_Repeated" xml:space="preserve"><value>There are repeated keys: {0}. Nothing was saved.</value></data>
+  <data name="EnvW_NoValue" xml:space="preserve"><value>No value</value></data>
   <data name="Env_CloseUnsaved" xml:space="preserve"><value>Close and discard the changes to the variables?</value></data>
   <data name="Events_LevelWarning" xml:space="preserve"><value>Warning</value></data>
   <data name="Events_LevelError" xml:space="preserve"><value>Error</value></data>
@@ -313,12 +315,6 @@
   <data name="EnvW_SecretTip" xml:space="preserve"><value>Secret: stored encrypted and shown hidden</value></data>
   <data name="EnvW_Show" xml:space="preserve"><value>Show</value></data>
   <data name="EnvW_Search" xml:space="preserve"><value>Search by key or value</value></data>
-  <data name="EnvW_AppHeader" xml:space="preserve"><value>APP</value></data>
-  <data name="EnvW_AllApps" xml:space="preserve"><value>All</value></data>
-  <data name="EnvW_FilterAllApps" xml:space="preserve"><value>All Apps</value></data>
-  <data name="EnvW_AppFilterTip" xml:space="preserve"><value>With an App selected you see its variables and those for all Apps</value></data>
-  <data name="EnvW_AppTip" xml:space="preserve"><value>The App that uses the variable. Within each tab, an App's variable wins over the one for all Apps</value></data>
-  <data name="Env_Repeated" xml:space="preserve"><value>Nothing was saved: some variables are repeated for the same App: {0}</value></data>
   <data name="EnvW_NoMatches" xml:space="preserve"><value>No variable matches the search.</value></data>
   <data name="Auth_Token" xml:space="preserve"><value>Token</value></data>
   <data name="Auth_User" xml:space="preserve"><value>Username</value></data>

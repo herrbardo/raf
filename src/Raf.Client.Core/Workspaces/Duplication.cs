@@ -31,15 +31,12 @@ public static partial class DuplicateName
 /// </summary>
 public sealed class WorkspaceDuplicator(IWorkspaceStore store, Guid ws)
 {
-    /// <summary>La App con su autenticación, su login, sus variables (Plan 11) y todo su contenido.</summary>
+    /// <summary>La App con su autenticación, su login y todo su contenido.</summary>
     public async Task<AppDto> DuplicateAppAsync(AppDto source, string name, int order, CancellationToken ct = default)
     {
         var tree = await LoadAsync(ct);
-        var variables = (await store.GetVariablesAsync(ws, ct)).Where(v => v.AppId == source.Id).ToList();
         var copy = await store.CreateAppAsync(ws, new CreateAppRequest(name, order, Auth: source.Auth, LoginId: source.LoginId), ct);
         await CopyContentsAsync(tree, source.Id, null, copy.Id, null, ct);
-        foreach (var v in variables)
-            await store.CreateVariableAsync(ws, new CreateVariableRequest(v.Key, v.Value ?? "", v.EnvironmentId, v.IsSecret, AppId: copy.Id), ct);
         return copy;
     }
 

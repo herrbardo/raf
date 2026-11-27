@@ -203,21 +203,7 @@ public static class ContentEndpoints
         v.ToDto(!v.IsSecret ? v.Value : canSeeSecrets ? await confidential.UnprotectAsync(v.WorkspaceId, v.Value, ct) : null);
 
     private static VariableDto ToDto(this Variable v, string? plainValue) =>
-        new(v.Id, v.EnvironmentId, v.Key, plainValue, v.IsSecret, v.Version, v.ChangeSeq, v.AppId);
-
-    /// <summary>La App de una variable tiene que existir en el workspace.</summary>
-    private static async Task<IResult?> ValidateVariableAppAsync(RafDbContext db, Guid ws, Guid? appId, CancellationToken ct) =>
-        appId is { } id && !await db.Apps.In(ws).AnyAsync(a => a.Id == id, ct) ? Problems.BadRequest("La app no existe.") : null;
-
-    /// <summary>
-    /// El nombre es único por environment (o globales) y App (Plan 11, V2). Se revisa antes de guardar para devolver un
-    /// mensaje claro; el índice único de la base cubre las carreras.
-    /// </summary>
-    private static async Task<IResult?> ValidateVariableUniqueAsync(
-        RafDbContext db, Guid ws, Guid? exceptId, Guid? environmentId, Guid? appId, string key, CancellationToken ct) =>
-        await db.Variables.In(ws).AnyAsync(v => v.Id != exceptId && v.EnvironmentId == environmentId && v.AppId == appId && v.Key == key, ct)
-            ? Problems.Conflict("Ya existe una variable con ese nombre para esa App en el mismo environment.")
-            : null;
+        new(v.Id, v.EnvironmentId, v.Key, plainValue, v.IsSecret, v.Version, v.ChangeSeq);
 
     /// <summary>Lo que se guarda en la columna: el valor cifrado si es secreto, en claro si no.</summary>
     private static async Task<string> StoredValueAsync(
@@ -236,31 +222,27 @@ public static class ContentEndpoints
     private static void MapVariables(RouteGroupBuilder g)
     {
         g.MapGet("/", async (
-            Guid ws, Guid? environmentId, bool? globalsOnly, Guid? appId, HttpContext http, RafDbContext db,
+            Guid ws, Guid? environmentId, bool? globalsOnly, HttpContext http, RafDbContext db,
             IConfidentialManager confidential, CancellationToken ct) =>
         {
             var q = db.Variables.In(ws);
             if (globalsOnly == true) q = q.Where(v => v.EnvironmentId == null);
             else if (environmentId is not null) q = q.Where(v => v.EnvironmentId == environmentId);
-            if (appId is not null) q = q.Where(v => v.AppId == appId || v.AppId == null);
             var canSee = http.CanSeeSecrets();
             var result = new List<VariableDto>();
             foreach (var v in await q.OrderBy(v => v.Key).ToListAsync(ct)) result.Add(await v.ToDtoAsync(canSee, confidential, ct));
             return result;
-        }).WithSummary("Lista variables. Sin filtros devuelve globales y de todos los environments; con appId, las de esa app y las de todas.");
+        }).WithSummary("Lista variables. Sin filtros devuelve globales y de todos los environments.");
 
         g.MapPost("/", async (Guid ws, CreateVariableRequest req, RafDbContext db, IConfidentialManager confidential, CancellationToken ct) =>
         {
             if (ValidateKey(req.Key) is { } invalid) return invalid;
             if (req.EnvironmentId is { } envId && !await db.Environments.In(ws).AnyAsync(e => e.Id == envId, ct))
                 return Problems.BadRequest("El environment no existe.");
-            if (await ValidateVariableAppAsync(db, ws, req.AppId, ct) is { } badApp) return badApp;
 
             if (await RetriedCreateAsync(db.Variables, ws, req.Id, "variables",
                     async x => (object)await x.ToDtoAsync(canSeeSecrets: true, confidential, ct), ct) is { } retried)
                 return retried;
-            if (await ValidateVariableUniqueAsync(db, ws, null, req.EnvironmentId, req.AppId, req.Key.Trim(), ct) is { } repeated)
-                return repeated;
 
             var plain = req.Value ?? "";
             var v = new Variable
@@ -268,7 +250,6 @@ public static class ContentEndpoints
                 Id = req.Id ?? Guid.CreateVersion7(),
                 WorkspaceId = ws,
                 EnvironmentId = req.EnvironmentId,
-                AppId = req.AppId,
                 Key = req.Key.Trim(),
                 Value = await StoredValueAsync(ws, plain, req.IsSecret, confidential, ct),
                 IsSecret = req.IsSecret,
@@ -286,15 +267,8 @@ public static class ContentEndpoints
             if (v is null) return Problems.NotFound("Variable");
             if (v.Version != req.Version) return Problems.VersionConflict(v);
 
-            // Sin App en el pedido la variable la conserva (un cliente anterior no la conoce); Guid.Empty la pasa a todas.
-            var appId = req.AppId is null ? v.AppId : req.AppId == Guid.Empty ? null : req.AppId;
-            if (await ValidateVariableAppAsync(db, ws, appId, ct) is { } badApp) return badApp;
-            if (await ValidateVariableUniqueAsync(db, ws, v.Id, v.EnvironmentId, appId, req.Key.Trim(), ct) is { } repeated)
-                return repeated;
-
             // El cliente siempre manda el valor en claro: pasar a secreta lo cifra y dejar de serlo lo guarda en claro.
             var plain = req.Value ?? "";
-            v.AppId = appId;
             v.Key = req.Key.Trim();
             v.Value = await StoredValueAsync(ws, plain, req.IsSecret, confidential, ct);
             v.IsSecret = req.IsSecret;
@@ -377,11 +351,10 @@ public static class ContentEndpoints
             var requests = await db.Requests.In(ws).Where(r => r.AppId == id).ToListAsync(ct);
             SoftDelete(requests);
             await SoftDeleteSamplesAsync(db, ws, requests, ct);
-            SoftDelete(await db.Variables.In(ws).Where(v => v.AppId == id).ToListAsync(ct));
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         }).RequireWorkspaceRole(WorkspaceRole.Editor)
-          .WithSummary("Elimina la app con todas sus carpetas, requests, samples y variables.");
+          .WithSummary("Elimina la app con todas sus carpetas, requests y samples.");
     }
 
     private static async Task SoftDeleteSamplesAsync(RafDbContext db, Guid ws, List<ApiRequest> requests, CancellationToken ct)

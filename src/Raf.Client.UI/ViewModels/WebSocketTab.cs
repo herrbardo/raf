@@ -132,7 +132,7 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         try
         {
             // El login automático de la App, si hace falta, antes del handshake.
-            var input = new RunInput(request, null, Variables, new RunOptions(Timeout, AcceptInvalidCertificates),
+            var input = new RunInput(request, null, Owner.Variables, new RunOptions(Timeout, AcceptInvalidCertificates),
                 AppAuth, Owner.AppLoginOf(AppId));
             var login = await Owner.Services.Runner.PrepareLoginAsync(input, cts.Token);
             foreach (var e in login.Events) Conversation.Add(EventEntry(e));
@@ -174,11 +174,11 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         }
         catch (RequestBuildException e)
         {
-            Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, Variables.Scrub(e.Message)));
+            Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, Owner.Variables.Scrub(e.Message)));
         }
         catch (WebSocketConnectException e)
         {
-            var error = Variables.Scrub(e.Message);
+            var error = Owner.Variables.Scrub(e.Message);
             Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, error,
                 detail: e.Headers.Count == 0 ? error : error + Environment.NewLine + Environment.NewLine + DescribeHeaders($"{e.Status}", e.Headers)));
             await AddHistoryAsync(url, RunOutcome.Failed, e.Status, started, error);
@@ -240,7 +240,7 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
     public async Task SendTextAsync(string text)
     {
         if (_session is not { IsOpen: true } session) return;
-        var resolver = Variables.CreateResolver();
+        var resolver = Owner.Variables.CreateResolver();
         var resolved = resolver.Resolve(text);
         if (resolver.Missing.Count > 0)
             Conversation.Add(new ConversationEntry(ConversationEntryKind.Info, DateTimeOffset.Now,
@@ -249,11 +249,11 @@ public sealed partial class WebSocketTabViewModel : EditorTabViewModel
         {
             var frame = await session.SendTextAsync(resolved);
             // En la conversación se muestra sin los valores secretos, como en la consola.
-            Conversation.Add(new ConversationEntry(ConversationEntryKind.Sent, frame.At, Variables.Scrub(frame.Text), frame.Size));
+            Conversation.Add(new ConversationEntry(ConversationEntryKind.Sent, frame.At, Owner.Variables.Scrub(frame.Text), frame.Size));
         }
         catch (Exception e) when (e is System.Net.WebSockets.WebSocketException or IOException or ObjectDisposedException)
         {
-            Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, Variables.Scrub(e.Message)));
+            Conversation.Add(new ConversationEntry(ConversationEntryKind.Error, DateTimeOffset.Now, Owner.Variables.Scrub(e.Message)));
         }
     }
 

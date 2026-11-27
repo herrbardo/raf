@@ -71,19 +71,15 @@ public sealed record CreateEnvironmentRequest(string Name, Guid? Id = null);
 
 public sealed record UpdateEnvironmentRequest(string Name, long Version);
 
-/// <summary>
-/// <see cref="Value"/> es null cuando la variable es secreta y el usuario es Viewer. <see cref="AppId"/> null = vale
-/// para todas las Apps (Plan 11).
-/// </summary>
+/// <summary><see cref="Value"/> es null cuando la variable es secreta y el usuario es Viewer.</summary>
 public sealed record VariableDto(
-    Guid Id, Guid? EnvironmentId, string Key, string? Value, bool IsSecret, long Version, long ChangeSeq, Guid? AppId = null);
+    Guid Id, Guid? EnvironmentId, string Key, string? Value, bool IsSecret, long Version, long ChangeSeq);
 
-/// <summary><see cref="EnvironmentId"/> null = variable global del workspace; <see cref="AppId"/> null = de todas las Apps.</summary>
+/// <summary><see cref="EnvironmentId"/> null = variable global del workspace.</summary>
 public sealed record CreateVariableRequest(
-    string Key, string Value, Guid? EnvironmentId = null, bool IsSecret = false, Guid? Id = null, Guid? AppId = null);
+    string Key, string Value, Guid? EnvironmentId = null, bool IsSecret = false, Guid? Id = null);
 
-/// <summary><see cref="AppId"/> null no cambia la App de la variable; <see cref="Guid.Empty"/> la pasa a todas las Apps.</summary>
-public sealed record UpdateVariableRequest(string Key, string Value, bool IsSecret, long Version, Guid? AppId = null);
+public sealed record UpdateVariableRequest(string Key, string Value, bool IsSecret, long Version);
 
 // ---------- Apps, carpetas, requests, samples ----------
 

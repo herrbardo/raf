@@ -60,7 +60,7 @@ public sealed partial class McpToolsTests
         var orders = await admin.PostOkAsync<AppDto>($"{w}/apps",
             new CreateAppRequest("Orders", Auth: new AuthSpec(AuthType.Bearer, Token: "{{token}}"), LoginId: login.Id));
         await admin.PostOkAsync<VariableDto>($"{w}/variables", new CreateVariableRequest("baseUrl", ApiBase, dev.Id));
-        await admin.PostOkAsync<VariableDto>($"{w}/variables", new CreateVariableRequest("clave", Secret, IsSecret: true, AppId: orders.Id));
+        await admin.PostOkAsync<VariableDto>($"{w}/variables", new CreateVariableRequest("clave", Secret, IsSecret: true));
         var spec = RequestSpec.Empty with
         {
             Method = "GET",

@@ -51,40 +51,38 @@ public sealed class RafWriteTools(RafMcpContext context)
     // ---------- Variables ----------
 
     [McpServerTool(Name = "set_variable", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Description("Creates or updates a variable by key, environment and app. A secret value can be written but is never returned.")]
+    [Description("Creates or updates a variable by key and environment. All apps share it. A secret value can be written but is never returned.")]
     public Task<string> SetVariableAsync(
         [Description("Workspace id or name.")] string workspace,
         [Description("Variable key, used as {{key}}.")] string key,
         [Description("Value.")] string value,
         [Description("Optional environment id or name. Without it, a global variable.")] string? environment = null,
-        [Description("Optional app id or name. Without it, a variable for all apps.")] string? app = null,
         [Description("Whether the value is secret. Without it, an existing variable keeps its setting and a new one is not secret.")] bool? secret = null,
         CancellationToken ct = default) => context.RunAsync(async () =>
     {
         var (store, ws) = await StartAsync(workspace, ct);
-        var (envId, appId) = await ScopeAsync(store, ws.Id, environment, app, ct);
+        var envId = await EnvironmentIdAsync(store, ws.Id, environment, ct);
         var existing = (await store.GetVariablesAsync(ws.Id, ct))
-            .FirstOrDefault(v => v.Key == key.Trim() && v.EnvironmentId == envId && v.AppId == appId);
+            .FirstOrDefault(v => v.Key == key.Trim() && v.EnvironmentId == envId);
         var saved = existing is null
-            ? await store.CreateVariableAsync(ws.Id, new CreateVariableRequest(key, value, envId, secret ?? false, AppId: appId), ct)
+            ? await store.CreateVariableAsync(ws.Id, new CreateVariableRequest(key, value, envId, secret ?? false), ct)
             : await store.UpdateVariableAsync(ws.Id, existing.Id,
-                new UpdateVariableRequest(key, value, secret ?? existing.IsSecret, existing.Version, appId ?? Guid.Empty), ct);
-        return new { saved.Id, saved.Key, Value = saved.IsSecret ? null : saved.Value, Secret = saved.IsSecret, saved.EnvironmentId, saved.AppId };
+                new UpdateVariableRequest(key, value, secret ?? existing.IsSecret, existing.Version), ct);
+        return new { saved.Id, saved.Key, Value = saved.IsSecret ? null : saved.Value, Secret = saved.IsSecret, saved.EnvironmentId };
     });
 
     [McpServerTool(Name = "delete_variable", ReadOnly = false, Destructive = true, OpenWorld = false)]
-    [Description("Deletes a variable by key, environment and app.")]
+    [Description("Deletes a variable by key and environment.")]
     public Task<string> DeleteVariableAsync(
         [Description("Workspace id or name.")] string workspace,
         [Description("Variable key.")] string key,
         [Description("Optional environment id or name. Without it, the global variable.")] string? environment = null,
-        [Description("Optional app id or name. Without it, the variable for all apps.")] string? app = null,
         CancellationToken ct = default) => context.RunAsync(async () =>
     {
         var (store, ws) = await StartAsync(workspace, ct);
-        var (envId, appId) = await ScopeAsync(store, ws.Id, environment, app, ct);
+        var envId = await EnvironmentIdAsync(store, ws.Id, environment, ct);
         var variable = (await store.GetVariablesAsync(ws.Id, ct))
-            .FirstOrDefault(v => v.Key == key.Trim() && v.EnvironmentId == envId && v.AppId == appId)
+            .FirstOrDefault(v => v.Key == key.Trim() && v.EnvironmentId == envId)
             ?? throw new McpException(string.Format(CoreTexts.Mcp_NotFound, CoreTexts.Mcp_KindVariable, key));
         await store.DeleteVariableAsync(ws.Id, variable.Id, ct);
         return new { Deleted = variable.Id };
@@ -295,12 +293,8 @@ public sealed class RafWriteTools(RafMcpContext context)
         return (store, await McpLookup.WorkspaceAsync(store, workspace, ct));
     }
 
-    private static async Task<(Guid? Environment, Guid? App)> ScopeAsync(
-        IWorkspaceStore store, Guid ws, string? environment, string? app, CancellationToken ct) =>
-    (
-        environment is null ? null : McpLookup.Environment(await store.GetEnvironmentsAsync(ws, ct), environment).Id,
-        app is null ? null : McpLookup.App(await store.GetAppsAsync(ws, ct), app).Id
-    );
+    private static async Task<Guid?> EnvironmentIdAsync(IWorkspaceStore store, Guid ws, string? environment, CancellationToken ct) =>
+        environment is null ? null : McpLookup.Environment(await store.GetEnvironmentsAsync(ws, ct), environment).Id;
 
     private static async Task<Guid> LoginIdAsync(IWorkspaceStore store, Guid ws, string login, CancellationToken ct)
     {
