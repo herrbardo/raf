@@ -39,7 +39,7 @@ Una versión web de RAF que funcione lo más parecido posible a la de escritorio
 |---|---|---|
 | W1 | Tecnología de la UI | **Avalonia en el navegador** (`Avalonia.Browser`, WebAssembly). Reutiliza las vistas AXAML, los ViewModels, los estilos y `Raf.Client.Core` tal cual. Blazor obligaría a reescribir toda la UI y a mantener dos |
 | W2 | Envío de requests | **Relay en el servidor.** El cliente web arma el request como desktop (sample, herencia de auth, variables, login de la App) y se lo pasa al servidor RAF, que lo envía y devuelve la respuesta. Desde el navegador no se podría: el CORS de las APIs de terceros, los headers prohibidos (`Cookie`, `Host`, `User-Agent`) y los certificados inválidos lo impiden |
-| W3 | Sesión y variables de sesión | **Hasta cerrar la pestaña:** `sessionStorage`. Sobreviven a recargar la página y se pierden al cerrar la pestaña. Las preferencias no sensibles (idioma, servidores recientes, environment activo) van en `localStorage` |
+| W3 | Sesión y variables de sesión | **Hasta cerrar la pestaña:** `sessionStorage`. Sobreviven a recargar la página y se pierden al cerrar la pestaña. Las preferencias no sensibles (idioma, servidores recientes, environment activo) van en `localStorage`. **Cambió en el Ticket-038 (26/11/2026):** a pedido del usuario, la sesión y las variables de sesión pasaron a `localStorage` para no perderse al cerrar el navegador. Las pestañas comparten la sesión y renuevan los tokens de a una con la Web Locks API. El costo es que quedan expuestas ante un XSS |
 | W4 | Caché y edición sin conexión | **Online, caché por pestaña:** el mismo `SyncedWorkspaceStore` y `SyncEngine` sobre SQLite **en memoria**. Al entrar se descarga todo; edición, outbox y conflictos funcionan igual mientras la pestaña esté abierta. Si se cierra con cambios sin enviar, el navegador pregunta antes de salir |
 | W5 | Hosting | **Servicio `web` aparte en Railway**, archivos estáticos. El servidor habilita CORS para su origen. La URL del servidor no va compilada en el sitio: la indica el usuario, como en desktop |
 
@@ -62,7 +62,7 @@ Una versión web de RAF que funcione lo más parecido posible a la de escritorio
 | Abstracción | Desktop | Web |
 |---|---|---|
 | `IRequestSender`: el envío de un salto HTTP (sin seguir redirecciones; las sigue `RequestRunner`, como hoy) | `SocketsHttpHandler` directo, con `RunTrace.ConnectAsync` para DNS/TCP/TLS | `RelayRequestSender`: `POST /relay` al servidor RAF; la traza de conexión viene en la respuesta |
-| `ISecureStore` (ya existe) | DPAPI / Keychain | `sessionStorage` (W3) |
+| `ISecureStore` (ya existe) | DPAPI / Keychain | `localStorage` (W3, desde el Ticket-038) |
 | `ILocalStore` para preferencias e historial (`SettingsStore`, `RunHistoryStore`) | Archivos en `AppPaths.DataDirectory` | `localStorage` (preferencias) y `sessionStorage` (historial, porque guarda URLs y respuestas) |
 | `IInstanceLock` (hoy, archivos `session.lock` y el lock de `SyncEngine`) | Lock de archivo entre instancias | Lock en proceso; cada pestaña tiene su propia sesión (ver riesgos) |
 | Apertura de la caché | Archivo SQLite cifrado | SQLite en memoria (W4) |
@@ -175,7 +175,7 @@ Prueba con `Avalonia.Browser` 11.3.22 sobre .NET 10, referenciando `Raf.Client.C
 | EF Core/SQLite no corre en WebAssembly o el trimming lo rompe | Etapa 0; alternativa de repositorio en memoria |
 | El relay como proxy abierto o para llegar a la red interna (SSRF) | Solo con sesión, bloqueo de IPs privadas tras resolver DNS, límites y rate limit (etapa 1) |
 | Los secretos de las variables pasan por el servidor al enviar | Ya viajan por TLS al mismo servidor que los guarda cifrados; el relay no los registra ni los guarda |
-| "Duplicar pestaña" copia el `sessionStorage` y dos pestañas usan el mismo refresh token: el servidor lo toma como robo y cierra todas las sesiones | Al arrancar, la pestaña marca su sesión con un id propio; si detecta una copia (vía `BroadcastChannel`), descarta los tokens copiados y pide login |
+| Dos pestañas usan el mismo refresh token: el servidor lo toma como robo y cierra todas las sesiones | Desde el Ticket-038 la sesión está en `localStorage` y la comparten todas las pestañas: la renovación pasa por un lock de la Web Locks API y cada una relee el token guardado antes de renovar. El servidor, además, tolera durante un minuto el reintento de un token recién rotado si su reemplazo no se usó |
 | Atajos que el navegador no cede | Verificar en la etapa 0 y documentar alternativas |
 | Bundle pesado (decenas de MB) | Compresión Brotli, cache inmutable y pantalla de carga; medir en la etapa 0 y decidir AOT ahí |
 | Cambios del outbox perdidos al cerrar la pestaña | Aviso de `beforeunload` (W4) |

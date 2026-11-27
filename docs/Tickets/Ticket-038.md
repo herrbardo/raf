@@ -7,4 +7,4 @@ Aumentar MUCHO el tiempo de la sesión; es mejor que ni venza, salvo que el serv
 Surgió del feedback del 26/11/2026.
 
 # Estado
-CREADO
+[HECHO]

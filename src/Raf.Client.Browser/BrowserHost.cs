@@ -12,9 +12,9 @@ using Raf.Client.Views;
 namespace Raf.Client.Browser;
 
 /// <summary>
-/// El cliente web (decisiones W1 a W5 del plan 09): preferencias en <c>localStorage</c>, sesión y variables de
-/// sesión en <c>sessionStorage</c> (duran hasta cerrar la pestaña), caché en memoria sin cifrar, diálogos
-/// superpuestos y los requests por el relay del servidor.
+/// El cliente web (decisiones W1 a W5 del plan 09): preferencias, sesión y variables de sesión en
+/// <c>localStorage</c> (la sesión sobrevive a cerrar el navegador, Ticket-038), caché en memoria sin cifrar,
+/// diálogos superpuestos y los requests por el relay del servidor.
 /// </summary>
 public sealed class BrowserHost : ClientHost
 {
@@ -22,11 +22,13 @@ public sealed class BrowserHost : ClientHost
 
     public override bool SupportsWebSockets => false;
 
+    public override Func<Task<IDisposable>>? SessionLock => () => WebLock.AcquireAsync("session");
+
     public override SettingsStore CreateSettings() => new(new BrowserStorage(BrowserStorage.Local), "settings");
 
     public override void AddServices(IServiceCollection services)
     {
-        services.AddSingleton<ISecureStore>(new BrowserStorage(BrowserStorage.Session));
+        services.AddSingleton<ISecureStore>(new BrowserStorage(BrowserStorage.Local));
         services.AddSingleton<IUpdateService, ReloadUpdateService>();
         services.AddSingleton<IWindowService, OverlayWindowService>();
         services.AddSingleton(sp => new RequestRunner(
@@ -42,7 +44,8 @@ public sealed class BrowserHost : ClientHost
 
 /// <summary>
 /// <c>localStorage</c> o <c>sessionStorage</c>, con las funciones que registra <c>main.js</c>. Lo que se guarda es
-/// accesible ante un XSS: por eso los tokens van en el de la pestaña (decisión W3).
+/// accesible ante un XSS. Desde el Ticket-038 la sesión va en <c>localStorage</c> para no perderla al cerrar el
+/// navegador: las pestañas la comparten y renuevan los tokens de a una (<see cref="WebLock"/>).
 /// </summary>
 public sealed partial class BrowserStorage(string area) : ISecureStore
 {
@@ -63,6 +66,31 @@ public sealed partial class BrowserStorage(string area) : ISecureStore
 
     [JSImport("storage.remove", "raf")]
     private static partial void Remove(string area, string key);
+}
+
+/// <summary>
+/// Lock entre pestañas con la Web Locks API (<c>navigator.locks</c>), registrado en <c>main.js</c>. Las pestañas
+/// comparten el refresh token: si dos lo renovaran a la vez, el servidor tomaría la segunda como robo.
+/// </summary>
+public static partial class WebLock
+{
+    public static async Task<IDisposable> AcquireAsync(string name) => new Held(await Acquire(name));
+
+    [JSImport("locks.acquire", "raf")]
+    private static partial Task<string> Acquire(string name);
+
+    [JSImport("locks.release", "raf")]
+    private static partial void Release(string id);
+
+    private sealed class Held(string id) : IDisposable
+    {
+        private int _released;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0) Release(id);
+        }
+    }
 }
 
 /// <summary>

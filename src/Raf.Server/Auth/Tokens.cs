@@ -44,7 +44,18 @@ public sealed class JwtOptions
     [Required, MinLength(32)] public string SigningKey { get; set; } = "";
 
     [Range(1, 1440)] public int AccessTokenMinutes { get; set; } = 15;
-    [Range(1, 365)] public int RefreshTokenDays { get; set; } = 30;
+    /// <summary>
+    /// Días que dura un refresh token sin usarse (cada renovación empieza la cuenta de nuevo). 0, el valor por
+    /// defecto, es sin vencimiento: la sesión termina al cerrarla, al cambiar la contraseña, al deshabilitar al
+    /// usuario o si se detecta el reuso de un token.
+    /// </summary>
+    [Range(0, 3650)] public int RefreshTokenDays { get; set; }
+
+    /// <summary>
+    /// Tiempo en que un refresh token recién rotado se acepta otra vez sin tomarlo como robo, si su reemplazo
+    /// todavía no se usó: cubre la respuesta de una renovación que no le llegó al cliente.
+    /// </summary>
+    [Range(0, 600)] public int RefreshReuseGraceSeconds { get; set; } = 60;
 
     public SymmetricSecurityKey GetKey() => new(Encoding.UTF8.GetBytes(SigningKey));
 }
@@ -62,7 +73,8 @@ public sealed class TokenService(RafDbContext db, IOptions<JwtOptions> options, 
     }
 
     /// <summary>
-    /// Rota el refresh token. Si llega uno ya revocado se asume robo y se revocan todas las sesiones del usuario.
+    /// Rota el refresh token. Si llega uno ya revocado se asume robo y se revocan todas las sesiones del usuario,
+    /// salvo que se haya rotado hace instantes y su reemplazo no se haya usado (ver <see cref="RetryOfLostRefreshAsync"/>).
     /// Devuelve null si el token no es válido.
     /// </summary>
     public async Task<TokenResponse?> RefreshAsync(string refreshToken, CancellationToken ct)
@@ -71,7 +83,7 @@ public sealed class TokenService(RafDbContext db, IOptions<JwtOptions> options, 
         var stored = await db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == Hash(refreshToken), ct);
         if (stored is null) return null;
 
-        if (stored.RevokedAt is not null)
+        if (stored.RevokedAt is not null && !await RetryOfLostRefreshAsync(stored, now, ct))
         {
             await RevokeAllAsync(stored.UserId, ct);
             return null;
@@ -81,10 +93,29 @@ public sealed class TokenService(RafDbContext db, IOptions<JwtOptions> options, 
         if (stored.ExpiresAt <= now || user is null || user.IsDisabled) return null;
 
         var (newToken, newEntity) = await CreateRefreshTokenAsync(user.Id, now, ct);
-        stored.RevokedAt = now;
+        stored.RevokedAt ??= now;
         stored.ReplacedByTokenId = newEntity.Id;
         await db.SaveChangesAsync(ct);
         return Build(user, now, newToken);
+    }
+
+    /// <summary>
+    /// Un token rotado hace menos del margen vuelve a llegar y su reemplazo nunca se usó: lo normal es que la
+    /// respuesta de la renovación se haya perdido (corte de red, app cerrada) y el cliente reintente. Se anula ese
+    /// reemplazo, que nadie tiene, y se sigue como una renovación normal. Si quien lo tenía era un atacante, el
+    /// cliente legítimo va a presentar después el reemplazo anulado y eso sí cierra todas las sesiones.
+    /// </summary>
+    private async Task<bool> RetryOfLostRefreshAsync(RefreshToken stored, DateTimeOffset now, CancellationToken ct)
+    {
+        if (stored.RevokedAt is not { } revokedAt || now - revokedAt > TimeSpan.FromSeconds(_opt.RefreshReuseGraceSeconds))
+            return false;
+        if (stored.ReplacedByTokenId is not { } replacementId) return false;
+
+        var replacement = await db.RefreshTokens.FindAsync([replacementId], ct);
+        if (replacement is not { RevokedAt: null }) return false;
+
+        replacement.RevokedAt = now;
+        return true;
     }
 
     public async Task RevokeAsync(string refreshToken, CancellationToken ct)
@@ -112,11 +143,15 @@ public sealed class TokenService(RafDbContext db, IOptions<JwtOptions> options, 
             UserId = userId,
             TokenHash = Hash(token),
             CreatedAt = now,
-            ExpiresAt = now.AddDays(_opt.RefreshTokenDays),
+            ExpiresAt = RefreshExpiry(now),
         };
         await db.RefreshTokens.AddAsync(entity, ct);
         return (token, entity);
     }
+
+    /// <summary>Sin vencimiento se guarda a cien años: la columna no admite nulos y el cliente compara contra la fecha.</summary>
+    private DateTimeOffset RefreshExpiry(DateTimeOffset now) =>
+        _opt.RefreshTokenDays == 0 ? now.AddYears(100) : now.AddDays(_opt.RefreshTokenDays);
 
     private TokenResponse Build(AppUser user, DateTimeOffset now, string refreshToken)
     {
@@ -141,7 +176,7 @@ public sealed class TokenService(RafDbContext db, IOptions<JwtOptions> options, 
             SigningCredentials = new SigningCredentials(_opt.GetKey(), SecurityAlgorithms.HmacSha256),
         });
 
-        return new TokenResponse(access, expires, refreshToken, now.AddDays(_opt.RefreshTokenDays), user.ToDto());
+        return new TokenResponse(access, expires, refreshToken, RefreshExpiry(now), user.ToDto());
     }
 
     private static string Hash(string token) =>

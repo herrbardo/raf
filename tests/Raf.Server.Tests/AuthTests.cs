@@ -79,12 +79,45 @@ public class AuthTests(RafApp app)
 
         var second = await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(first.RefreshToken), HttpStatusCode.OK);
         Assert.NotEqual(first.RefreshToken, second.RefreshToken);
+        var third = await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(second.RefreshToken), HttpStatusCode.OK);
 
-        // Reusar un token ya rotado se trata como robo: se revoca todo, incluido el nuevo.
+        // Reusar un token ya rotado cuyo reemplazo ya se usó se trata como robo: se revoca todo, incluido el último.
         var reuse = await anon.PostJsonAsync("/auth/refresh", new RefreshRequest(first.RefreshToken));
         Assert.Equal(HttpStatusCode.Unauthorized, reuse.StatusCode);
-        var afterReuse = await anon.PostJsonAsync("/auth/refresh", new RefreshRequest(second.RefreshToken));
+        var afterReuse = await anon.PostJsonAsync("/auth/refresh", new RefreshRequest(third.RefreshToken));
         Assert.Equal(HttpStatusCode.Unauthorized, afterReuse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Retrying_a_refresh_whose_response_was_lost_keeps_the_session()
+    {
+        var (user, _) = await app.CreateActiveUserAsync();
+        var first = await app.LoginRawAsync(user.Email, "NuevaClave123");
+        var anon = app.Anonymous();
+
+        // La respuesta con "lost" no le llegó al cliente, que reintenta con el mismo token enseguida.
+        var lost = await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(first.RefreshToken), HttpStatusCode.OK);
+        var retried = await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(first.RefreshToken), HttpStatusCode.OK);
+        Assert.NotEqual(lost.RefreshToken, retried.RefreshToken);
+
+        // La sesión sigue con los tokens del reintento.
+        var next = await anon.PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(retried.RefreshToken), HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, (await app.WithToken(next.AccessToken).GetAsync("/workspaces")).StatusCode);
+
+        // El reemplazo anulado no sirve; si aparece, alguien más tenía el token y se cierra todo.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anon.PostJsonAsync("/auth/refresh", new RefreshRequest(lost.RefreshToken))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anon.PostJsonAsync("/auth/refresh", new RefreshRequest(next.RefreshToken))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_token_does_not_expire_by_default()
+    {
+        var (user, _) = await app.CreateActiveUserAsync();
+        var login = await app.LoginRawAsync(user.Email, "NuevaClave123");
+        Assert.True(login.RefreshTokenExpiresAt > DateTimeOffset.UtcNow.AddYears(50));
+
+        var renewed = await app.Anonymous().PostOkAsync<TokenResponse>("/auth/refresh", new RefreshRequest(login.RefreshToken), HttpStatusCode.OK);
+        Assert.True(renewed.RefreshTokenExpiresAt > DateTimeOffset.UtcNow.AddYears(50));
     }
 
     [Fact]
