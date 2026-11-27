@@ -28,6 +28,8 @@ Orden de ejecución: 02 → 03 → 04 → 05 → 06 → 07.
 
 **v0.4.0** suma lo hecho desde la v0.3.0: pantalla de servidores guardados (Ticket-033), duplicar (Ticket-034), gRPC (plan 10, Ticket-035), WebSocket (Ticket-036), variables por App (plan 11, Ticket-018) y el servidor MCP de la app de escritorio (plan 12, Ticket-019). Las migraciones `ProtoSets` y `VariableApps`, el endpoint `/auth/sessions` y los tipos nuevos (`grpc` y `webSocket` en el spec, el cambio `ProtoSet`) no los entiende un cliente anterior: se desplegó primero el servidor y después se subió `Clients:MinVersion` a `0.4.0`.
 
+**v0.5.0** suma lo hecho desde la v0.4.0 (feedback del 26/11/2026): eliminar con Supr (Ticket-037), sesión sin vencimiento y persistente en web (Ticket-038), cerrar pestañas con el botón del medio (Ticket-039), limpiar la consola (Ticket-040), arrastrar, copiar, cortar y pegar en el árbol (Ticket-041), atajos con Cmd en Mac (Ticket-042), el nombre RAF en el menú de macOS (Ticket-043) y variables compartidas por todas las Apps, con la grilla que lista las claves de todos los environments (Ticket-044, deja sin efecto el plan 11). La migración `SharedVariables` quita el `AppId` de las variables, que un cliente anterior todavía manda: se despliega primero el servidor y después se sube `Clients:MinVersion` a `0.5.0`.
+
 ## Decisiones pendientes
 
 | # | Decisión | Afecta | Recomendación |
