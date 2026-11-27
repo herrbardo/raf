@@ -173,8 +173,8 @@
 
 - Ticket-040.md
     - Creado: 26/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Solución: la pestaña Consola de la respuesta tiene un botón "Limpiar" junto a "Copiar" (ResponseView.axaml), con los textos que ya usaba la consola de eventos (Console_Clear y Console_ClearTip). ResponseViewModel.ClearConsole vacía los eventos, la selección y el aviso de copiado; la respuesta, sus headers y el body quedan como estaban, y el próximo envío vuelve a llenar la consola. Copiar y Limpiar se deshabilitan con la consola vacía (CanExecute HasEvents). Cómo se probó: dotnet build sin errores; en el cliente web contra el servidor en Docker se envió "List users" (sin baseUrl, así que terminó en error con tres eventos: Variables, Error y Total), Limpiar dejó la consola vacía con los dos botones deshabilitados y el error de la respuesta visible, y un nuevo envío la volvió a llenar. No se probó: la app de escritorio. La conversación de WebSocket y gRPC tiene su propio "Limpiar" desde antes y no se tocó.
 
 - Ticket-041.md
     - Creado: 26/11/2026

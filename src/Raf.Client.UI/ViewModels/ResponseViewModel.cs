@@ -87,7 +87,9 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     [ObservableProperty] private IReadOnlyList<ResponseHeaderRow> _headers = [];
 
     /// <summary>Consola de la última ejecución. No se guarda: se pierde al cerrar la pestaña.</summary>
-    [ObservableProperty] private IReadOnlyList<RunEventRow> _events = [];
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ClearConsoleCommand), nameof(CopyConsoleCommand))]
+    private IReadOnlyList<RunEventRow> _events = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedDetail))]
@@ -258,7 +260,18 @@ public sealed partial class ResponseViewModel(IDialogs dialogs) : ObservableObje
     public Task CopyAsync(string? text) =>
         CopyToClipboard is { } copy && text is not null ? copy(text) : Task.CompletedTask;
 
-    [RelayCommand]
+    private bool HasEvents => Events.Count > 0;
+
+    /// <summary>Vacía la consola (Ticket-040). La respuesta y sus headers quedan; el próximo envío la vuelve a llenar.</summary>
+    [RelayCommand(CanExecute = nameof(HasEvents))]
+    private void ClearConsole()
+    {
+        Events = [];
+        SelectedEvent = null;
+        ConsoleNotice = null;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasEvents))]
     private async Task CopyConsoleAsync()
     {
         if (CopyToClipboard is null || Events.Count == 0) return;
