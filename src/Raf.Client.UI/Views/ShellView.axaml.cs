@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Raf.Client.Controls;
 using Raf.Client.Services;
 using Raf.Client.ViewModels;
 
@@ -11,6 +12,7 @@ public partial class ShellView : UserControl
     public ShellView()
     {
         InitializeComponent();
+        CommandKey.AddMetaAliases(KeyBindings); // Cmd en Mac (Ticket-042)
         OverlayWindowService.Host = DialogLayer;
         DataContextChanged += (_, _) =>
         {

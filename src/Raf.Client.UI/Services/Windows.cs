@@ -53,6 +53,13 @@ public class DialogView : UserControl
     {
     }
 
+    /// <summary>Los atajos de los diálogos (Ctrl+S) también con Cmd, para Mac (Ticket-042).</summary>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        CommandKey.AddMetaAliases(KeyBindings);
+    }
+
     public virtual void OnHidden()
     {
     }
