@@ -135,6 +135,8 @@
   <data name="Env_NoChanges" xml:space="preserve"><value>No hay cambios para guardar.</value></data>
   <data name="Env_SavedOne" xml:space="preserve"><value>Guardado: 1 cambio.</value></data>
   <data name="Env_SavedMany" xml:space="preserve"><value>Guardado: {0} cambios.</value></data>
+  <data name="Env_Repeated" xml:space="preserve"><value>Hay claves repetidas: {0}. No se guardó nada.</value></data>
+  <data name="EnvW_NoValue" xml:space="preserve"><value>Sin valor</value></data>
   <data name="Env_CloseUnsaved" xml:space="preserve"><value>¿Cerrar y descartar los cambios en las variables?</value></data>
   <data name="Events_LevelWarning" xml:space="preserve"><value>Advertencia</value></data>
   <data name="Events_LevelError" xml:space="preserve"><value>Error</value></data>
@@ -313,12 +315,6 @@
   <data name="EnvW_SecretTip" xml:space="preserve"><value>Secreta: se guarda cifrada y se muestra oculta</value></data>
   <data name="EnvW_Show" xml:space="preserve"><value>Ver</value></data>
   <data name="EnvW_Search" xml:space="preserve"><value>Buscar por clave o valor</value></data>
-  <data name="EnvW_AppHeader" xml:space="preserve"><value>APP</value></data>
-  <data name="EnvW_AllApps" xml:space="preserve"><value>Todas</value></data>
-  <data name="EnvW_FilterAllApps" xml:space="preserve"><value>Todas las Apps</value></data>
-  <data name="EnvW_AppFilterTip" xml:space="preserve"><value>Con una App elegida se ven sus variables y las de todas las Apps</value></data>
-  <data name="EnvW_AppTip" xml:space="preserve"><value>La App que usa la variable. Dentro de cada pestaña, la de una App le gana a la de todas</value></data>
-  <data name="Env_Repeated" xml:space="preserve"><value>No se guardó nada: hay variables repetidas para la misma App: {0}</value></data>
   <data name="EnvW_NoMatches" xml:space="preserve"><value>Ninguna variable coincide con la búsqueda.</value></data>
   <data name="Auth_Token" xml:space="preserve"><value>Token</value></data>
   <data name="Auth_User" xml:space="preserve"><value>Usuario</value></data>

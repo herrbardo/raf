@@ -146,7 +146,7 @@ internal static class SyncItems
     /// <summary>Elementos que tienen que existir para que este exista.</summary>
     public static IReadOnlyList<Guid> ParentsOf(object dto) => dto switch
     {
-        VariableDto x => [.. new[] { x.EnvironmentId, x.AppId }.OfType<Guid>()],
+        VariableDto { EnvironmentId: { } env } => [env],
         AppDto { LoginId: { } login } => [login],
         FolderDto { ParentFolderId: { } parent } x => [x.AppId, parent],
         FolderDto x => [x.AppId],
@@ -186,7 +186,7 @@ internal static class SyncItems
         return dto switch
         {
             EnvironmentDto x => x with { Id = newId },
-            VariableDto x => x with { Id = newId, EnvironmentId = ToOpt(x.EnvironmentId), AppId = ToOpt(x.AppId) },
+            VariableDto x => x with { Id = newId, EnvironmentId = ToOpt(x.EnvironmentId) },
             AppDto x => x with { Id = newId, LoginId = ToOpt(x.LoginId) },
             LoginDto x => x with { Id = newId },
             ProtoSetDto x => x with { Id = newId },

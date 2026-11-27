@@ -7,4 +7,4 @@ Volver al esquema de variables de entorno para todas las apps. Al cambiar de amb
 Surgió del feedback del 26/11/2026.
 
 # Estado
-CREADO
+[HECHO]

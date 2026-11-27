@@ -73,18 +73,10 @@ public class DuplicationTests
         var folder = await store.CreateFolderAsync(Ws, new CreateFolderRequest(app.Id, "Carpeta"));
         await store.CreateRequestAsync(Ws, new CreateRequestRequest(app.Id, "En carpeta", null, folder.Id));
         await store.CreateRequestAsync(Ws, new CreateRequestRequest(app.Id, "En la raíz"));
-        var env = Guid.NewGuid();
-        await store.CreateVariableAsync(Ws, new CreateVariableRequest("baseUrl", "dev", env, AppId: app.Id));
-        await store.CreateVariableAsync(Ws, new CreateVariableRequest("clave", "s", IsSecret: true, AppId: app.Id));
-        await store.CreateVariableAsync(Ws, new CreateVariableRequest("deTodas", "x"));
-        await store.CreateVariableAsync(Ws, new CreateVariableRequest("deOtra", "y", AppId: other.Id));
 
         var copy = await new WorkspaceDuplicator(store, Ws).DuplicateAppAsync(app, "App (1)", 1);
 
         Assert.Equal(("App (1)", 1, auth, (Guid?)login.Id), (copy.Name, copy.Order, copy.Auth, copy.LoginId));
-        Assert.Equal([("baseUrl", "dev", (Guid?)env, false), ("clave", "s", null, true)],
-            store.Variables.Where(v => v.AppId == copy.Id).Select(v => (v.Key, v.Value!, v.EnvironmentId, v.IsSecret)).OrderBy(v => v.Key));
-        Assert.Equal(6, store.Variables.Count);
         var folderCopy = Assert.Single(store.Folders, f => f.AppId == copy.Id);
         Assert.Equal("En carpeta", Assert.Single(store.Requests, r => r.FolderId == folderCopy.Id).Name);
         Assert.Equal(["En carpeta", "En la raíz"], store.Requests.Where(r => r.AppId == copy.Id).Select(r => r.Name).Order());

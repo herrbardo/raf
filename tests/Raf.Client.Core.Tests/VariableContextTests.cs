@@ -4,85 +4,69 @@ using Raf.Contracts;
 
 namespace Raf.Client.Core.Tests;
 
-/// <summary>Precedencia con variables por App (Plan 11, V5).</summary>
+/// <summary>Precedencia de las variables, que valen para todas las Apps (Ticket-044).</summary>
 public sealed class VariableContextTests
 {
     private static readonly Guid Env = Guid.NewGuid();
-    private static readonly Guid Orders = Guid.NewGuid();
-    private static readonly Guid Users = Guid.NewGuid();
 
-    private static VariableDto Var(string key, string value, Guid? env = null, Guid? app = null) =>
-        new(Guid.NewGuid(), env, key, value, false, 1, 1, app);
+    private static VariableDto Var(string key, string? value, Guid? env = null, bool secret = false) =>
+        new(Guid.NewGuid(), env, key, value, secret, 1, 1);
 
     private static string? Value(VariableContext vars, string key) => vars.Effective.FirstOrDefault(v => v.Key == key)?.Value;
 
-    // Cada fila agrega una capa más; gana la más alta: globales·Todas < globales·App < environment·Todas < environment·App < sesión.
+    // Cada fila agrega una capa más; gana la más alta: globales < environment < sesión.
     [Theory]
     [InlineData(1, "global")]
-    [InlineData(2, "global-app")]
-    [InlineData(3, "env")]
-    [InlineData(4, "env-app")]
-    [InlineData(5, "sesion")]
+    [InlineData(2, "env")]
+    [InlineData(3, "sesion")]
     public void Gana_la_capa_mas_cercana(int layers, string expected)
     {
-        VariableDto[] all =
-        [
-            Var("x", "global"), Var("x", "global-app", app: Orders), Var("x", "env", Env), Var("x", "env-app", Env, Orders),
-        ];
-        var session = layers == 5 ? new Dictionary<string, string> { ["x"] = "sesion" } : null;
+        VariableDto[] all = [Var("x", "global"), Var("x", "env", Env)];
+        var session = layers == 3 ? new Dictionary<string, string> { ["x"] = "sesion" } : null;
 
-        var vars = VariableContext.From(all.Take(Math.Min(layers, 4)), Env, session, Orders);
+        var vars = VariableContext.From(all.Take(Math.Min(layers, 2)), Env, session);
 
         Assert.Equal(expected, Value(vars, "x"));
     }
 
     [Fact]
-    public void Una_global_de_la_App_no_le_gana_al_environment_de_todas()
+    public void Las_de_otro_environment_no_cuentan()
     {
-        var vars = VariableContext.From([Var("x", "global-app", app: Orders), Var("x", "env", Env)], Env, null, Orders);
-        Assert.Equal("env", Value(vars, "x"));
+        var vars = VariableContext.From([Var("a", "otro", Guid.NewGuid())], Env);
+        Assert.Empty(vars.Effective);
+        Assert.False(vars.IsDefined("a"));
     }
 
     [Fact]
-    public void Las_variables_de_otra_App_y_las_de_otro_environment_no_cuentan()
+    public void Una_variable_vacia_cuenta_como_sin_valor()
     {
-        VariableDto[] all = [Var("a", "de-users", app: Users), Var("b", "de-users-env", Env, Users), Var("c", "otro-env", Guid.NewGuid(), Orders)];
+        var vars = VariableContext.From([Var("solo", "", Env), Var("host", "global"), Var("host", "", Env)], Env);
 
-        var orders = VariableContext.From(all, Env, null, Orders);
-        var shared = VariableContext.From(all, Env);
+        Assert.False(vars.IsDefined("solo")); // en rojo y en "Sin valor"
+        Assert.Equal("global", Value(vars, "host")); // la vacía del environment no tapa a la global
 
-        Assert.Empty(orders.Effective);
-        Assert.Empty(shared.Effective);
+        var resolver = vars.CreateResolver();
+        Assert.Equal("{{solo}}/global", resolver.Resolve("{{solo}}/{{host}}"));
+        Assert.Equal(["solo"], resolver.Missing);
     }
 
     [Fact]
-    public void Shared_deja_afuera_las_de_la_App_y_conserva_la_sesion_nueva()
+    public void Una_secreta_que_el_rol_no_puede_leer_existe_aunque_no_tenga_valor()
     {
-        var vars = VariableContext.From([Var("host", "todas"), Var("host", "orders", app: Orders)], null, null, Orders)
-            .WithSession("token", "t");
-
-        Assert.Equal("orders", Value(vars, "host"));
-        Assert.Equal("todas", Value(vars.Shared, "host"));
-        Assert.True(vars.Shared.IsSession("token"));
-
-        var plain = VariableContext.From([Var("host", "todas")], null);
-        Assert.Same(plain, plain.Shared);
+        var vars = VariableContext.From([Var("token", null, Env, secret: true)], Env);
+        Assert.True(vars.IsDefined("token"));
+        Assert.True(vars.IsUnreadable("token"));
     }
 
     [Fact]
     public void El_tooltip_y_el_autocompletar_dicen_de_donde_sale_el_valor()
     {
-        var vars = VariableContext.From(
-            [Var("a", "1"), Var("b", "2", app: Orders), Var("c", "3", Env), Var("d", "4", Env, Orders)], Env, null, Orders);
+        var vars = VariableContext.From([Var("a", "1"), Var("c", "3", Env)], Env);
 
-        Assert.StartsWith($"a · {CoreTexts.Completion_Global}", VariableCompletion.Tooltip(vars, "a", "dev", "Orders"));
-        Assert.StartsWith($"b · {string.Format(CoreTexts.Hover_AppGlobal, "Orders")}", VariableCompletion.Tooltip(vars, "b", "dev", "Orders"));
-        Assert.StartsWith($"c · {string.Format(CoreTexts.Hover_Environment, "dev")}", VariableCompletion.Tooltip(vars, "c", "dev", "Orders"));
-        Assert.StartsWith($"d · {string.Format(CoreTexts.Hover_AppScope, "Orders", "dev")}", VariableCompletion.Tooltip(vars, "d", "dev", "Orders"));
+        Assert.StartsWith($"a · {CoreTexts.Completion_Global}", VariableCompletion.Tooltip(vars, "a", "dev"));
+        Assert.StartsWith($"c · {string.Format(CoreTexts.Hover_Environment, "dev")}", VariableCompletion.Tooltip(vars, "c", "dev"));
 
         var scopes = VariableCompletion.Suggestions(vars).Select(s => s.Description.Split(" · ")[0]).ToList();
-        Assert.Equal(
-            [CoreTexts.Completion_Global, CoreTexts.Completion_AppGlobal, CoreTexts.Completion_Environment, CoreTexts.Completion_AppEnvironment],
-            scopes);
+        Assert.Equal([CoreTexts.Completion_Global, CoreTexts.Completion_Environment], scopes);
     }
 }

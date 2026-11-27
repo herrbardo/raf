@@ -71,7 +71,7 @@ public sealed class RafDbContext(
         Sync<Variable>(b, e =>
         {
             e.Property(v => v.Key).HasMaxLength(200);
-            e.HasIndex(v => new { v.WorkspaceId, v.EnvironmentId, v.AppId, v.Key })
+            e.HasIndex(v => new { v.WorkspaceId, v.EnvironmentId, v.Key })
                 .IsUnique()
                 .AreNullsDistinct(false)
                 .HasFilter("\"IsDeleted\" = false");

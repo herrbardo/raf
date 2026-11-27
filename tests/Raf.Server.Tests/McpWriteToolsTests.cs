@@ -69,20 +69,20 @@ public sealed partial class McpToolsTests
         Assert.Equal(("PUT", "{{baseUrl}}/v2/cobros?grande=1"), (savedSample.Overrides.Method, savedSample.Overrides.Url));
 
         // Variables: el valor secreto entra pero no sale; sin "secret" se conserva.
-        var secret = await mcp.CallAsync("set_variable", new { workspace = name, key = "clave", value = "uno", environment = "qa", app = "Pagos", secret = true });
+        var secret = await mcp.CallAsync("set_variable", new { workspace = name, key = "clave", value = "uno", environment = "qa", secret = true });
         Assert.False(secret.IsError, secret.Text);
         Assert.DoesNotContain("uno", secret.Text);
-        var again = await mcp.CallAsync("set_variable", new { workspace = name, key = "clave", value = "dos", environment = "qa", app = "Pagos" });
+        var again = await mcp.CallAsync("set_variable", new { workspace = name, key = "clave", value = "dos", environment = "qa" });
         Assert.DoesNotContain("dos", again.Text);
         var variable = Assert.Single(await admin.GetOkAsync<List<VariableDto>>($"{w}/variables"));
-        Assert.Equal(("dos", true, IdOf(qa), IdOf(pagos)), (variable.Value, variable.IsSecret, variable.EnvironmentId!.Value, variable.AppId!.Value));
+        Assert.Equal(("dos", true, IdOf(qa)), (variable.Value, variable.IsSecret, variable.EnvironmentId!.Value));
 
         await mcp.JsonAsync("update_app", new { workspace = name, app = "Pagos", name = "Pagos 2" });
         Assert.Equal("Bearer", (await admin.GetOkAsync<List<AppDto>>($"{w}/apps")).Single().Auth!.Type.ToString());
 
         // Borrar, cada cosa con su herramienta.
         await mcp.JsonAsync("delete_sample", new { workspace = name, sample = IdOf(sample) });
-        await mcp.JsonAsync("delete_variable", new { workspace = name, key = "clave", environment = "qa", app = "Pagos 2" });
+        await mcp.JsonAsync("delete_variable", new { workspace = name, key = "clave", environment = "qa" });
         await mcp.JsonAsync("delete_request", new { workspace = name, request = requestId });
         await mcp.JsonAsync("delete_folder", new { workspace = name, folder = IdOf(folder) });
         await mcp.JsonAsync("delete_app", new { workspace = name, app = "Pagos 2" });

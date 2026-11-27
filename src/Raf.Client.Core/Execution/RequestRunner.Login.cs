@@ -111,14 +111,13 @@ public sealed partial class RequestRunner
     {
         events.Add(Event(start, RunEventLevel.Info, reason));
 
-        // El login lo comparten varias Apps: usa solo las variables de todas las Apps (Plan 11, V3).
-        var check = Check(config.Request, null, variables.Shared);
+        var check = Check(config.Request, null, variables);
         if (check.UnreadableSecrets.Count > 0)
             return Failed(string.Format(CoreTexts.Login_UnreadableSecrets, string.Join(", ", check.UnreadableSecrets)), RunOutcome.Failed, null);
 
         var offset = Stopwatch.GetElapsedTime(start);
         using var login = await RunOnceAsync(
-            new RunInput(config.Request with { Extractions = null }, null, variables.Shared, input.Options), ct);
+            new RunInput(config.Request with { Extractions = null }, null, variables, input.Options), ct);
         var loginEvents = login.Events
             .Select(e => e with { At = e.At + offset, Title = string.Format(CoreTexts.Login_Prefix, e.Title) })
             .ToList();

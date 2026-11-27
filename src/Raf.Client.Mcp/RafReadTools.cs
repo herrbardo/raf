@@ -95,23 +95,19 @@ public sealed class RafReadTools(RafMcpContext context)
     });
 
     [McpServerTool(Name = "list_variables", ReadOnly = true, Idempotent = true, OpenWorld = false)]
-    [Description("Lists the variables of a workspace with their scope: global or an environment, and all apps or one app. Secret values are never returned. Within a scope an app variable wins over the one for all apps, and environment variables win over globals.")]
+    [Description("Lists the variables of a workspace with their scope: global or an environment. All apps share them. Secret values are never returned. Environment variables win over globals.")]
     public Task<string> ListVariablesAsync(
         [Description("Workspace id or name.")] string workspace,
         [Description("Optional environment id or name: only its variables and the globals.")] string? environment = null,
-        [Description("Optional app id or name: only its variables and those for all apps.")] string? app = null,
         CancellationToken ct = default) => context.RunAsync(async () =>
     {
         var store = context.Store(McpAccess.Read);
         var ws = await McpLookup.WorkspaceAsync(store, workspace, ct);
         var environments = await store.GetEnvironmentsAsync(ws.Id, ct);
-        var apps = await store.GetAppsAsync(ws.Id, ct);
         var env = environment is null ? null : McpLookup.Environment(environments, environment);
-        var appDto = app is null ? null : McpLookup.App(apps, app);
 
         return (await store.GetVariablesAsync(ws.Id, ct))
             .Where(v => env is null || v.EnvironmentId is null || v.EnvironmentId == env.Id)
-            .Where(v => appDto is null || v.AppId is null || v.AppId == appDto.Id)
             .OrderBy(v => v.Key, StringComparer.OrdinalIgnoreCase)
             .Select(v => new
             {
@@ -119,7 +115,6 @@ public sealed class RafReadTools(RafMcpContext context)
                 Value = v.IsSecret ? null : v.Value,
                 Secret = v.IsSecret,
                 Environment = v.EnvironmentId is { } e ? environments.FirstOrDefault(x => x.Id == e)?.Name : null,
-                App = v.AppId is { } a ? apps.FirstOrDefault(x => x.Id == a)?.Name : null,
             })
             .ToList();
     });

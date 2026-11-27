@@ -34,13 +34,7 @@ public static class VariableCompletion
             .Select(v =>
             {
                 var scope = variables.IsSession(v.Key) ? CoreTexts.Completion_Session
-                    : (v.EnvironmentId, v.AppId) switch
-                    {
-                        (null, null) => CoreTexts.Completion_Global,
-                        (null, _) => CoreTexts.Completion_AppGlobal,
-                        (_, null) => CoreTexts.Completion_Environment,
-                        _ => CoreTexts.Completion_AppEnvironment,
-                    };
+                    : v.EnvironmentId is null ? CoreTexts.Completion_Global : CoreTexts.Completion_Environment;
                 var value = v switch
                 {
                     { IsSecret: true, Value: null } => CoreTexts.Completion_SecretUnreadable,
@@ -59,23 +53,15 @@ public static class VariableCompletion
     /// valor. Los secretos nunca se muestran, igual que en el autocompletar. Si no existe, lo dice.
     /// </summary>
     /// <param name="environmentName">El environment activo, para nombrarlo cuando el valor sale de él.</param>
-    /// <param name="appName">La App de las variables, para nombrarla cuando el valor sale de una variable suya (Plan 11, V9).</param>
-    public static string Tooltip(VariableContext variables, string key, string? environmentName, string? appName = null)
+    public static string Tooltip(VariableContext variables, string key, string? environmentName)
     {
         var v = variables.Effective.FirstOrDefault(x => x.Key == key);
         if (v is null) return string.Format(CoreTexts.Hover_Missing, key);
 
-        var environment = environmentName is { Length: > 0 } name ? name : CoreTexts.Completion_Environment;
         var scope = variables.IsSession(key) ? CoreTexts.Completion_Session
-            : (v.EnvironmentId, v.AppId, appName) switch
-            {
-                (null, null, _) => CoreTexts.Completion_Global,
-                (_, null, _) => environmentName is { Length: > 0 } ? string.Format(CoreTexts.Hover_Environment, environmentName) : environment,
-                (null, _, { Length: > 0 } app) => string.Format(CoreTexts.Hover_AppGlobal, app),
-                (null, _, _) => CoreTexts.Completion_AppGlobal,
-                (_, _, { Length: > 0 } app) => string.Format(CoreTexts.Hover_AppScope, app, environment),
-                _ => CoreTexts.Completion_AppEnvironment,
-            };
+            : v.EnvironmentId is null ? CoreTexts.Completion_Global
+            : environmentName is { Length: > 0 } name ? string.Format(CoreTexts.Hover_Environment, name)
+            : CoreTexts.Completion_Environment;
         var value = v switch
         {
             { IsSecret: true, Value: null } => CoreTexts.Completion_SecretUnreadable,

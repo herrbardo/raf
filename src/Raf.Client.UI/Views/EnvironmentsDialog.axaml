@@ -6,7 +6,7 @@
         x:Class="Raf.Client.Views.EnvironmentsDialog"
         x:DataType="vm:EnvironmentsViewModel"
         Title="{x:Static l:Texts.EnvW_Title}"
-        DialogWidth="980" DialogHeight="560" DialogMinWidth="720" DialogMinHeight="360">
+        DialogWidth="860" DialogHeight="560" DialogMinWidth="640" DialogMinHeight="360">
   <svc:DialogView.KeyBindings>
     <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
   </svc:DialogView.KeyBindings>
@@ -62,39 +62,31 @@
             <TextBlock VerticalAlignment="Center" Text="{x:Static l:Texts.EnvW_AddVariable}" />
           </StackPanel>
         </Button>
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="16,0,14,10">
-          <TextBox Text="{Binding Search}" Watermark="{x:Static l:Texts.EnvW_Search}">
-            <TextBox.InnerLeftContent>
-              <ctl:Icon Width="12" Height="12" Margin="8,0,0,0" Data="{StaticResource IconSearch}" />
-            </TextBox.InnerLeftContent>
-          </TextBox>
-          <!-- Filtro por App (Plan 11, V6) -->
-          <ComboBox Grid.Column="1" Width="180" ItemsSource="{Binding AppFilters}" SelectedItem="{Binding AppFilter}"
-                    IsVisible="{Binding HasApps}" ToolTip.Tip="{x:Static l:Texts.EnvW_AppFilterTip}" />
-        </Grid>
+        <TextBox DockPanel.Dock="Top" Margin="16,0,14,10" Text="{Binding Search}" Watermark="{x:Static l:Texts.EnvW_Search}">
+          <TextBox.InnerLeftContent>
+            <ctl:Icon Width="12" Height="12" Margin="8,0,0,0" Data="{StaticResource IconSearch}" />
+          </TextBox.InnerLeftContent>
+        </TextBox>
         <TextBlock DockPanel.Dock="Bottom" Classes="caption" Margin="16,6,0,0" Text="{x:Static l:Texts.EnvW_NoMatches}"
                    IsVisible="{Binding NoMatches}" />
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="10,*,*,150,70,70,30" ColumnSpacing="6" Margin="0,0,14,6">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="10,*,*,70,70,30" ColumnSpacing="6" Margin="0,0,14,6">
           <TextBlock Grid.Column="1" Classes="label" Text="{x:Static l:Texts.EnvW_KeyHeader}" />
           <TextBlock Grid.Column="2" Classes="label" Text="{x:Static l:Texts.EnvW_ValueHeader}" />
-          <TextBlock Grid.Column="3" Classes="label" Text="{x:Static l:Texts.EnvW_AppHeader}" ToolTip.Tip="{x:Static l:Texts.EnvW_AppTip}" />
-          <TextBlock Grid.Column="4" Classes="label" Text="{x:Static l:Texts.EnvW_SecretHeader}" />
+          <TextBlock Grid.Column="3" Classes="label" Text="{x:Static l:Texts.EnvW_SecretHeader}" />
         </Grid>
         <ScrollViewer>
           <ItemsControl ItemsSource="{Binding SelectedScope.Rows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:VariableRowViewModel">
-                <Grid ColumnDefinitions="10,*,*,150,70,70,30" ColumnSpacing="6" Margin="0,2,14,2" IsVisible="{Binding IsShown}">
+                <Grid ColumnDefinitions="10,*,*,70,70,30" ColumnSpacing="6" Margin="0,2,14,2" IsVisible="{Binding IsShown}">
                   <Ellipse Classes="dirty" ToolTip.Tip="{x:Static l:Texts.V_Unsaved}" IsVisible="{Binding HasChanges}" />
-                  <TextBox Grid.Column="1" Classes="mono" Text="{Binding Key}" IsReadOnly="{Binding IsReadOnly}"
+                  <TextBox Grid.Column="1" Classes="mono" Text="{Binding Key}" IsReadOnly="{Binding IsKeyReadOnly}"
                            Loaded="OnKeyLoaded" />
                   <TextBox Grid.Column="2" Classes="mono" Text="{Binding Value}" PasswordChar="{Binding MaskChar}"
                            Watermark="{Binding ValueHint}" IsReadOnly="{Binding IsReadOnly}" />
-                  <ComboBox Grid.Column="3" HorizontalAlignment="Stretch" ItemsSource="{Binding AppChoices}" SelectedItem="{Binding App}"
-                            IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.EnvW_AppTip}" />
-                  <CheckBox Grid.Column="4" IsChecked="{Binding IsSecret}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.EnvW_SecretTip}" />
-                  <ToggleButton Grid.Column="5" Content="{x:Static l:Texts.EnvW_Show}" IsChecked="{Binding Reveal}" IsVisible="{Binding CanReveal}" />
-                  <Button Grid.Column="6" Classes="icon small danger" ToolTip.Tip="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanEdit}">
+                  <CheckBox Grid.Column="3" IsChecked="{Binding IsSecret}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{x:Static l:Texts.EnvW_SecretTip}" />
+                  <ToggleButton Grid.Column="4" Content="{x:Static l:Texts.EnvW_Show}" IsChecked="{Binding Reveal}" IsVisible="{Binding CanReveal}" />
+                  <Button Grid.Column="5" Classes="icon small danger" ToolTip.Tip="{x:Static l:Texts.V_Remove}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}">
                     <ctl:Icon Data="{StaticResource IconClose}" />
                   </Button>
                 </Grid>

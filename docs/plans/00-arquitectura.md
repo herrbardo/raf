@@ -130,7 +130,7 @@ User ──< WorkspaceMember >── Workspace ──< Environment ──< Varia
 
 **Variables:**
 - Sintaxis `{{nombre}}` en URL, headers, query, body y auth.
-- Precedencia: **variables de sesión > Environment activo > globales del Workspace**; dentro del environment y de las globales, la variable de la App le gana a la de todas las Apps ([Plan 11](11-variables-por-app.md)). Las de sesión son locales de cada usuario y no se sincronizan ([Plan 08](08-auth-por-app.md)).
+- Precedencia: **variables de sesión > Environment activo > globales del Workspace**. Las variables valen para todas las Apps (el [Plan 11](11-variables-por-app.md), variables por App, se dejó sin efecto en el Ticket-044). Una variable con valor vacío cuenta como sin valor: no tapa a una global y se marca en rojo. Las de sesión son locales de cada usuario y no se sincronizan ([Plan 08](08-auth-por-app.md)).
 - El environment activo es una **elección local de cada usuario**; no se sincroniza.
 - Variables `IsSecret`: se sincronizan con el equipo, se cifran en Postgres con KMS detrás de `IConfidentialManager`, se muestran enmascaradas en la UI y solo las ven los miembros con rol `Editor` o superior.
 

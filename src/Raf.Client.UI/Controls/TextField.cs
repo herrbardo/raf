@@ -26,16 +26,12 @@ public sealed class VariableLookup
     /// <summary>El environment activo, para nombrarlo en el tooltip; null si no hay.</summary>
     public string? EnvironmentName { get; private set; }
 
-    /// <summary>La App de las variables, para nombrarla en el tooltip; null si son las de todas las Apps.</summary>
-    public string? AppName { get; private set; }
-
     public event Action? Changed;
 
-    public void Update(VariableContext context, string? environmentName = null, string? appName = null)
+    public void Update(VariableContext context, string? environmentName = null)
     {
         Context = context;
         EnvironmentName = environmentName;
-        AppName = appName;
         Changed?.Invoke();
     }
 }
@@ -185,7 +181,7 @@ public sealed partial class TextField : TextEditor
             return;
         }
 
-        var tip = VariableCompletion.Tooltip(variables, match.Groups[1].Value, _lookup?.EnvironmentName, _lookup?.AppName);
+        var tip = VariableCompletion.Tooltip(variables, match.Groups[1].Value, _lookup?.EnvironmentName);
         var offset = line.Offset + match.Index;
         if (_tip is { } open && open.Offset == offset && open.Tip == tip) return;
 

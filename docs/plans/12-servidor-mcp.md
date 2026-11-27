@@ -39,7 +39,7 @@ Propuestas en este plan, para aprobar:
 | `list_environments` | Environments de un workspace y cuál está activo en la app |
 | `get_tree` | Apps, carpetas, requests (con método y URL) y samples de un workspace, o de una App |
 | `get_request` | El spec completo de un request, o un sample con lo que sobreescribe y el resultado combinado |
-| `list_variables` | Variables con su alcance (environment y App); el valor solo si no es secreta |
+| `list_variables` | Variables con su alcance (global o environment); el valor solo si no es secreta. Desde el Ticket-044 no hay variables por App |
 | `get_app` | La auth de la App y su login automático, sin secretos |
 
 **Ejecución**
