@@ -33,7 +33,7 @@ export default defineRailway((ctx, project) => {
 
       // Versión mínima del cliente: uno anterior recibe 426 y pide actualizarse. Se sube después de publicar la
       // versión nueva del cliente (ver README.md, "Publicar una versión del cliente").
-      Clients__MinVersion: "0.4.0",
+      Clients__MinVersion: "0.5.0",
 
       // Base por la red privada del proyecto, que Railway ya cifra. Prefer usa TLS si la base lo ofrece (su
       // certificado es autofirmado, así que no se valida).
