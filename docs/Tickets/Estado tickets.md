@@ -168,8 +168,8 @@
 
 - Ticket-039.md
     - Creado: 26/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Solución: el clic con el botón del medio sobre la pestaña de un request o sample la cierra, igual que la X: MainView.axaml.cs (OnDocumentsPointerReleased, enganchado al TabControl de documentos en MainView.axaml) busca el TabItem bajo el puntero y ejecuta su CloseCommand, que pregunta si hay cambios sin guardar como siempre. Solo cuenta un TabItem de ese TabControl (ItemsControlFromItemContainer), porque las secciones de adentro (Query, Headers, Body...) también son TabItem con el mismo DataContext y no deben cerrar el request. Cómo se probó: dotnet build sin errores; en el cliente web contra el servidor en Docker se abrió "List users" y se simularon con JavaScript los eventos de puntero del botón del medio (la herramienta del navegador no tiene clic del medio): sobre la sección Headers la pestaña siguió abierta; sobre la pestaña del request se cerró. No se probó: con un mouse real, la app de escritorio, ni una pestaña con cambios sin guardar (usa el mismo comando que la X).
 
 - Ticket-040.md
     - Creado: 26/11/2026
