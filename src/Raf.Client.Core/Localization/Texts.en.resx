@@ -521,4 +521,13 @@
   <data name="GrpcV_Reflection" xml:space="preserve"><value>Server reflection</value></data>
   <data name="GrpcV_ProtoSet" xml:space="preserve"><value>.proto files: {0}</value></data>
   <data name="GrpcV_SourceTip" xml:space="preserve"><value>Where the services come from: the server's reflection or a set of .proto files</value></data>
+  <data name="V_Cut" xml:space="preserve"><value>Cut</value></data>
+  <data name="V_Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="Tree_Copied" xml:space="preserve"><value>Copied "{0}": paste it with Ctrl+V on the target App or folder.</value></data>
+  <data name="Tree_Cut" xml:space="preserve"><value>Cut "{0}": paste it with Ctrl+V in another folder of the same App.</value></data>
+  <data name="Tree_CutNotAllowed" xml:space="preserve"><value>Only folders and requests can be cut. Apps and samples are reordered by dragging them.</value></data>
+  <data name="Tree_OtherApp" xml:space="preserve"><value>Items can only be moved within the same App. To take one to another App, copy and paste it.</value></data>
+  <data name="Tree_IntoItself" xml:space="preserve"><value>A folder can't go inside itself or one of its subfolders.</value></data>
+  <data name="Tree_NotAllowed" xml:space="preserve"><value>That can't go there.</value></data>
+  <data name="Tree_NothingToPaste" xml:space="preserve"><value>There's nothing copied or cut to paste.</value></data>
 </root>

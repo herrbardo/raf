@@ -20,6 +20,9 @@ namespace Raf.Client.ViewModels;
 
 public enum NodeKind { App, Folder, Request, Sample }
 
+/// <summary>Dónde se suelta un nodo arrastrado respecto del que está debajo: arriba, en el medio o abajo.</summary>
+public enum DropPosition { Before, Into, After }
+
 public sealed partial class TreeNodeViewModel : ObservableObject
 {
     private readonly MainViewModel _owner;
@@ -101,6 +104,12 @@ public sealed partial class TreeNodeViewModel : ObservableObject
     [RelayCommand] private Task Delete() => _owner.DeleteAsync(this);
     [RelayCommand] private Task MoveUp() => _owner.MoveAsync(this, -1);
     [RelayCommand] private Task MoveDown() => _owner.MoveAsync(this, 1);
+    [RelayCommand] private void Copy() => _owner.CopyNode(this);
+    [RelayCommand] private void Cut() => _owner.CutNode(this);
+    [RelayCommand] private Task Paste() => _owner.PasteAsync(this);
+
+    /// <summary>Se cortan carpetas y requests (Ticket-041): las Apps y los samples se reordenan arrastrando.</summary>
+    public bool CanCut => CanEdit && Kind is NodeKind.Folder or NodeKind.Request;
 }
 
 public sealed record EnvironmentChoice(Guid? Id, string Name);
@@ -507,6 +516,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         CloseAllTabs();
+        _clipboard = null; // lo copiado es de este workspace
         Roots.Clear();
         SelectedEnvironment = null; // el environment elegido pertenece al workspace anterior
         Environments.Clear();
@@ -908,6 +918,155 @@ public sealed partial class MainViewModel : ObservableObject
         if (copy is { Kind: NodeKind.Request or NodeKind.Sample }) Open(copy);
     });
 
+    // ---------- Copiar, cortar, pegar y arrastrar (Ticket-041) ----------
+
+    /// <summary>Lo copiado o cortado en el árbol. Es de la app, no del portapapeles del sistema, y de este workspace.</summary>
+    private (TreeNodeViewModel Node, bool Cut)? _clipboard;
+
+    public void CopyNode(TreeNodeViewModel node)
+    {
+        _clipboard = (node, false);
+        ReportStatus(string.Format(Texts.Tree_Copied, node.Name));
+    }
+
+    /// <summary>Se cortan carpetas y requests; las Apps y los samples se reordenan arrastrando.</summary>
+    public void CutNode(TreeNodeViewModel node)
+    {
+        if (!CanEdit) return;
+        if (node.Kind is not (NodeKind.Folder or NodeKind.Request))
+        {
+            ReportStatus(Texts.Tree_CutNotAllowed);
+            return;
+        }
+        _clipboard = (node, true);
+        ReportStatus(string.Format(Texts.Tree_Cut, node.Name));
+    }
+
+    /// <summary>Pega dentro de una App o carpeta, o a continuación del elemento elegido.</summary>
+    public Task PasteAsync(TreeNodeViewModel target)
+    {
+        if (!CanEdit) return Task.CompletedTask;
+        if (_clipboard is not { } clip)
+        {
+            ReportStatus(Texts.Tree_NothingToPaste);
+            return Task.CompletedTask;
+        }
+        var position = target.Kind is NodeKind.App or NodeKind.Folder ? DropPosition.Into : DropPosition.After;
+        return clip.Cut ? MoveNodeAsync(clip.Node, target, position) : CopyNodeAsync(clip.Node, target, position);
+    }
+
+    public Task DropAsync(TreeNodeViewModel source, TreeNodeViewModel target, DropPosition position) =>
+        MoveNodeAsync(source, target, position);
+
+    /// <summary>Si soltar <paramref name="source"/> ahí tiene sentido; la vista lo usa para marcar el destino.</summary>
+    public bool CanDrop(TreeNodeViewModel source, TreeNodeViewModel target, DropPosition position) =>
+        CanEdit && source != target && PlaceFor(source, target, position) is not null;
+
+    private Task MoveNodeAsync(TreeNodeViewModel source, TreeNodeViewModel target, DropPosition position) => GuardAsync(async () =>
+    {
+        if (!CanEdit || PlaceFor(source, target, position) is not { } place) return;
+        var result = await new TreeArranger(Services.Store, WorkspaceId).MoveAsync(source.Dto, place);
+        if (Explain(result.Change) is { } problem)
+        {
+            ReportStatus(problem);
+            return;
+        }
+        if (_clipboard is { Cut: true } clip && clip.Node.Id == source.Id) _clipboard = null;
+        if (result.Change == TreeChange.Done) await ReloadAfterArrangeAsync(place, open: null);
+    });
+
+    private Task CopyNodeAsync(TreeNodeViewModel source, TreeNodeViewModel target, DropPosition position) => GuardAsync(async () =>
+    {
+        if (!CanEdit || PlaceFor(source, target, position) is not { } place) return;
+        var result = await new TreeArranger(Services.Store, WorkspaceId).CopyAsync(source.Dto, place);
+        if (Explain(result.Change) is { } problem)
+        {
+            ReportStatus(problem);
+            return;
+        }
+        await ReloadAfterArrangeAsync(place, open: result.Id);
+    });
+
+    private static string? Explain(TreeChange change) => change switch
+    {
+        TreeChange.OtherApp => Texts.Tree_OtherApp,
+        TreeChange.IntoItself => Texts.Tree_IntoItself,
+        TreeChange.NotAllowed => Texts.Tree_NotAllowed,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Traduce "soltar sobre este nodo, arriba, en el medio o abajo" al lugar donde queda el elemento. Null si ahí no
+    /// puede ir. Las carpetas van antes que los requests, así que un request soltado junto a una carpeta queda primero
+    /// entre los requests, y una carpeta junto a un request, última entre las carpetas.
+    /// </summary>
+    private static TreePlace? PlaceFor(TreeNodeViewModel source, TreeNodeViewModel target, DropPosition position)
+    {
+        var after = position != DropPosition.Before;
+        switch (source.Kind)
+        {
+            case NodeKind.App:
+                var app = AppOf(target);
+                return TreePlace.Apps(app.Id, after: after || target != app);
+
+            case NodeKind.Folder or NodeKind.Request:
+                if (target.Kind == NodeKind.Sample) return PlaceFor(source, target.Parent!, DropPosition.After);
+                if (target.Kind == NodeKind.App || (target.Kind == NodeKind.Folder && position == DropPosition.Into))
+                {
+                    var (appId, folderId) = Container(target);
+                    return TreePlace.In(appId, folderId);
+                }
+                var (parentApp, parentFolder) = Container(target.Parent!);
+                return target.Kind == source.Kind
+                    ? TreePlace.In(parentApp, parentFolder, target.Id, after)
+                    : TreePlace.In(parentApp, parentFolder, anchor: null, after: source.Kind == NodeKind.Folder);
+
+            case NodeKind.Sample:
+                return target.Kind switch
+                {
+                    NodeKind.Sample => TreePlace.InRequest(target.Parent!.Id, target.Id, after),
+                    NodeKind.Request => TreePlace.InRequest(target.Id),
+                    _ => null,
+                };
+
+            default:
+                return null;
+        }
+    }
+
+    private static TreeNodeViewModel AppOf(TreeNodeViewModel node) => node.Parent is { } parent ? AppOf(parent) : node;
+
+    private async Task ReloadAfterArrangeAsync(TreePlace place, Guid? open)
+    {
+        await ReloadAsync();
+        var nodes = Roots.SelectMany(r => r.SelfAndDescendants()).ToDictionary(n => n.Id);
+        foreach (var id in new[] { place.AppId, place.FolderId, place.RequestId })
+            if (id is { } container && nodes.TryGetValue(container, out var node))
+                for (var n = node; n is not null; n = n.Parent) n.IsExpanded = true;
+        AdoptNewPositions(nodes);
+        if (open is { } id2 && nodes.TryGetValue(id2, out var copy) && copy.Kind is NodeKind.Request or NodeKind.Sample) Open(copy);
+    }
+
+    /// <summary>
+    /// Una pestaña con cambios sin guardar conserva el DTO que tenía, y al guardar manda su carpeta y su orden: si el
+    /// elemento se acaba de mover, lo devolvería a su lugar. Si lo único que cambió es el lugar, toma el DTO nuevo.
+    /// </summary>
+    private void AdoptNewPositions(IReadOnlyDictionary<Guid, TreeNodeViewModel> nodes)
+    {
+        foreach (var tab in Tabs.Where(t => t.IsDirty))
+        {
+            if (!nodes.TryGetValue(tab.Node.Id, out var fresh)) continue;
+            var samePlaceAsFresh = (tab.Node.Dto, fresh.Dto) switch
+            {
+                (RequestDto old, RequestDto now) => old with { FolderId = now.FolderId, Order = now.Order },
+                (FolderDto old, FolderDto now) => old with { ParentFolderId = now.ParentFolderId, Order = now.Order },
+                (SampleDto old, SampleDto now) => old with { Order = now.Order },
+                _ => (object?)null,
+            };
+            if (samePlaceAsFresh is not null && SyncContent.Same(samePlaceAsFresh, fresh.Dto)) tab.Node.Dto = fresh.Dto;
+        }
+    }
+
     // ---------- Sesión y variables ----------
 
     [RelayCommand]
@@ -920,6 +1079,7 @@ public sealed partial class MainViewModel : ObservableObject
                 Texts.Main_UnsavedTitle, Texts.Main_UnsavedLogout, Texts.Main_Logout))
             return;
         CloseAllTabs();
+        _clipboard = null;
         await Services.Session.LogoutAsync();
         Shell.ShowLogin();
     }

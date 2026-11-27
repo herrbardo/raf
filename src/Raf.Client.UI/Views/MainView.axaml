@@ -136,7 +136,7 @@
                   <TextBlock Classes="empty-title" Text="{x:Static l:Texts.MainV_EmptyCollection}" />
                   <TextBlock Classes="caption" Text="{x:Static l:Texts.MainV_EmptyCollectionHint}" IsVisible="{Binding CanEdit}" />
                 </StackPanel>
-                <TreeView x:Name="Tree" ItemsSource="{Binding Roots}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                <TreeView x:Name="Tree" ItemsSource="{Binding Roots}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" KeyDown="OnTreeKeyDown"
                           ctl:DeleteKey.Command="{Binding #Tree.((vm:TreeNodeViewModel)SelectedItem).DeleteCommand}">
                   <TreeView.Styles>
                     <Style Selector="TreeViewItem" x:DataType="vm:TreeNodeViewModel">
@@ -145,31 +145,36 @@
                   </TreeView.Styles>
                   <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:TreeNodeViewModel" ItemsSource="{Binding Children}">
-                      <Grid ColumnDefinitions="Auto,*" Background="Transparent" Tapped="OnNodeTapped">
-                        <Grid.ContextMenu>
-                          <ContextMenu>
-                            <MenuItem Header="{x:Static l:Texts.MainV_NewFolder}" Command="{Binding NewFolderCommand}" IsVisible="{Binding CanAddContainer}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_NewRequest}" Command="{Binding NewRequestCommand}" IsVisible="{Binding CanAddContainer}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_NewGrpcRequest}" Command="{Binding NewGrpcRequestCommand}" IsVisible="{Binding CanAddContainer}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_NewWebSocket}" Command="{Binding NewWebSocketCommand}" IsVisible="{Binding CanAddContainer}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_NewSample}" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_AppAuth}" Command="{Binding EditAuthCommand}" IsVisible="{Binding IsApp}" />
-                            <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="{x:Static l:Texts.V_Duplicate}" Command="{Binding DuplicateCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_MoveUp}" Command="{Binding MoveUpCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="{x:Static l:Texts.MainV_MoveDown}" Command="{Binding MoveDownCommand}" IsVisible="{Binding CanEdit}" />
-                            <MenuItem Header="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" IsVisible="{Binding CanEdit}" />
-                          </ContextMenu>
-                        </Grid.ContextMenu>
-                        <Panel Margin="0,0,8,0">
-                          <ctl:Icon Classes="node" Data="{StaticResource IconApp}" IsVisible="{Binding IsApp}" />
-                          <ctl:Icon Classes="node" Data="{StaticResource IconFolder}" IsVisible="{Binding IsFolder}" />
-                          <ctl:MethodBadge Width="44" Method="{Binding Method}" IsVisible="{Binding IsRequest}" />
-                          <ctl:Icon Classes="node" Width="14" Height="14" Data="{StaticResource IconSample}" IsVisible="{Binding IsSample}" />
-                        </Panel>
-                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                   Text="{Binding Name}" ToolTip.Tip="{Binding Name}" />
-                      </Grid>
+                      <Border Classes="node-row">
+                        <Grid ColumnDefinitions="Auto,*" Background="Transparent" Tapped="OnNodeTapped">
+                          <Grid.ContextMenu>
+                            <ContextMenu>
+                              <MenuItem Header="{x:Static l:Texts.MainV_NewFolder}" Command="{Binding NewFolderCommand}" IsVisible="{Binding CanAddContainer}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_NewRequest}" Command="{Binding NewRequestCommand}" IsVisible="{Binding CanAddContainer}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_NewGrpcRequest}" Command="{Binding NewGrpcRequestCommand}" IsVisible="{Binding CanAddContainer}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_NewWebSocket}" Command="{Binding NewWebSocketCommand}" IsVisible="{Binding CanAddContainer}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_NewSample}" Command="{Binding NewSampleCommand}" IsVisible="{Binding CanAddSample}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_AppAuth}" Command="{Binding EditAuthCommand}" IsVisible="{Binding IsApp}" />
+                              <MenuItem Header="{x:Static l:Texts.V_Rename}" Command="{Binding RenameCommand}" IsVisible="{Binding CanEdit}" />
+                              <MenuItem Header="{x:Static l:Texts.V_Duplicate}" Command="{Binding DuplicateCommand}" IsVisible="{Binding CanEdit}" />
+                              <MenuItem Header="{x:Static l:Texts.V_Copy}" Command="{Binding CopyCommand}" InputGesture="Ctrl+C" />
+                              <MenuItem Header="{x:Static l:Texts.V_Cut}" Command="{Binding CutCommand}" InputGesture="Ctrl+X" IsVisible="{Binding CanCut}" />
+                              <MenuItem Header="{x:Static l:Texts.V_Paste}" Command="{Binding PasteCommand}" InputGesture="Ctrl+V" IsVisible="{Binding CanEdit}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_MoveUp}" Command="{Binding MoveUpCommand}" IsVisible="{Binding CanEdit}" />
+                              <MenuItem Header="{x:Static l:Texts.MainV_MoveDown}" Command="{Binding MoveDownCommand}" IsVisible="{Binding CanEdit}" />
+                              <MenuItem Header="{x:Static l:Texts.V_Delete}" Command="{Binding DeleteCommand}" IsVisible="{Binding CanEdit}" />
+                            </ContextMenu>
+                          </Grid.ContextMenu>
+                          <Panel Margin="0,0,8,0">
+                            <ctl:Icon Classes="node" Data="{StaticResource IconApp}" IsVisible="{Binding IsApp}" />
+                            <ctl:Icon Classes="node" Data="{StaticResource IconFolder}" IsVisible="{Binding IsFolder}" />
+                            <ctl:MethodBadge Width="44" Method="{Binding Method}" IsVisible="{Binding IsRequest}" />
+                            <ctl:Icon Classes="node" Width="14" Height="14" Data="{StaticResource IconSample}" IsVisible="{Binding IsSample}" />
+                          </Panel>
+                          <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                     Text="{Binding Name}" ToolTip.Tip="{Binding Name}" />
+                        </Grid>
+                      </Border>
                     </TreeDataTemplate>
                   </TreeView.ItemTemplate>
                 </TreeView>
