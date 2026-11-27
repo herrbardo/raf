@@ -100,6 +100,8 @@
                 <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding ConsoleNotice}" />
                 <Button Classes="link" Content="{x:Static l:Texts.V_Copy}" Command="{Binding CopyConsoleCommand}"
                         ToolTip.Tip="{x:Static l:Texts.RespV_ConsoleCopyTip}" />
+                <Button Classes="link" Content="{x:Static l:Texts.Console_Clear}" Command="{Binding ClearConsoleCommand}"
+                        ToolTip.Tip="{x:Static l:Texts.Console_ClearTip}" />
               </StackPanel>
               <TextBlock Classes="caption" VerticalAlignment="Center"
                          Text="{x:Static l:Texts.RespV_ConsoleHint}" />
