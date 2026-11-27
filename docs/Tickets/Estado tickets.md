@@ -183,8 +183,8 @@
 
 - Ticket-042.md
     - Creado: 26/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Causa: los atajos estaban declarados solo con Ctrl (Ctrl+S, Ctrl+Enter, Ctrl+Shift+L, el Ctrl+S de los diálogos de variables, logins y .proto, y el Ctrl+Shift+F del body), y en Mac se usa Cmd. Solución: CommandKey.AddMetaAliases (src/Raf.Client.UI/Controls/CommandKey.cs) agrega por cada atajo con Ctrl el mismo con Cmd (Meta), con el comando enlazado al del original para que siga sus cambios, como el Guardar de la pestaña activa. Lo llaman ShellView (en el constructor: en web, al adjuntarse todavía no hay TopLevel y el código que pasa los atajos a la raíz sale antes), DialogView al adjuntarse (todos los diálogos) y BodyEditorView. Se agrega en todos los sistemas porque en web no se sabe de antemano si el navegador corre en un Mac. El árbol ya aceptaba Cmd para copiar, cortar y pegar (Ticket-041). El skill avalonia lo indica para vistas nuevas. Cómo se probó: dotnet build sin errores; en el cliente web contra el servidor en Docker, con una App de prueba (después se borró), se editó la URL de un request y un keydown con metaKey (Cmd+S) disparado desde JavaScript lo guardó: el servidor devolvió la URL nueva y no se coló una "s" en el texto (antes del cambio, la misma prueba no guardaba y escribía la "s"). Con una traza temporal se vio que el diálogo de Variables crea su Cmd+S con el comando enlazado. No se probó: en un Mac real (ni escritorio ni Safari), Cmd+Enter, Cmd+Shift+L ni Cmd+Shift+F, ni el Ctrl+Espacio de las variables, que queda igual (en Mac, Cmd+Espacio es Spotlight). Los tooltips y el menú siguen mostrando "Ctrl+...". Nota: al probar, dos veces la primera compilación incremental después de un cambio dio errores falsos en todos los .axaml y la siguiente "pasó" pero sin compilar el XAML (la app web no arrancaba); con dotnet build --no-incremental se resolvió. Parece un problema del entorno (posiblemente OneDrive) y no del código.
 
 - Ticket-043.md
     - Creado: 26/11/2026

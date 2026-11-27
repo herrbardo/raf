@@ -23,7 +23,7 @@ Antes de agregar algo, copiar el patrón de una vista parecida. Si esta guía y 
 
 La interfaz es una sola para desktop y web (`Raf.Client.UI`). Una vista nueva se muestra con un `DataTemplate` en `App.axaml` y un `ContentControl` enlazado al viewmodel. No hay contenedor de DI en los viewmodels: las dependencias llegan por constructor.
 
-**Ventanas secundarias:** no se crean `Window`, que no existen en el navegador. Se escribe un `DialogView` (`XxxDialog.axaml`, raíz `svc:DialogView` con `Title`, `DialogWidth`, `DialogHeight`...) y se abre con `IWindowService.ShowDialogAsync`: en desktop va en una ventana y en web, superpuesto. Para cerrar, `Close(resultado)`; para confirmar antes de cerrar, `CanCloseAsync`. Los atajos globales van en `ShellView`, que los pasa a la raíz.
+**Ventanas secundarias:** no se crean `Window`, que no existen en el navegador. Se escribe un `DialogView` (`XxxDialog.axaml`, raíz `svc:DialogView` con `Title`, `DialogWidth`, `DialogHeight`...) y se abre con `IWindowService.ShowDialogAsync`: en desktop va en una ventana y en web, superpuesto. Para cerrar, `Close(resultado)`; para confirmar antes de cerrar, `CanCloseAsync`. Los atajos globales van en `ShellView`, que los pasa a la raíz. Los atajos se escriben con `Ctrl`: `ShellView`, `DialogView` y `BodyEditorView` les agregan el mismo con Cmd (`CommandKey.AddMetaAliases`) para Mac; una vista nueva con `KeyBindings` propios tiene que llamarlo también.
 
 ## Viewmodels
 
