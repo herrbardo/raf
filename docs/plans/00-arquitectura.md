@@ -71,7 +71,7 @@ infra/
 - **ASP.NET Core Identity** para usuarios y hashing de contraseñas (no `MapIdentityApi`: sus tokens dependen de Data Protection, y con varias tareas ECS habría que compartir el key ring).
 - **Tokens propios:**
   - Access token **JWT** de 15 min, firmado con una clave guardada en Secrets Manager. Es stateless.
-  - Refresh token opaco y rotativo, guardado hasheado en la base y revocable.
+  - Refresh token opaco y rotativo, guardado hasheado en la base y revocable. Desde el Ticket-038 no vence por defecto (`Jwt:RefreshTokenDays` = 0): la sesión termina al cerrarla, al cambiar o resetear la contraseña, al deshabilitar al usuario o al detectar el reuso de un token. Un token rotado hace menos de un minuto cuyo reemplazo no se usó se acepta otra vez (`Jwt:RefreshReuseGraceSeconds`), para que una respuesta de renovación perdida no cierre todas las sesiones.
 - **Alta de cuentas: solo el admin.** No hay registro abierto.
   - Rol de sistema **`Admin`** (distinto de los roles de workspace). El primer admin se crea al arrancar por primera vez, con usuario y contraseña tomados de la configuración (variable de entorno / Secrets Manager).
   - El admin crea el usuario con una **contraseña temporal** y se la pasa por fuera de la app. El usuario queda marcado `MustChangePassword` y debe cambiarla en el primer login.

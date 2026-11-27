@@ -38,6 +38,12 @@ public abstract class ClientHost
     /// </summary>
     public virtual string? McpExecutable => null;
 
+    /// <summary>
+    /// Lock que serializa la renovación de la sesión entre instancias. Null usa el archivo <c>session.lock</c>; en
+    /// web, donde las pestañas comparten la sesión y no un sistema de archivos, se usa el del navegador.
+    /// </summary>
+    public virtual Func<Task<IDisposable>>? SessionLock => null;
+
     public abstract SettingsStore CreateSettings();
 
     /// <summary>

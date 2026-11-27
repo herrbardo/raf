@@ -31,11 +31,12 @@ public static class ServerUrl
 /// Dueño de los tokens. El servidor trata la reutilización de un refresh token como robo y cierra todas las
 /// sesiones, así que cada renovación debe usar el último token emitido: hay una sola en curso por proceso,
 /// no se cancela aunque el llamador desista (la respuesta trae el token que reemplaza al actual) y un lock de
-/// archivo la serializa entre instancias de la app.
+/// archivo la serializa entre instancias de la app. Donde no hay archivos compartidos (las pestañas del cliente web)
+/// se pasa <paramref name="acquireLock"/> con el lock de la plataforma.
 /// </summary>
 public sealed class SessionManager(
     HttpClient http, ISecureStore store, TimeProvider clock, string lockPath, EventLog? events = null,
-    string storeKey = SessionManager.AppStoreKey)
+    string storeKey = SessionManager.AppStoreKey, Func<Task<IDisposable>>? acquireLock = null)
 {
     /// <summary>Dónde guarda la app su sesión. El MCP usa otra (Plan 12), para no compartir el refresh token.</summary>
     public const string AppStoreKey = "session";
@@ -244,6 +245,7 @@ public sealed class SessionManager(
 
     private async Task<IDisposable> AcquireFileLockAsync()
     {
+        if (acquireLock is not null) return await acquireLock();
         Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
         var deadline = clock.GetUtcNow() + TimeSpan.FromSeconds(30);
         while (true)

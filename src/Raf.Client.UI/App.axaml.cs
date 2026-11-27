@@ -69,7 +69,8 @@ public partial class App : Application
         services.AddSingleton(new RunHistoryStore(Path.Combine(data, "history")));
         services.AddSingleton(sp => new SessionManager(
             sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISecureStore>(),
-            TimeProvider.System, Path.Combine(data, "session.lock"), sp.GetRequiredService<EventLog>()));
+            TimeProvider.System, Path.Combine(data, "session.lock"), sp.GetRequiredService<EventLog>(),
+            acquireLock: host.SessionLock));
         services.AddSingleton(sp => new McpConnection(
             sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISecureStore>(), TimeProvider.System, data));
         services.AddSingleton<RafApiClient>();

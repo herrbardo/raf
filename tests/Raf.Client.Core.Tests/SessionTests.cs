@@ -131,6 +131,50 @@ public sealed class SessionTests : IDisposable
     }
 
     [Fact]
+    public async Task El_lock_de_la_plataforma_reemplaza_al_archivo()
+    {
+        // Como las pestañas del cliente web: comparten el almacén pero no un sistema de archivos.
+        var gate = new SemaphoreSlim(1, 1);
+        var acquired = 0;
+        async Task<IDisposable> Acquire()
+        {
+            await gate.WaitAsync();
+            Interlocked.Increment(ref acquired);
+            return new Releaser(gate);
+        }
+        SessionManager Tab(string folder)
+        {
+            var session = new SessionManager(new HttpClient(_auth), _store, _clock, Path.Combine(_dir, folder, "lock"),
+                acquireLock: Acquire);
+            session.SetServer(Server);
+            return session;
+        }
+
+        _auth.Now = _clock.GetUtcNow();
+        var first = Tab("a");
+        first.Adopt(FakeAuthServer.Tokens(0, _clock.GetUtcNow(), TimeSpan.FromSeconds(-1)));
+        var second = Tab("b");
+        Assert.True(second.TryRestore());
+        _auth.Gate = new TaskCompletionSource();
+
+        var calls = new[] { Task.Run(() => first.GetAccessTokenAsync()), Task.Run(() => second.GetAccessTokenAsync()) };
+        await Task.Delay(100);
+        _auth.Gate.SetResult();
+        var tokens = await Task.WhenAll(calls);
+
+        Assert.Equal(2, acquired);
+        Assert.Equal(1, _auth.RefreshCalls);
+        Assert.False(_auth.TheftDetected);
+        Assert.Equal(tokens[0], tokens[1]);
+        Assert.False(Directory.Exists(Path.Combine(_dir, "a")));
+    }
+
+    private sealed class Releaser(SemaphoreSlim gate) : IDisposable
+    {
+        public void Dispose() => gate.Release();
+    }
+
+    [Fact]
     public async Task Sesion_expirada_en_el_servidor_avisa_y_borra_los_tokens()
     {
         var session = LoggedInWithExpiredToken();

@@ -3,14 +3,18 @@ import { dotnet } from './_framework/dotnet.js';
 // Todo lo que RAF guarda en el navegador lleva este prefijo.
 const prefix = 'raf:';
 
+// Los locks entre pestañas que tiene esta pestaña, por id, con la función que los suelta.
+const heldLocks = new Map();
+
 function area(name) {
   return name === 'session' ? sessionStorage : localStorage;
 }
 
 /**
- * "Duplicar pestaña" copia el sessionStorage, con la sesión adentro. Si las dos pestañas renovaran el mismo
- * refresh token, el servidor lo tomaría como robo y cerraría todas las sesiones. Cada pestaña tiene un id; si al
- * arrancar otra pestaña viva responde que ese id es suyo, esta es una copia y descarta lo copiado.
+ * "Duplicar pestaña" copia el sessionStorage. La sesión ya no está ahí (desde el Ticket-038 va en localStorage,
+ * compartida y renovada con un lock entre pestañas), pero lo que quede propio de la pestaña no debe copiarse.
+ * Cada pestaña tiene un id; si al arrancar otra pestaña viva responde que ese id es suyo, esta es una copia y
+ * descarta lo copiado.
  */
 async function guardDuplicatedTab() {
   const key = prefix + 'tab';
@@ -62,6 +66,25 @@ runtime.setModuleImports('raf', {
   },
   page: {
     reload: () => location.reload(),
+  },
+  // Locks entre pestañas (WebLock en BrowserHost.cs): acquire resuelve con un id cuando el lock es de esta
+  // pestaña, y release lo suelta. Sin Web Locks (contexto no seguro) no hay a quién esperar.
+  locks: {
+    acquire: name => new Promise(acquired => {
+      const id = crypto.randomUUID();
+      if (!navigator.locks) {
+        acquired(id);
+        return;
+      }
+      navigator.locks.request(prefix + name, () => new Promise(release => {
+        heldLocks.set(id, release);
+        acquired(id);
+      }));
+    }),
+    release: id => {
+      heldLocks.get(id)?.();
+      heldLocks.delete(id);
+    },
   },
 });
 
