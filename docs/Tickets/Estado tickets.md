@@ -188,8 +188,8 @@
 
 - Ticket-043.md
     - Creado: 26/11/2026
-    - Estado: CREADO
-    - Comentarios:
+    - Estado: [HECHO]
+    - Comentarios: Causa: en macOS, Avalonia titula el menú de la aplicación (el que aparece arriba, junto a la manzana) con Application.Name, y si no se define usa "Avalonia Application". El ejecutable ya se llama RAF (AssemblyName) y el paquete de macOS se arma con --packTitle RAF (release.yml), así que lo único que faltaba era el nombre de la aplicación. Solución: Name="RAF" en src/Raf.Client.UI/App.axaml, con un comentario que explica para qué es. En Windows y en web no cambia nada visible. Cómo se probó: dotnet build --no-incremental sin errores (el XAML compilado acepta la propiedad). No se probó: en un Mac, que es donde se ve; tampoco se revisó el resto del menú de la aplicación de macOS, que según la documentación de Avalonia incluye por defecto "About Avalonia" (si aparece, se puede reemplazar por "Acerca de RAF" con un NativeMenu propio en un ticket aparte).
 
 - Ticket-044.md
     - Creado: 26/11/2026

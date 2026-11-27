@@ -3,7 +3,9 @@
              xmlns:vm="using:Raf.Client.ViewModels"
              xmlns:views="using:Raf.Client.Views"
              x:Class="Raf.Client.App"
+             Name="RAF"
              RequestedThemeVariant="Dark">
+  <!-- Name: el nombre del menú de la aplicación en macOS; sin él, Avalonia muestra "Avalonia Application" (Ticket-043) -->
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
