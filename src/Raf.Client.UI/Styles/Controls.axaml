@@ -324,6 +324,22 @@
     <Setter Property="MinHeight" Value="30" />
     <Setter Property="FontSize" Value="{DynamicResource RafFontSizeBody}" />
   </Style>
+  <!-- Arrastrar en el árbol (Ticket-041): dónde va a quedar lo que se suelta. Arriba o abajo, una línea; adentro, el fondo -->
+  <Style Selector="Border.node-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource RafAccentBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RafRadius}" />
+  </Style>
+  <Style Selector="Border.node-row.drop-before">
+    <Setter Property="BorderThickness" Value="0,2,0,0" />
+  </Style>
+  <Style Selector="Border.node-row.drop-after">
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+  </Style>
+  <Style Selector="Border.node-row.drop-into">
+    <Setter Property="Background" Value="{DynamicResource RafAccentSoftBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
   <Style Selector="ListBox">
     <Setter Property="Background" Value="Transparent" />
   </Style>

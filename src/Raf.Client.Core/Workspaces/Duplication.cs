@@ -44,23 +44,37 @@ public sealed class WorkspaceDuplicator(IWorkspaceStore store, Guid ws)
     }
 
     /// <summary>La carpeta, en el mismo lugar, con sus subcarpetas, requests y samples.</summary>
-    public async Task<FolderDto> DuplicateFolderAsync(FolderDto source, string name, int order, CancellationToken ct = default)
+    public Task<FolderDto> DuplicateFolderAsync(FolderDto source, string name, int order, CancellationToken ct = default) =>
+        CopyFolderToAsync(source, name, order, source.AppId, source.ParentFolderId, ct);
+
+    /// <summary>La carpeta con todo su contenido, dentro de otra carpeta o App (Ticket-041: copiar y pegar).</summary>
+    public async Task<FolderDto> CopyFolderToAsync(
+        FolderDto source, string name, int order, Guid toApp, Guid? toFolder, CancellationToken ct = default)
     {
         var tree = await LoadAsync(ct);
-        var copy = await store.CreateFolderAsync(ws, new CreateFolderRequest(source.AppId, name, source.ParentFolderId, order), ct);
+        var copy = await store.CreateFolderAsync(ws, new CreateFolderRequest(toApp, name, toFolder, order), ct);
         await CopyContentsAsync(tree, source.AppId, source.Id, copy.AppId, copy.Id, ct);
         return copy;
     }
 
     /// <summary>El request, en el mismo lugar, con sus samples.</summary>
-    public async Task<RequestDto> DuplicateRequestAsync(RequestDto source, string name, int order, CancellationToken ct = default)
+    public Task<RequestDto> DuplicateRequestAsync(RequestDto source, string name, int order, CancellationToken ct = default) =>
+        CopyRequestToAsync(source, name, order, source.AppId, source.FolderId, ct);
+
+    /// <summary>El request con sus samples, dentro de otra carpeta o App.</summary>
+    public async Task<RequestDto> CopyRequestToAsync(
+        RequestDto source, string name, int order, Guid toApp, Guid? toFolder, CancellationToken ct = default)
     {
         var tree = await LoadAsync(ct);
-        return await CopyRequestAsync(tree, source, name, order, source.AppId, source.FolderId, ct);
+        return await CopyRequestAsync(tree, source, name, order, toApp, toFolder, ct);
     }
 
     public Task<SampleDto> DuplicateSampleAsync(SampleDto source, string name, int order, CancellationToken ct = default) =>
-        store.CreateSampleAsync(ws, new CreateSampleRequest(source.RequestId, name, source.Overrides, order), ct);
+        CopySampleToAsync(source, name, order, source.RequestId, ct);
+
+    /// <summary>El sample, en otro request.</summary>
+    public Task<SampleDto> CopySampleToAsync(SampleDto source, string name, int order, Guid toRequest, CancellationToken ct = default) =>
+        store.CreateSampleAsync(ws, new CreateSampleRequest(toRequest, name, source.Overrides, order), ct);
 
     public Task<LoginDto> DuplicateLoginAsync(LoginDto source, string name, CancellationToken ct = default) =>
         store.CreateLoginAsync(ws, new CreateLoginRequest(name, source.Config), ct);

@@ -12,6 +12,7 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        HookTreeDrag();
         DataContextChanged += (_, _) =>
         {
             if (DataContext is not MainViewModel vm) return;

@@ -521,4 +521,13 @@
   <data name="GrpcV_Reflection" xml:space="preserve"><value>Server reflection del servidor</value></data>
   <data name="GrpcV_ProtoSet" xml:space="preserve"><value>Archivos .proto: {0}</value></data>
   <data name="GrpcV_SourceTip" xml:space="preserve"><value>De dónde salen los servicios: el server reflection del servidor o un conjunto de archivos .proto</value></data>
+  <data name="V_Cut" xml:space="preserve"><value>Cortar</value></data>
+  <data name="V_Paste" xml:space="preserve"><value>Pegar</value></data>
+  <data name="Tree_Copied" xml:space="preserve"><value>Copiado "{0}": pegalo con Ctrl+V sobre la App o carpeta de destino.</value></data>
+  <data name="Tree_Cut" xml:space="preserve"><value>Cortado "{0}": pegalo con Ctrl+V en otra carpeta de la misma App.</value></data>
+  <data name="Tree_CutNotAllowed" xml:space="preserve"><value>Solo se cortan carpetas y requests. Las Apps y los samples se reordenan arrastrándolos.</value></data>
+  <data name="Tree_OtherApp" xml:space="preserve"><value>Solo se puede mover dentro de la misma App. Para llevarlo a otra, copialo y pegalo.</value></data>
+  <data name="Tree_IntoItself" xml:space="preserve"><value>Una carpeta no puede ir dentro de sí misma ni de una de sus subcarpetas.</value></data>
+  <data name="Tree_NotAllowed" xml:space="preserve"><value>Eso no puede ir ahí.</value></data>
+  <data name="Tree_NothingToPaste" xml:space="preserve"><value>No hay nada copiado ni cortado para pegar.</value></data>
 </root>
